@@ -16,7 +16,10 @@ canvas{display:block;touch-action:none}
 #info{top:58px;left:8px;max-width:270px;padding:10px 12px;display:none;font-size:14px;line-height:1.45}
 #closeinfo{position:absolute;right:6px;top:4px;background:none;border:0;color:#f3e6cc;font-size:18px}
 #toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);background:rgba(217,162,58,.95);color:#2b1e13;padding:8px 14px;border-radius:10px;font-size:14px;transition:opacity .4s;pointer-events:none;text-align:center;max-width:85%}
-</style></head><body>
+@media (min-width:900px){#res{font-size:20px;gap:6px 18px}#speed{font-size:18px;padding:8px 16px}
+#menu{left:50%;right:auto;transform:translateX(-50%)}#menu button{min-width:110px;font-size:16px;padding:8px}#menu button i{font-size:34px}#menu small{font-size:14px}
+#place{left:50%;right:auto;transform:translateX(-50%);width:640px}#place button{font-size:18px;padding:12px}#placeinfo{font-size:16px}#info{font-size:17px;max-width:340px}#toast{font-size:18px}}
+#menu button:hover{background:#7a5636}</style></head><body>
 <div id="top" class="panel"><div id="res"></div><button id="speed">1×</button></div>
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div></div>
 <div id="toast"></div>
@@ -55268,15 +55271,20 @@ function freeSpot(x, z, r, ignore) {
   if (Math.hypot(x, z) > 56) return false;
   if (Math.abs(x - riverX(z)) < 5 + r) return false;
   for (const b of buildings) { if (b === ignore) continue; if (Math.hypot(b.x - x, b.z - z) < TYPES[b.type].r + r + 1) return false; for (const p of b.plots) if (Math.hypot(p.x - x, p.z - z) < r + 1.6) return false; }
-  for (const k of rocks) if (Math.hypot(k.x - x, k.z - z) < r + 1.6) return false;
+  for (const k of rocks) if (k.amount > 0 && Math.hypot(k.x - x, k.z - z) < r + 1.6) return false;
   return true;
 }
-function canPlace(type, x, z) {
+function placeReason(type, x, z) {
   const r = TYPES[type].r;
-  if (!freeSpot(x, z, r)) return false;
+  if (Math.hypot(x, z) > 56) return 'Zu weit draußen';
+  if (Math.abs(x - riverX(z)) < 5 + r) return 'Zu nah am Fluss';
+  for (const k of rocks) if (k.amount > 0 && Math.hypot(k.x - x, k.z - z) < r + 1.6) return 'Zu nah an einem Felsen';
+  if (!freeSpot(x, z, r)) return 'Zu nah an einem Gebäude oder Feld';
   let lo = 99, hi = -99; for (let a = 0; a < 8; a++) { const h = height(x + Math.cos(a) * r, z + Math.sin(a) * r); lo = Math.min(lo, h); hi = Math.max(hi, h); }
-  return hi - lo < 1.6 && lo > -0.2;
+  if (hi - lo > 2.6 || lo < -0.2) return 'Zu steil';
+  return null;
 }
+function canPlace(type, x, z) { return !placeReason(type, x, z); }
 
 // ---------- Arbeits-Abläufe ----------
 function moveTo(w, p) { w.queue.push({ to: new V3(p.x, 0, p.z) }); }
@@ -55389,19 +55397,20 @@ function startPlacing(t) {
   ghost.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; o.castShadow = false; } });
   scene.add(ghost); ghost.visible = false; ring.scale.setScalar(TYPES[t].r + 0.4);
   $('place').style.display = 'flex'; $('menu').style.display = 'none'; selectB(null);
-  $('placeinfo').textContent = `${TYPES[t].name}: ${TYPES[t].desc} – Tippe auf einen Platz.`;
+  $('placeinfo').textContent = `${TYPES[t].name}: ${TYPES[t].desc} – Klicke/tippe auf einen grünen Platz, dann wird sofort gebaut. Rechtsklick oder ✕ = abbrechen.`;
 }
 function cancelPlacing() { if (ghost) scene.remove(ghost); ghost = null; placing = null; ring.visible = false; $('place').style.display = 'none'; $('menu').style.display = 'flex'; }
 $('cancel').onclick = cancelPlacing;
 $('rotate').onclick = () => { ghostRot += Math.PI / 2; if (ghost) ghost.rotation.y = ghostRot; };
-$('confirm').onclick = () => {
-  if (!ghost || !ghost.visible) return toast('Tippe zuerst auf einen Platz');
+$('confirm').onclick = () => doBuild();
+function doBuild() {
+  if (!ghost || !ghost.visible) return toast('Klicke zuerst auf einen Platz');
   const { x, z } = ghost.position;
-  if (!canPlace(placing, x, z)) return toast('Hier kann nicht gebaut werden');
+  const why = placeReason(placing, x, z); if (why) return toast('Hier geht es nicht: ' + why);
   if (!canAfford(TYPES[placing].cost)) return toast('Nicht genug Material');
   for (const [k, v] of Object.entries(TYPES[placing].cost)) stock[k] -= v;
-  placeBuilding(placing, x, z, ghostRot); refreshPiles(); cancelPlacing();
-};
+  const t = placing; placeBuilding(placing, x, z, ghostRot); refreshPiles(); cancelPlacing(); toast(TYPES[t].name + ' wird gebaut');
+}
 function selectB(b) {
   selected = b; const p = $('info');
   if (!b) { p.style.display = 'none'; ring.visible = !!placing && ring.visible; return; }
@@ -55424,13 +55433,14 @@ let yaw = 0.6, pitch = 0.85, dist = innerWidth < innerHeight ? 55 : 40;
 const target = new V3(0, 0, 0);
 const pointers = new Map(); let gesture = null, downInfo = null;
 const el = renderer.domElement, ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-el.addEventListener('contextmenu', e => e.preventDefault());
+el.addEventListener('contextmenu', e => { e.preventDefault(); });
+el.addEventListener('pointerdown', e => { if (placing && e.button === 2) cancelPlacing(); });
 el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); downInfo = pointers.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, btn: e.button } : null; gesture = null; });
 el.addEventListener('pointermove', e => {
   const p = pointers.get(e.pointerId);
   if (!p) { if (placing && e.pointerType === 'mouse') hoverGhost(e.clientX, e.clientY); return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y;
-  if (downInfo && Math.hypot(e.clientX - downInfo.x, e.clientY - downInfo.y) > 8) downInfo.moved = true;
+  if (downInfo && Math.hypot(e.clientX - downInfo.x, e.clientY - downInfo.y) > (e.pointerType === 'mouse' ? 14 : 10)) downInfo.moved = true;
   if (pointers.size === 1 && (!downInfo || downInfo.moved)) {
     if (downInfo && downInfo.btn === 2) { yaw -= dx * 0.006; pitch = THREE.MathUtils.clamp(pitch + dy * 0.004, 0.35, 1.4); }
     else { const k = dist * 0.0022; const fw = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), rt = new V3(Math.cos(yaw), 0, -Math.sin(yaw)); target.addScaledVector(rt, -dx * k).addScaledVector(fw, dy * k); target.x = THREE.MathUtils.clamp(target.x, -55, 55); target.z = THREE.MathUtils.clamp(target.z, -55, 55); }
@@ -55443,7 +55453,7 @@ el.addEventListener('pointermove', e => {
   }
 });
 function endPointer(e) {
-  if (downInfo && !downInfo.moved && pointers.size === 1 && performance.now() - downInfo.t < 500 && downInfo.btn !== 2) tap(e.clientX, e.clientY);
+  if (downInfo && !downInfo.moved && pointers.size === 1 && performance.now() - downInfo.t < 900 && downInfo.btn !== 2) tap(e.clientX, e.clientY);
   pointers.delete(e.pointerId); gesture = null; if (pointers.size === 0) downInfo = null;
 }
 el.addEventListener('pointerup', endPointer); el.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); gesture = null; downInfo = null; });
@@ -55457,7 +55467,7 @@ function hoverGhost(cx, cy) {
   ring.position.set(x, height(x, z) + 0.15, z); ring.visible = true;
 }
 function tap(cx, cy) {
-  if (placing) return hoverGhost(cx, cy);
+  if (placing) { hoverGhost(cx, cy); return doBuild(); }
   const p = groundHit(cx, cy); if (!p) return;
   let best = null, bd = 99; for (const b of buildings) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < TYPES[b.type].r + 1 && d < bd) { bd = d; best = b; } }
   if (!best) for (const b of buildings) for (const pl of b.plots) if (Math.hypot(pl.x - p.x, pl.z - p.z) < 1.3) best = b;
