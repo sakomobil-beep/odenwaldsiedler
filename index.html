@@ -37,12 +37,35 @@ canvas{display:block;touch-action:none}
 .row button.on{background:#d9a23a;color:#2b1e13}.row button.warn{background:#a8432c;color:#fff}.row button:disabled{opacity:.4}
 .slot span{flex:1;display:flex;flex-direction:column}
 #info{z-index:4}
+#loading{position:fixed;inset:0;background:#1d222b;color:#f3e6cc;display:flex;align-items:center;justify-content:center;z-index:50;font-size:20px}
+#loading .spin{width:42px;height:42px;border:4px solid #d9a23a55;border-top-color:#d9a23a;border-radius:50%;margin:0 auto 14px;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+body.inmenu #top,body.inmenu #menu,body.inmenu #sub,body.inmenu #mini,body.inmenu #info,body.inmenu #place,body.inmenu #toast{display:none!important}
+#mainmenu{position:fixed;inset:0;display:none;align-items:center;justify-content:flex-start;padding-left:7vw;background:linear-gradient(90deg,rgba(20,14,8,.78),rgba(20,14,8,.15) 60%,transparent);z-index:20}
+.mmbox{display:flex;flex-direction:column;gap:12px;max-width:380px;width:84vw}
+.title{font-size:clamp(34px,6vw,60px);color:#fff4dc;text-shadow:0 4px 18px rgba(0,0,0,.6);font-weight:bold;letter-spacing:1px;margin-bottom:14px}.title small{display:block;font-size:16px;opacity:.85;font-weight:normal;letter-spacing:2px}
+#mainbtns,#pausebtns{display:flex;flex-direction:column;gap:9px}
+#mainbtns button,#pausebtns button{background:rgba(90,64,41,.92);color:#f3e6cc;border:1px solid #c9a06a;border-radius:12px;padding:13px 18px;font:19px Georgia;text-align:left;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+#mainbtns button:hover,#pausebtns button:hover{background:#d9a23a;color:#2b1e13}#mainbtns small{display:block;font-size:12px;opacity:.8;margin-top:2px}
+#pausemenu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:22}.pmbox{position:static;padding:16px 18px;width:min(340px,86vw)}
+#screen{display:none;top:50%;left:50%;transform:translate(-50%,-50%);width:min(760px,94vw);max-height:88vh;overflow-y:auto;padding:16px 18px;z-index:24;font-size:15px}
+#screen .x{position:absolute;right:10px;top:8px;background:none;border:0;color:#f3e6cc;font-size:20px;cursor:pointer}
+#screen h4{margin:14px 0 4px;color:#f0c870}#screen p{line-height:1.5}
+.opt{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0;flex-wrap:wrap}.opt>span{min-width:150px}
+.seg{display:flex;gap:4px;flex-wrap:wrap;align-items:center}.seg button{background:#5a4029;color:#f3e6cc;border:1px solid #8a6a45;border-radius:8px;padding:6px 10px;font:14px Georgia;cursor:pointer}.seg button.on{background:#d9a23a;color:#2b1e13}
+.seg input[type=number]{width:90px;padding:6px;border-radius:8px;border:1px solid #8a6a45;background:#3a2a1a;color:#f3e6cc;font:14px Georgia}
+input[type=range]{width:160px;accent-color:#d9a23a}
+.newwrap{display:flex;gap:16px;flex-wrap:wrap}.opts{flex:1;min-width:280px}.prev{display:flex;flex-direction:column;align-items:center;gap:4px}.prev canvas{width:220px;height:220px;border-radius:10px;border:2px solid #c9a06a;image-rendering:pixelated}
+.row button.big{font-size:19px;padding:12px 22px;background:#6fae4a;color:#fff;border:0}
+.saves{display:flex;flex-direction:column;gap:8px;margin-top:8px}.save{display:flex;gap:10px;background:rgba(0,0,0,.2);border-radius:10px;padding:8px}.save img{width:160px;height:90px;object-fit:cover;border-radius:6px;background:#222}.si{flex:1}.si b{display:block}.si small{opacity:.85;line-height:1.4}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="savebtn" class="tb">💾</button><button id="speed">1×</button></div>
+<div id="top" class="panel"><div id="res"></div><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
-<div id="savemenu" class="panel pop"><button id="closesave" class="x">✕</button><div id="savebody"></div></div>
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div><div id="infobtns"></div></div>
 <div id="toast"></div>
+<div id="loading"><div><div class="spin"></div>Welt wird erzeugt …</div></div>
+<div id="mainmenu"><div class="mmbox"><div class="title">Odenwald-Siedler<small>Ein Aufbauspiel im Odenwald</small></div><div id="mainbtns"></div></div></div>
+<div id="pausemenu"><div class="pmbox panel"><div class="subhead">⏸ Pause</div><div id="pausebtns"></div></div></div>
+<div id="screen" class="panel"></div>
 <canvas id="mini" width="200" height="200"></canvas>
 <div id="sub" class="panel"></div>
 <div id="menu" class="panel"></div>
@@ -4427,36 +4450,58 @@ three/build/three.module.js:
 // ===================== Odenwald-Siedler – Spieldemo =====================
 const $ = id => document.getElementById(id);
 const V3 = THREE.Vector3;
+// ---------- Einstellungen & Start-Konfiguration ----------
+const DEF_SET = { quality: 'hoch', grass: true, shadows: true, ao: true, bloom: true, view: 330, vol: 80, volFx: 100, volAmb: 70, speed: 1, autosave: 60, camSpeed: 1, edge: true, ui: 1, minimap: true };
+const SET = Object.assign({}, DEF_SET, (() => { try { return JSON.parse(localStorage.getItem('odws_set') || '{}'); } catch (e) { return {}; } })());
+if (!localStorage.getItem('odws_set') && localStorage.getItem('odws_q') === 'normal') Object.assign(SET, { quality: 'niedrig', ao: false, bloom: false });
+function saveSet() { localStorage.setItem('odws_set', JSON.stringify(SET)); }
+const QUALITY = SET.quality;
+const BOOT = (() => { try { return JSON.parse(sessionStorage.getItem('odws_boot') || 'null'); } catch (e) { return null; } })(); sessionStorage.removeItem('odws_boot');
+// Spielstand-Verzeichnis (unbegrenzt viele Stände)
+function loadIndex() { try { return JSON.parse(localStorage.getItem('odws_index') || '[]'); } catch (e) { return []; } }
+const IDX = loadIndex();
+function saveIndex() { localStorage.setItem('odws_index', JSON.stringify(IDX)); }
+for (const k of ['auto', '1', '2', '3']) { // alte Spielstände übernehmen
+  const raw = localStorage.getItem('odws_' + k); if (!raw) continue;
+  try { const d = JSON.parse(raw), id = 'alt' + k + '_' + Date.now(); localStorage.setItem('odws_save_' + id, raw); IDX.push({ id, name: k === 'auto' ? 'Alter Spielstand (automatisch)' : 'Alter Spielstand ' + k, t: d.t || Date.now(), simT: d.simT || 0, nb: (d.buildings || []).length, pop: 0, cfg: { classic: true } }); } catch (e) { }
+  localStorage.removeItem('odws_' + k);
+}
+localStorage.removeItem('odws_auto_before_load'); saveIndex();
+let CFG = { classic: true };
+if (BOOT && BOOT.mode === 'new') CFG = BOOT.cfg;
+if (BOOT && BOOT.mode === 'load') { const e = IDX.find(e => e.id === BOOT.id); CFG = (e && e.cfg) || { classic: true }; }
+const INMENU = !BOOT;
 const scene = new THREE.Scene();
 const sky = new THREE.Color(0xcfe3ef);
 scene.background = sky;
-scene.fog = new THREE.Fog(sky, 140, 330);
+scene.fog = new THREE.Fog(sky, SET.view * 0.42, SET.view);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = SET.shadows;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.prepend(renderer.domElement);
-const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.5, 600);
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.5, SET.view + 250);
 scene.add(new THREE.HemisphereLight(0xffeed8, 0x4a5a3a, 0.95));
 const sun = new THREE.DirectionalLight(0xffdcaa, 2.3);
 sun.position.set(-40, 55, 30); sun.castShadow = true;
-sun.shadow.mapSize.set(localStorage.getItem('odws_q') === 'normal' ? 2048 : 4096, localStorage.getItem('odws_q') === 'normal' ? 2048 : 4096); sun.shadow.normalBias = 0.04;
+sun.shadow.mapSize.set(QUALITY === 'hoch' ? 4096 : 2048, QUALITY === 'hoch' ? 4096 : 2048); sun.shadow.normalBias = 0.04;
 Object.assign(sun.shadow.camera, { left: -75, right: 75, top: 75, bottom: -75, far: 220 }); scene.add(sun.target);
 sun.shadow.bias = -0.0005; scene.add(sun);
 // ---------- Grafik-Qualität & Nachbearbeitung ----------
-const QUALITY = localStorage.getItem('odws_q') || 'hoch';
 let composer = null, gtao = null;
-if (QUALITY === 'hoch') {
+if (QUALITY !== 'niedrig' && (SET.ao || SET.bloom)) {
   composer = new PP.EffectComposer(renderer);
   composer.addPass(new PP.RenderPass(scene, camera));
+  if (SET.ao && QUALITY === 'hoch') {
   gtao = new PP.GTAOPass(scene, camera, innerWidth, innerHeight);
   gtao.updateGtaoMaterial({ radius: 1.6, distanceExponent: 1.4, thickness: 1.5, scale: 1.1, samples: 12 });
   gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
   gtao.blendIntensity = 0.9;
   composer.addPass(gtao);
-  composer.addPass(new PP.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.55, 0.88));
+  }
+  if (SET.bloom) composer.addPass(new PP.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.55, 0.88));
   composer.addPass(new PP.OutputPass());
   composer.addPass(new PP.ShaderPass({
     uniforms: { tDiffuse: { value: null } },
@@ -4489,19 +4534,48 @@ function addWind(m, amp, base) {
 
 
 // ---------- Gelände ----------
-function hash(x, y) { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); }
+function hash(x, y) { const s = Math.sin(x * 127.1 + y * 311.7 + SEED * 1.713) * 43758.5453; return s - Math.floor(s); }
 function noise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
-const riverX = z => Math.sin(z * 0.07) * 6 + Math.sin(z * 0.013) * 22 + 34;
-const MAP = 200; // Karte reicht von -200 bis +200
-const MOUNTAINS = [
-  { x: -30, z: -25, R: 19, H: 16, kinds: ['stein', 'eisenerz', 'kohle'], face: true },
-  { x: 95, z: 45, R: 26, H: 22, kinds: ['eisenerz', 'kohle', 'gold'] },
-  { x: -110, z: 85, R: 30, H: 24, kinds: ['kohle', 'eisenerz', 'gold', 'stein'] },
-  { x: 60, z: -125, R: 28, H: 22, kinds: ['stein', 'eisenerz', 'kohle'] },
-  { x: -140, z: -110, R: 34, H: 28, kinds: ['eisenerz', 'gold', 'kohle', 'stein'] },
-  { x: 145, z: 145, R: 30, H: 24, kinds: ['kohle', 'stein', 'eisenerz'] },
-  { x: 150, z: -60, R: 22, H: 18, kinds: ['eisenerz', 'stein'] },
-];
+const riverX = z => Math.sin(z * 0.07 + RIVP) * 6 + Math.sin(z * 0.013 + RIVP * 1.7) * 22 + RIVX;
+// ---------- Welt-Beschreibung (Kartengenerator) ----------
+let SEED = 0, RIVP = 0, RIVX = 34, HILLA = 1, MAPV = 200, MOUNTAINS = [], LAKES = [];
+function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function makeWorld(cfg) {
+  if (cfg.classic) return { classic: true, seed: 0, rivp: 0, rivx: 34, hilla: 1, map: 200, forest: 1, res: 1, start: 1,
+    mountains: [
+      { x: -30, z: -25, R: 19, H: 16, kinds: ['stein', 'eisenerz', 'kohle'], face: true }, { x: 95, z: 45, R: 26, H: 22, kinds: ['eisenerz', 'kohle', 'gold'] },
+      { x: -110, z: 85, R: 30, H: 24, kinds: ['kohle', 'eisenerz', 'gold', 'stein'] }, { x: 60, z: -125, R: 28, H: 22, kinds: ['stein', 'eisenerz', 'kohle'] },
+      { x: -140, z: -110, R: 34, H: 28, kinds: ['eisenerz', 'gold', 'kohle', 'stein'] }, { x: 145, z: 145, R: 30, H: 24, kinds: ['kohle', 'stein', 'eisenerz'] }, { x: 150, z: -60, R: 22, H: 18, kinds: ['eisenerz', 'stein'] }],
+    lakes: [{ x: 15, z: 22, R: 6.5 }, { x: 60, z: 90, R: 14 }, { x: -70, z: -40, R: 12 }, { x: -60, z: 140, R: 16 }, { x: 115, z: -15, R: 10 }, { x: 15, z: -80, R: 12 }, { x: -155, z: 20, R: 15 }, { x: 170, z: 60, R: 11 }] };
+  const R = rng(cfg.seed || 1), map = { klein: 110, mittel: 200, gross: 300 }[cfg.size] || 200, ak = (map / 200) ** 2;
+  const TP = { flach: { n: 0.5, H: [7, 11], hill: 0.45 }, huegel: { n: 0.8, H: [10, 15], hill: 1.35 }, gebirge: { n: 1.6, H: [20, 32], hill: 1.1 }, gemischt: { n: 1.1, H: [12, 26], hill: 1 } }[cfg.terrain] || { n: 1.1, H: [12, 26], hill: 1 };
+  const rivx = (R() < 0.5 ? -1 : 1) * (28 + R() * 14), rivp = R() * 6.28;
+  const resK = { knapp: 0.6, normal: 1, reich: 1.5 }[cfg.res] || 1, goldP = { knapp: 0.2, normal: 0.35, reich: 0.55 }[cfg.res] || 0.35;
+  const mountains = [], lakes = [];
+  // Startberg mit allen drei Erzen auf der eigenen Flussseite
+  let a0 = R() * 6.28; if (Math.cos(a0) * Math.sign(rivx) > -0.2) a0 = Math.PI - a0;
+  mountains.push({ x: Math.cos(a0) * 38, z: Math.sin(a0) * 38, R: 19, H: Math.min(16, TP.H[1]), kinds: ['stein', 'eisenerz', 'kohle'], face: true });
+  const nM = Math.max(2, Math.round(7 * TP.n * ak));
+  for (let tries = 0; tries < 400 && mountains.length < nM + 1; tries++) {
+    const x = (R() * 2 - 1) * (map - 35), z = (R() * 2 - 1) * (map - 35), Rr = 20 + R() * 14;
+    if (Math.hypot(x, z) < 75 || mountains.some(m => Math.hypot(m.x - x, m.z - z) < (m.R + Rr) * 1.25)) continue;
+    const base = ['stein', 'eisenerz', 'kohle'].sort(() => R() - 0.5), n = cfg.res === 'knapp' ? 1 + Math.floor(R() * 2) : cfg.res === 'reich' ? 3 : 2 + Math.floor(R() * 2);
+    const kinds = base.slice(0, n); if (R() < goldP) kinds.push('gold');
+    mountains.push({ x, z, R: Rr, H: TP.H[0] + R() * (TP.H[1] - TP.H[0]), kinds });
+  }
+  if (!mountains.some(m => m.kinds.includes('gold')) && mountains.length > 1) mountains[mountains.length - 1].kinds.push('gold');
+  const nL = Math.round(({ wenig: 3, normal: 7, viel: 12 }[cfg.water] || 7) * ak);
+  if (cfg.water !== 'wenig') for (let t = 0; t < 50; t++) { const a = R() * 6.28, x = Math.cos(a) * 24, z = Math.sin(a) * 24; if (Math.abs(x - rivx) < 16 || Math.hypot(x - mountains[0].x, z - mountains[0].z) < 36) continue; lakes.push({ x, z, R: 6.5 }); break; }
+  for (let t = 0; t < 400 && lakes.length < nL; t++) {
+    const x = (R() * 2 - 1) * (map - 25), z = (R() * 2 - 1) * (map - 25), Rr = 7 + R() * 9 * (cfg.water === 'viel' ? 1.3 : 1);
+    if (Math.hypot(x, z) < 50 || Math.abs(x - rivx) < Rr + 14 || mountains.some(m => Math.hypot(m.x - x, m.z - z) < m.R * 1.6 + Rr) || lakes.some(l => Math.hypot(l.x - x, l.z - z) < l.R + Rr + 10)) continue;
+    lakes.push({ x, z, R: Rr });
+  }
+  return { seed: (cfg.seed || 1) % 997, rivp, rivx, hilla: TP.hill, map, mountains, lakes, forest: { licht: 0.6, normal: 1, dicht: 1.45 }[cfg.forest] || 1, res: resK, start: { wenig: 0.6, normal: 1, viel: 1.7 }[cfg.start] || 1 };
+}
+function useWorld(w) { SEED = w.seed; RIVP = w.rivp; RIVX = w.rivx; HILLA = w.hilla; MAPV = w.map; MOUNTAINS = w.mountains; LAKES = w.lakes; }
+const W = makeWorld(CFG); useWorld(W);
+const MAP = W.map; // Karte reicht von -MAP bis +MAP
 function mountain(x, z) {
   let h = 0;
   for (const m of MOUNTAINS) { const RR = m.R * 1.6, d = Math.hypot(x - m.x, z - m.z); if (d > RR) continue; const k = 1 - d / RR;
@@ -4510,17 +4584,16 @@ function mountain(x, z) {
   return h;
 }
 const MC = MOUNTAINS[0], MR = MOUNTAINS[0].R;
-const LAKES = [{ x: 15, z: 22, R: 6.5 }, { x: 60, z: 90, R: 14 }, { x: -70, z: -40, R: 12 }, { x: -60, z: 140, R: 16 }, { x: 115, z: -15, R: 10 }, { x: 15, z: -80, R: 12 }, { x: -155, z: 20, R: 15 }, { x: 170, z: 60, R: 11 }];
 function lakeDepth(x, z) { let h = 99; for (const l of LAKES) { const d = Math.hypot(x - l.x, z - l.z) / l.R; if (d < 1.5) h = Math.min(h, -1.7 + Math.max(0, d) * d * 1.75); } return h; }
 const riverSide = (x, z) => x - riverX(z) > 0 ? 1 : -1;
 const riverDX = z => (riverX(z + 0.5) - riverX(z - 0.5));
 const sstep = (e0, e1, v) => { const t = Math.min(1, Math.max(0, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 function height(x, z) {
   const hill = noise(x * 0.0075 + 3.1, z * 0.0075 - 1.7), roll = 1 - Math.abs(noise(x * 0.018 + 9, z * 0.018) * 2 - 1);
-  let h = noise(x * 0.035, z * 0.035) * 3 + noise(x * 0.11, z * 0.11) * 1.0 + noise(x * 0.012, z * 0.012) * 4 + hill * hill * 13 + roll * roll * 3.5;
+  let h = noise(x * 0.035, z * 0.035) * 3 + noise(x * 0.11, z * 0.11) * 1.0 + (noise(x * 0.012, z * 0.012) * 4 + hill * hill * 13 + roll * roll * 3.5) * HILLA;
   const r = Math.hypot(x, z);
   h *= 0.12 + 0.88 * sstep(20, 55, r);
-  const edge = Math.max(Math.abs(x), Math.abs(z)); h += Math.max(0, edge - 180) * 0.5;
+  const edge = Math.max(Math.abs(x), Math.abs(z)); h += Math.max(0, edge - (MAPV - 20)) * 0.5;
   // Fluss: sanft abfallende Ufer
   const dr = Math.abs(x - riverX(z));
   const bed = Math.min(-1.3 + dr * 0.32, 0.25), tr = sstep(3, 20, dr);
@@ -4533,7 +4606,7 @@ function height(x, z) {
   }
   return h + mountain(x, z);
 }
-const SIZE = MAP * 2, SEG = 280;
+const SIZE = MAP * 2, SEG = { 110: 160, 200: 280, 300: 360 }[MAP] || 280;
 const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG).rotateX(-Math.PI / 2).toNonIndexed();
 const baseCols = [];
 {
@@ -4566,7 +4639,7 @@ const baseCols = [];
 }
 const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
 ground.receiveShadow = true; scene.add(ground);
-const WSEG = 200;
+const WSEG = SIZE / 2;
 const wgeo = new THREE.PlaneGeometry(SIZE, SIZE, WSEG, WSEG).rotateX(-Math.PI / 2);
 {
   const p = wgeo.attributes.position, n = p.count, dep = new Float32Array(n), flow = new Float32Array(n * 2);
@@ -4680,7 +4753,7 @@ function gable(w, d, h, roofM) { // Fachwerkhaus-Korpus mit Satteldach, Front = 
 
 // ---------- Natur: Bäume (instanziert, detailliert) ----------
 const leafCols = [0x3f6b34, 0x557a35, 0x6f8a2e, 0xc9822e, 0xb4532a].map(c => new THREE.Color(c));
-const TCAP = 16000, HQ = QUALITY === 'hoch';
+const TCAP = { 110: 7000, 200: 16000, 300: 30000 }[MAP] || 16000, HQ = QUALITY !== 'niedrig';
 const NB = HQ ? 4 : 2, NCN = HQ ? 6 : 3; // Kronen-Klumpen / Tannen-Etagen je Baum
 function gradGeo(geo, lo, hi, jit = 0.06) {
   geo = geo.index ? geo.toNonIndexed() : geo; geo.computeBoundingBox();
@@ -4787,7 +4860,7 @@ function addStump(x, z, s = 1) {
 function updStump(st) { if (!isExplored(st.x, st.z)) { setM(stumpIM, st.i, ZERO); return; } _m.compose(_p.set(st.x, height(st.x, st.z), st.z), _q.setFromEuler(_e.set(0, st.x, 0)), _s.set(st.s, st.s, st.s)); setM(stumpIM, st.i, _m); }
 function clearStumps(x, z, r) { for (const st of stumps) if (st && Math.hypot(st.x - x, st.z - z) < r) setM(stumpIM, st.i, ZERO), st.gone = true; }
 // Unterholz: Büsche & Farne
-const UCAP = HQ ? 9000 : 4000;
+const UCAP = Math.round((HQ ? 9000 : 4000) * (MAP / 200) ** 2);
 const fernGeo = (() => {
   const pos = [], col = [];
   for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283, c = Math.cos(a), s = Math.sin(a), w = 0.09;
@@ -4812,15 +4885,16 @@ function updUnder(u) {
 function clearUnder(x, z, r) { for (const u of under) if (!u.gone && Math.hypot(u.x - x, u.z - z) < r) { u.gone = true; updUnder(u); } }
 function clearTrees(x, z, r) { for (let i = trees.length - 1; i >= 0; i--) if (Math.hypot(trees[i].x - x, trees[i].z - z) < r) removeTree(trees[i]); clearUnder(x, z, r); clearStumps(x, z, r); if (boulders) for (const b of boulders) if (!b.gone && Math.hypot(b.x - x, b.z - z) < r + b.s) { b.gone = true; updBoulder(b); } }
 // Wälder per Rauschen über die ganze Karte
-for (let i = 0; i < 60000 && nextIdx < TCAP - 2000; i++) {
+let origN = 0;
+for (let i = 0; i < 60000 * (MAP / 200) ** 2 && nextIdx < TCAP - 2000; i++) {
   const x = (hash(i, 1) - 0.5) * (SIZE - 16), z = (hash(i, 2) - 0.5) * (SIZE - 16), r = Math.hypot(x, z);
   const dens = noise(x * 0.025 + 3, z * 0.025 + 7);
-  if (hash(i, 5) > Math.pow(dens, 2.2) * 1.4) continue;
+  if (hash(i, 5) > Math.pow(dens, 2.2) * 1.4 * W.forest) continue;
   const mhT = mountain(x, z);
   if (r < 14 + hash(i, 3) * 10 || Math.abs(x - riverX(z)) < 5.5 || mhT > 9 || height(x, z) < 0.15) continue;
   if (mhT > 1.5 && (hash(i, 6) > 0.75 - mhT * 0.04)) continue;
   if (r < 30 && hash(i, 4) > (x < 0 && z < 0 ? 0.85 : 0.35)) continue;
-  addTree(x, z);
+  const nt = addTree(x, z); if (nt) nt.orig = origN++;
 }
 {
   let nb = 0, nf = 0;
@@ -4841,8 +4915,10 @@ function addRock(x, z) {
   g.position.set(x, height(x, z), z); scene.add(g);
   rocks.push({ g, x, z, amount: 8, max: 8, reserved: false });
 }
-const rockSpots = [[18, -14], [21, -10], [16, -19], [-22, 18], [-18, 22]];
-for (let i = 0; i < 400 && rockSpots.length < 45; i++) { const x = (hash(i, 11) - 0.5) * 360, z = (hash(i, 12) - 0.5) * 360; if (Math.hypot(x, z) > 45 && mountain(x, z) < 1 && Math.abs(x - riverX(z)) > 8 && lakeDepth(x, z) > 1) rockSpots.push([x, z]); }
+const rockSpots = W.classic ? [[18, -14], [21, -10], [16, -19], [-22, 18], [-18, 22]] : [];
+for (let i = 0; i < 300 && !W.classic && rockSpots.length < 5; i++) { const a = hash(i, 31) * 6.28, d = 15 + hash(i, 32) * 11, x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.abs(x - riverX(z)) > 9 && lakeDepth(x, z) > 1.2 && mountain(x, z) < 0.5 && !rockSpots.some(([a2, b2]) => Math.hypot(a2 - x, b2 - z) < 5)) rockSpots.push([x, z]); }
+const rockMax = rockSpots.length + Math.round(40 * (MAP / 200) ** 2 * W.res);
+for (let i = 0; i < 1200 && rockSpots.length < rockMax; i++) { const x = (hash(i, 11) - 0.5) * (MAP * 1.8), z = (hash(i, 12) - 0.5) * (MAP * 1.8); if (Math.hypot(x, z) > 45 && mountain(x, z) < 1 && Math.abs(x - riverX(z)) > 8 && lakeDepth(x, z) > 1) rockSpots.push([x, z]); }
 rockSpots.forEach(([x, z]) => { clearTrees(x, z, 3); addRock(x, z); });
 
 // ---------- Erzvorkommen in den Gebirgen ----------
@@ -4881,22 +4957,23 @@ function addFish(x, z) {
   const fish = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.55, 5).rotateZ(Math.PI / 2), fishMat); fish.visible = false; g.add(fish);
   scene.add(g); fishSpots.push({ x, z, g, rings, fish, amount: 6, max: 6, reserved: false, regen: 0, jump: hash(x, z) * 5 });
 }
-for (let z = -190; z <= 190; z += 22) addFish(riverX(z), z);
+for (let z = -MAP + 10; z <= MAP - 10; z += 22) addFish(riverX(z), z);
 for (const l of LAKES) { addFish(l.x, l.z); if (l.R > 9) { addFish(l.x + l.R * 0.45, l.z - l.R * 0.2); addFish(l.x - l.R * 0.4, l.z + l.R * 0.35); } }
 // ---------- Geräusche (werden live erzeugt, keine Dateien nötig) ----------
-let AC = null, master = null, soundOn = localStorage.getItem('odws_snd') !== 'aus';
+let AC = null, master = null, fxBus = null, ambBus = null, soundOn = localStorage.getItem('odws_snd') !== 'aus';
 let ambWater = null, ambWind = null;
 function audioInit() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
-  master = AC.createGain(); master.gain.value = soundOn ? 0.8 : 0; master.connect(AC.destination);
+  master = AC.createGain(); master.gain.value = soundOn ? SET.vol / 100 : 0; master.connect(AC.destination);
+  fxBus = AC.createGain(); fxBus.gain.value = SET.volFx / 100; fxBus.connect(master); ambBus = AC.createGain(); ambBus.gain.value = SET.volAmb / 100; ambBus.connect(master);
   const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate), d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   AC.noise = noiseBuf;
-  const loop = (freq, type) => { const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; const g = AC.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(master); s.start(); return g; };
+  const loop = (freq, type) => { const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; const g = AC.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(ambBus); s.start(); return g; };
   ambWater = loop(700, 'lowpass'); ambWind = loop(400, 'bandpass');
 }
 addEventListener('pointerdown', audioInit); addEventListener('keydown', audioInit);
-function sndSetOn(on) { soundOn = on; localStorage.setItem('odws_snd', on ? 'an' : 'aus'); if (master) master.gain.value = on ? 0.8 : 0; $('sndbtn').textContent = on ? '🔊' : '🔇'; }
+function sndSetOn(on) { soundOn = on; localStorage.setItem('odws_snd', on ? 'an' : 'aus'); if (master) master.gain.value = on ? SET.vol / 100 : 0; $('sndbtn').textContent = on ? '🔊' : '🔇'; }
 const _sv = new V3();
 function spatial(x, z) { // Lautstärke & Stereo je nach Abstand zum Blickpunkt und Zoom
   const d = Math.hypot(x - target.x, z - target.z), reach = dist * 0.75 + 12;
@@ -4904,7 +4981,7 @@ function spatial(x, z) { // Lautstärke & Stereo je nach Abstand zum Blickpunkt 
   _sv.set(x, height(x, z), z).project(camera); const pan = THREE.MathUtils.clamp(_sv.x, -1, 1) * 0.8;
   return [v, pan];
 }
-function out(vol, pan) { const g = AC.createGain(); g.gain.value = vol; const p = AC.createStereoPanner ? AC.createStereoPanner() : null; if (p) { p.pan.value = pan; g.connect(p); p.connect(master); } else g.connect(master); return g; }
+function out(vol, pan, bus) { const g = AC.createGain(); g.gain.value = vol; const p = AC.createStereoPanner ? AC.createStereoPanner() : null; const dst = bus || fxBus; if (p) { p.pan.value = pan; g.connect(p); p.connect(dst); } else g.connect(dst); return g; }
 function env(g, t0, a, peak, dec) { g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + a); g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + dec); }
 function noiseHit(dst, t0, freq, type, q, peak, dec, rate = 1) { const s = AC.createBufferSource(); s.buffer = AC.noise; s.playbackRate.value = rate; const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; const g = AC.createGain(); env(g, t0, 0.004, peak, dec); s.connect(f); f.connect(g); g.connect(dst); s.start(t0, Math.random()); s.stop(t0 + dec + 0.05); }
 function tone(dst, t0, f0, f1, type, peak, dec) { const o = AC.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + dec); const g = AC.createGain(); env(g, t0, 0.005, peak, dec); o.connect(g); g.connect(dst); o.start(t0); o.stop(t0 + dec + 0.05); }
@@ -4921,10 +4998,10 @@ const SOUNDS = {
   crackle: (o, t) => { for (let k = 0; k < 4; k++) noiseHit(o, t + Math.random() * 0.4, 2500, 'highpass', 1, 0.15 + Math.random() * 0.2, 0.02); },
   dig: (o, t) => noiseHit(o, t, 700, 'bandpass', 0.8, 0.35, 0.15),
 };
-function play(name, x, z, gain = 1) {
+function play(name, x, z, gain = 1, bus) {
   if (!AC || !soundOn || AC.state !== 'running') return;
   const [v, pan] = spatial(x, z); if (v * gain < 0.03) return;
-  SOUNDS[name](out(v * gain, pan), AC.currentTime + 0.01);
+  SOUNDS[name](out(v * gain, pan, bus), AC.currentTime + 0.01);
 }
 let birdT = 0;
 function ambientSound(dt) {
@@ -4935,7 +5012,7 @@ function ambientSound(dt) {
   ambWater.gain.setTargetAtTime(Math.max(0, 1 - wd / 35) * 0.35 * zoomK, AC.currentTime, 0.5);
   ambWind.gain.setTargetAtTime(0.03 + THREE.MathUtils.clamp(dist / 140, 0, 1) * 0.12, AC.currentTime, 0.8);
   // Vögel, wenn Bäume in der Nähe sind
-  birdT -= dt; if (birdT < 0) { birdT = 0.6 + Math.random() * 2.5; let n = 0; for (let k = 0; k < 40; k++) { const t = trees[Math.floor(Math.random() * trees.length)]; if (t && Math.hypot(t.x - target.x, t.z - target.z) < dist * 0.8 + 10) n++; } if (n > 1) { const a = Math.random() * 6.28, r = Math.random() * dist * 0.6; play('chirp', target.x + Math.cos(a) * r, target.z + Math.sin(a) * r, 0.7); } }
+  birdT -= dt; if (birdT < 0) { birdT = 0.6 + Math.random() * 2.5; let n = 0; for (let k = 0; k < 40; k++) { const t = trees[Math.floor(Math.random() * trees.length)]; if (t && Math.hypot(t.x - target.x, t.z - target.z) < dist * 0.8 + 10) n++; } if (n > 1) { const a = Math.random() * 6.28, r = Math.random() * dist * 0.6; play('chirp', target.x + Math.cos(a) * r, target.z + Math.sin(a) * r, 0.7, ambBus); } }
 }
 
 // ---------- Gebiet & Grenzfähnchen ----------
@@ -4964,7 +5041,7 @@ function rebuildFlags() {
 function addTerritory(x, z, r) { territories.push({ x, z, r }); reveal(x, z, r + 22); rebuildFlags(); if (typeof grassDirty !== 'undefined') grassDirty = true; }
 
 // ---------- Gras & Blumen (rund um den Blickpunkt, wippen im Wind) ----------
-const GRASS_N = QUALITY === 'hoch' ? 50000 : 16000, FLOWER_N = QUALITY === 'hoch' ? 3500 : 1200, GRASS_R = QUALITY === 'hoch' ? 75 : 55;
+const GRASS_N = !SET.grass ? 1 : { hoch: 50000, mittel: 28000, niedrig: 14000 }[QUALITY] || 28000, FLOWER_N = !SET.grass ? 1 : QUALITY === 'hoch' ? 3500 : 1600, GRASS_R = QUALITY === 'hoch' ? 75 : 60;
 const grassGeo = (() => {
   const pos = [], col = [], base = new THREE.Color(0x6f8f34), tip = new THREE.Color(0xc2d46a);
   for (let k = 0; k < 3; k++) { const a = k * 2.1, cx = Math.cos(a) * 0.07, cz = Math.sin(a) * 0.07, px = Math.cos(a + 1.57) * 0.045, pz = Math.sin(a + 1.57) * 0.045, h = 0.26 + k * 0.06, lean = 0.07;
@@ -5669,14 +5746,17 @@ const pointers = new Map(); let gesture = null, downInfo = null;
 const el = renderer.domElement, ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 el.addEventListener('contextmenu', e => { e.preventDefault(); });
 el.addEventListener('pointerdown', e => { if (placing && e.button === 2) cancelPlacing(); if (openCat >= 0) { openCat = -1; renderSub(); } });
-el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); downInfo = pointers.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, btn: e.button } : null; gesture = null; });
+let mouseX = 0, mouseY = 0, mouseIn = false;
+addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; mouseIn = e.target === el; });
+document.addEventListener('mouseleave', () => { mouseIn = false; });
+el.addEventListener('pointerdown', e => { if (INMENU) return; el.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); downInfo = pointers.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, btn: e.button } : null; gesture = null; });
 el.addEventListener('pointermove', e => {
   const p = pointers.get(e.pointerId);
   if (!p) { if (placing && e.pointerType === 'mouse') hoverGhost(e.clientX, e.clientY); return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y;
   if (downInfo && Math.hypot(e.clientX - downInfo.x, e.clientY - downInfo.y) > (e.pointerType === 'mouse' ? 14 : 10)) downInfo.moved = true;
   if (pointers.size === 1 && (!downInfo || downInfo.moved)) {
-    if (downInfo && downInfo.btn === 2) { yaw -= dx * 0.006; pitch = THREE.MathUtils.clamp(pitch + dy * 0.004, 0.35, 1.4); }
+    if (downInfo && downInfo.btn === 2) { yaw -= dx * 0.006 * SET.camSpeed; pitch = THREE.MathUtils.clamp(pitch + dy * 0.004 * SET.camSpeed, 0.35, 1.4); }
     else { const k = dist * 0.0022; const fw = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), rt = new V3(Math.cos(yaw), 0, -Math.sin(yaw)); target.addScaledVector(rt, -dx * k).addScaledVector(fw, dy * k); target.x = THREE.MathUtils.clamp(target.x, -MAP + 10, MAP - 10); target.z = THREE.MathUtils.clamp(target.z, -MAP + 10, MAP - 10); }
   }
   p.x = e.clientX; p.y = e.clientY;
@@ -5909,27 +5989,43 @@ function renderStats() {
   $('statsbody').innerHTML = h;
 }
 $('sndbtn').textContent = soundOn ? '🔊' : '🔇'; $('sndbtn').onclick = () => { audioInit(); sndSetOn(!soundOn); toast(soundOn ? 'Ton an' : 'Ton aus'); };
-$('statbtn').onclick = () => { const s = $('stats'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; $('savemenu').style.display = 'none'; renderStats(); };
+$('statbtn').onclick = () => { const s = $('stats'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; renderStats(); };
 $('closestats').onclick = () => $('stats').style.display = 'none';
 
 // ---------- Speichern & Laden ----------
-const SAVEKEY = k => 'odws_' + k;
 const r1 = v => Math.round(v * 10) / 10;
+let GAME_ID = BOOT && BOOT.mode === 'load' ? BOOT.id : null, paused = false;
 function serialize() {
+  const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
+  for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 1, bonus1: true, t: Date.now(), simT, stock: { ...stock }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
-    trees: trees.filter(t => t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
-    rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount), roads: Array.from(road).reduce((a, v, i) => (v && a.push(i), a), []),
+    v: 2, bonus1: true, t: Date.now(), simT, stock: { ...stock }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
+    rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
     buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
   };
 }
-function saveGame(slot) { try { localStorage.setItem(SAVEKEY(slot), JSON.stringify(serialize())); if (slot !== 'auto') toast('Gespeichert in Spielstand ' + slot); renderSaveMenu(); } catch (e) { toast('Speichern fehlgeschlagen: ' + e.message); } }
+function thumb() {
+  try { if (composer) composer.render(); else renderer.render(scene, camera); const c = document.createElement('canvas'); c.width = 192; c.height = 108; c.getContext('2d').drawImage(renderer.domElement, 0, 0, 192, 108); return c.toDataURL('image/jpeg', 0.6); } catch (e) { return ''; }
+}
+function saveGame(name, auto) {
+  if (INMENU) return;
+  try {
+    let e;
+    if (auto) { const autos = IDX.filter(x => x.auto).sort((a, b) => a.t - b.t); e = autos.length >= 3 ? autos[0] : null; if (!e) { e = { id: 'auto' + Date.now(), auto: true }; IDX.push(e); } e.name = 'Automatisch gespeichert'; }
+    else { e = { id: 's' + Date.now() }; IDX.push(e); e.name = name; GAME_ID = e.id; }
+    Object.assign(e, { t: Date.now(), simT, nb: buildings.length, pop: workers.length + carriers.length, cfg: CFG, thumb: thumb() });
+    localStorage.setItem('odws_save_' + e.id, JSON.stringify(serialize())); saveIndex();
+    if (!auto) toast('Gespeichert: ' + name);
+    return e;
+  } catch (err) { toast('Speichern fehlgeschlagen – der Speicher ist voll. Bitte alte Spielstände löschen.'); }
+}
 function applySave(d) {
   Object.assign(stock, d.stock);
   for (let i = 0; i < explored.length; i++) explored[i] = d.explored.charCodeAt(i) === 49 ? 1 : 0;
-  for (const t of [...trees]) removeTree(t);
-  for (const [x, z, g] of d.trees) addTree(x, z, g);
+  if (d.trees) { for (const t of [...trees]) removeTree(t); for (const [x, z, g] of d.trees) addTree(x, z, g); }
+  else { const rm = new Set(d.treeRemoved || []); for (const t of [...trees]) if (t.orig !== undefined && rm.has(t.orig)) removeTree(t); for (const [x, z, g] of d.treeAdded || []) addTree(x, z, g); }
   d.rocks.forEach((a, i) => { const r = rocks[i]; if (!r) return; r.amount = a; if (a <= 0) scene.remove(r.g); else r.g.scale.setScalar(0.35 + 0.65 * a / r.max); });
   d.fish.forEach((a, i) => { if (fishSpots[i]) fishSpots[i].amount = a; });
   territories.length = 0; territories.push(...d.territories); rebuildFlags();
@@ -5947,40 +6043,145 @@ function applySave(d) {
   }
   placeBuilding.noPlots = false;
   buildWalk();
-  // Straßen sind entfernt – alte gespeicherte Straßen werden ignoriert
   if (d.cam) { target.x = d.cam[0]; target.z = d.cam[1]; yaw = d.cam[2]; pitch = d.cam[3]; dist = d.cam[4]; }
   simT = d.simT || 0; fogDirty = true;
   if (!d.bonus1) { stock.bretter += 35; stock.stein += 25; stock.stamm += 8; setTimeout(() => toast('Startbonus: +35 Bretter, +25 Steine, +8 Stämme'), 2500); }
 }
-function renderSaveMenu() {
-  const fmt = k => { try { const d = JSON.parse(localStorage.getItem(SAVEKEY(k)) || 'null'); return d ? new Date(d.t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' Uhr' : null; } catch (e) { return null; } };
-  let h = '<div class="subhead">💾 Spielstände</div>';
-  for (const k of ['auto', '1', '2', '3']) {
-    const t = fmt(k);
-    h += `<div class="row slot"><span><b>${k === 'auto' ? 'Automatisch' : 'Spielstand ' + k}</b><small>${t || 'leer'}</small></span>${k !== 'auto' ? `<button data-save="${k}">Speichern</button>` : ''}<button data-load="${k}" ${t ? '' : 'disabled'}>Laden</button></div>`;
-  }
-  h += `<div class="subhead">🎨 Grafik</div><div class="row">${['hoch', 'normal'].map(q => `<button data-q="${q}" class="${QUALITY === q ? 'on' : ''}">${q === 'hoch' ? 'Hoch (PC)' : 'Normal (Handy)'}</button>`).join('')}</div>`;
-  h += '<div class="row"><button data-new="1" class="warn">🆕 Neues Spiel</button></div><small>Automatisch gespeichert wird jede Minute. Beim Öffnen geht es mit dem automatischen Spielstand weiter.</small>';
-  $('savebody').innerHTML = h;
-  $('savebody').querySelectorAll('[data-q]').forEach(x => x.onclick = () => { if (x.dataset.q === QUALITY) return; saveGame('auto'); localStorage.setItem('odws_q', x.dataset.q); sessionStorage.setItem('odws_load', 'auto'); location.reload(); });
-  $('savebody').querySelectorAll('[data-save]').forEach(x => x.onclick = () => saveGame(x.dataset.save));
-  $('savebody').querySelectorAll('[data-load]').forEach(x => x.onclick = () => { saveGame('auto_before_load'); sessionStorage.setItem('odws_load', x.dataset.load); location.reload(); });
-  $('savebody').querySelectorAll('[data-new]').forEach(x => x.onclick = () => { if (x.dataset.sure) { saveGame('auto'); sessionStorage.setItem('odws_new', '1'); location.reload(); } else { x.dataset.sure = 1; x.textContent = '❗ Wirklich neu anfangen? (Auto-Stand bleibt erhalten)'; } });
-}
-$('savebtn').onclick = () => { const s = $('savemenu'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; $('stats').style.display = 'none'; renderSaveMenu(); };
-$('closesave').onclick = () => $('savemenu').style.display = 'none';
+function bootTo(b) { if (!INMENU) saveGame(null, true); $('loading').style.display = 'flex'; if (b) sessionStorage.setItem('odws_boot', JSON.stringify(b)); setTimeout(() => location.reload(), 60); }
 let autoT = 0;
+
+// ---------- Menüs ----------
+const fmtDate = t => new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
+const fmtTime = s => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return h ? `${h} Std. ${m} Min.` : `${m} Min.`; };
+const LBL = { size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' } };
+const LBLN = { size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial' };
+let NEWCFG = Object.assign({ size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
+function openScreen(html, back) { const s = $('screen'); s.innerHTML = `<button class="x" id="scrback">✕</button>` + html; s.style.display = 'block'; $('scrback').onclick = back || closeScreen; return s; }
+function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('mainmenu').style.display = 'flex'; else if (paused) showPause(); }
+function showMain() {
+  const last = [...IDX].sort((a, b) => b.t - a.t)[0];
+  $('mainbtns').innerHTML = (last ? `<button data-m="cont">▶ Weiterspielen<small>${last.name} · ${fmtDate(last.t)}</small></button>` : '') +
+    `<button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
+  $('mainbtns').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const m = b.dataset.m; if (m !== 'cont') $('mainmenu').style.display = 'none';
+    if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); });
+  $('mainmenu').style.display = 'flex';
+}
+// Kartengenerator
+function drawPreview(cfg, cv) {
+  const keep = { SEED, RIVP, RIVX, HILLA, MAPV, MOUNTAINS, LAKES }, w = makeWorld(cfg); useWorld(w);
+  const N = 120, ctx = cv.getContext('2d'), img = ctx.createImageData(N, N), mp = w.map;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = (i / N * 2 - 1) * mp, z = (j / N * 2 - 1) * mp, h = height(x, z), mh = mountain(x, z), o = (j * N + i) * 4;
+    let c = [143, 174, 78];
+    if (h < -0.35) c = [60, 130, 160]; else if (mh > 8) c = [235, 238, 242]; else if (mh > 3) c = [140, 138, 130]; else { const dens = noise(x * 0.025 + 3, z * 0.025 + 7); if (Math.pow(dens, 2.2) * 1.4 * w.forest > 0.55 && Math.hypot(x, z) > 25) c = [62, 104, 50]; }
+    const sh = 1 + (h - height(x - 3, z - 3)) * 0.05;
+    img.data[o] = c[0] * sh; img.data[o + 1] = c[1] * sh; img.data[o + 2] = c[2] * sh; img.data[o + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(N / 2, N / 2, 2.5, 0, 6.3); ctx.fill();
+  for (const m of w.mountains) if (m.kinds.includes('gold')) { ctx.fillStyle = '#f0c030'; ctx.fillRect((m.x / mp + 1) / 2 * N - 1.5, (m.z / mp + 1) / 2 * N - 1.5, 3, 3); }
+  SEED = keep.SEED; RIVP = keep.RIVP; RIVX = keep.RIVX; HILLA = keep.HILLA; MAPV = keep.MAPV; MOUNTAINS = keep.MOUNTAINS; LAKES = keep.LAKES;
+}
+function showNew() {
+  const opt = k => `<div class="opt"><span>${LBLN[k]}</span><div class="seg">${Object.entries(LBL[k]).map(([v, n]) => `<button data-k="${k}" data-v="${v}" class="${NEWCFG[k] === v ? 'on' : ''}">${n}</button>`).join('')}</div></div>`;
+  const s = openScreen(`<div class="subhead">🗺️ Neues Spiel – Kartengenerator</div><div class="newwrap"><div class="opts">${Object.keys(LBL).map(opt).join('')}
+    <div class="opt"><span>🔢 Kartennummer</span><div class="seg"><input id="seedin" type="number" value="${NEWCFG.seed}"><button id="dice">🎲</button></div></div></div>
+    <div class="prev"><canvas id="prevcv" width="120" height="120"></canvas><small>Vorschau · 🟡 Gold · ● Startpunkt</small></div></div>
+    <div class="row"><button class="big" id="startnew">▶ Spiel starten</button></div>`, () => { closeScreen(); showMain(); });
+  const upd = () => drawPreview(NEWCFG, $('prevcv'));
+  s.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { NEWCFG[b.dataset.k] = b.dataset.v; s.querySelectorAll(`[data-k="${b.dataset.k}"]`).forEach(x => x.classList.toggle('on', x === b)); upd(); });
+  $('seedin').onchange = () => { NEWCFG.seed = Math.max(1, parseInt($('seedin').value) || 1); upd(); };
+  $('dice').onclick = () => { NEWCFG.seed = 1 + Math.floor(Math.random() * 99999); $('seedin').value = NEWCFG.seed; upd(); };
+  $('startnew').onclick = () => { localStorage.setItem('odws_lastcfg', JSON.stringify(NEWCFG)); bootTo({ mode: 'new', cfg: { ...NEWCFG } }); };
+  setTimeout(upd, 30);
+}
+// Laden
+function showLoad() {
+  const list = [...IDX].sort((a, b) => b.t - a.t);
+  const cfgTxt = c => c && !c.classic ? `${LBL.size[c.size] || ''} · ${LBL.terrain[c.terrain] || ''} · Nr. ${c.seed}` : 'Klassische Karte';
+  const s = openScreen(`<div class="subhead">📂 Spielstände laden</div>
+    <div class="row"><button id="impbtn">⬆ Spielstand-Datei importieren</button><input type="file" id="impfile" accept=".json" style="display:none"></div>
+    <div class="saves">${list.length ? list.map(e => `<div class="save" data-id="${e.id}"><img src="${e.thumb || ''}" alt=""><div class="si"><b>${e.name}</b><small>${fmtDate(e.t)}<br>Spielzeit ${fmtTime(e.simT || 0)} · ${e.nb || 0} Gebäude · ${e.pop || 0} Siedler<br>${cfgTxt(e.cfg)}</small>
+      <div class="row"><button data-a="load" class="on">▶ Laden</button><button data-a="ren">✏️</button><button data-a="exp">⬇</button><button data-a="del">🗑</button></div></div></div>`).join('') : '<p>Noch keine Spielstände vorhanden.</p>'}</div>`, () => { closeScreen(); if (INMENU) showMain(); });
+  s.querySelectorAll('.save').forEach(el => {
+    const e = IDX.find(x => x.id === el.dataset.id);
+    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+      const a = b.dataset.a;
+      if (a === 'load') bootTo({ mode: 'load', id: e.id });
+      if (a === 'ren') { const n = prompt('Neuer Name:', e.name); if (n) { e.name = n; e.auto = false; saveIndex(); showLoad(); } }
+      if (a === 'exp') { const blob = new Blob([JSON.stringify({ entry: e, data: JSON.parse(localStorage.getItem('odws_save_' + e.id)) })], { type: 'application/json' }); const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = e.name.replace(/[^\w äöüÄÖÜß-]/g, '') + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); }
+      if (a === 'del') { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = '❗ Löschen?'; b.classList.add('warn'); return; } localStorage.removeItem('odws_save_' + e.id); IDX.splice(IDX.indexOf(e), 1); saveIndex(); showLoad(); }
+    });
+  });
+  $('impbtn').onclick = () => $('impfile').click();
+  $('impfile').onchange = ev => { const f = ev.target.files[0]; if (!f) return; f.text().then(t => { try { const o = JSON.parse(t), e = Object.assign({}, o.entry, { id: 'imp' + Date.now() }); localStorage.setItem('odws_save_' + e.id, JSON.stringify(o.data)); IDX.push(e); saveIndex(); toast('Spielstand importiert'); showLoad(); } catch (er) { toast('Diese Datei ist kein gültiger Spielstand'); } }); };
+}
+// Einstellungen
+function showSettings() {
+  const seg = (k, opts) => `<div class="seg">${opts.map(([v, n]) => `<button data-set="${k}" data-v="${v}" class="${String(SET[k]) === String(v) ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+  const onoff = k => seg(k, [[true, 'An'], [false, 'Aus']]);
+  const slider = (k, min, max, step) => `<input type="range" data-sl="${k}" min="${min}" max="${max}" step="${step}" value="${SET[k]}"><b data-slv="${k}">${SET[k]}</b>`;
+  const s = openScreen(`<div class="subhead">⚙️ Einstellungen</div>
+    <h4>🎨 Grafik <small>(wird nach „Übernehmen“ neu geladen)</small></h4>
+    <div class="opt"><span>Qualität</span>${seg('quality', [['hoch', 'Hoch'], ['mittel', 'Mittel'], ['niedrig', 'Niedrig']])}</div>
+    <div class="opt"><span>Gras & Blumen</span>${onoff('grass')}</div><div class="opt"><span>Schatten</span>${onoff('shadows')}</div>
+    <div class="opt"><span>Umgebungsverdeckung</span>${onoff('ao')}</div><div class="opt"><span>Leuchten & Farbe</span>${onoff('bloom')}</div>
+    <div class="opt"><span>Sichtweite</span>${slider('view', 200, 500, 10)}</div>
+    <div class="row"><button id="applygfx" class="on">✔ Grafik übernehmen</button></div>
+    <h4>🔊 Ton</h4>
+    <div class="opt"><span>Gesamt</span>${slider('vol', 0, 100, 5)}</div><div class="opt"><span>Effekte</span>${slider('volFx', 0, 100, 5)}</div><div class="opt"><span>Umgebung</span>${slider('volAmb', 0, 100, 5)}</div>
+    <h4>🎮 Spiel</h4>
+    <div class="opt"><span>Startgeschwindigkeit</span>${seg('speed', [[1, '1×'], [2, '2×'], [4, '4×']])}</div>
+    <div class="opt"><span>Automatisch speichern</span>${seg('autosave', [[60, '1 Min.'], [180, '3 Min.'], [300, '5 Min.'], [0, 'Aus']])}</div>
+    <div class="opt"><span>Kamera-Drehtempo</span>${slider('camSpeed', 0.5, 2, 0.1)}</div>
+    <div class="opt"><span>Kantenscrollen (Maus am Rand)</span>${onoff('edge')}</div>
+    <h4>🖥️ Anzeige</h4>
+    <div class="opt"><span>Größe der Bedienung</span>${seg('ui', [[0.85, 'Klein'], [1, 'Normal'], [1.2, 'Groß'], [1.4, 'Sehr groß']])}</div>
+    <div class="opt"><span>Minikarte</span>${onoff('minimap')}</div>`, () => { closeScreen(); if (INMENU) showMain(); });
+  s.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { const k = b.dataset.set; let v = b.dataset.v; v = v === 'true' ? true : v === 'false' ? false : isNaN(+v) ? v : +v; SET[k] = v; saveSet(); s.querySelectorAll(`[data-set="${k}"]`).forEach(x => x.classList.toggle('on', x === b)); applyLiveSettings(); });
+  s.querySelectorAll('[data-sl]').forEach(r => r.oninput = () => { const k = r.dataset.sl; SET[k] = +r.value; s.querySelector(`[data-slv="${k}"]`).textContent = r.value; saveSet(); applyLiveSettings(); });
+  $('applygfx').onclick = () => { saveSet(); if (INMENU) bootTo(null); else { const e = saveGame(null, true); bootTo(e ? { mode: 'load', id: e.id } : null); } };
+}
+function applyLiveSettings() {
+  scene.fog.near = SET.view * 0.42; scene.fog.far = SET.view; camera.far = SET.view + 250; camera.updateProjectionMatrix();
+  if (master) { master.gain.value = soundOn ? SET.vol / 100 : 0; fxBus.gain.value = SET.volFx / 100; ambBus.gain.value = SET.volAmb / 100; }
+  document.querySelectorAll('.panel, #mini, #toast').forEach(e => e.style.zoom = SET.ui);
+  $('mini').style.display = SET.minimap && !INMENU ? 'block' : 'none';
+}
+function showAbout() {
+  openScreen(`<div class="subhead">ℹ️ Über das Spiel</div>
+    <p><b>Odenwald-Siedler</b> (Arbeitstitel) – ein Aufbauspiel im Odenwald. Baue Warenketten auf, versorge deine Bergwerke, erweitere dein Gebiet mit Wachtürmen.</p>
+    <h4>Steuerung am PC</h4><p>Linke Maustaste ziehen: Karte verschieben · Rechte Maustaste ziehen: drehen · Mausrad: zoomen<br>Gebäude: Kategorie wählen → Gebäude → Platz anklicken → ✔ Bauen (Enter)<br>R: Gebäude drehen · Esc: abbrechen bzw. Pausenmenü</p>
+    <h4>Steuerung am Handy</h4><p>Ein Finger: verschieben · Zwei Finger: zoomen und drehen · Antippen: Gebäude auswählen</p>
+    <h4>Tipps</h4><p>Zuerst Holzfäller, Sägewerk und Steinmetz bauen. Jeder Arbeiter braucht ein Werkzeug, Wächter einen Kampfstock. Bergwerke brauchen Brot, Fisch oder Schinken.</p>`, () => { closeScreen(); if (INMENU) showMain(); });
+}
+// Pausenmenü
+function showPause() {
+  paused = true; $('pausemenu').style.display = 'flex';
+  $('pausebtns').innerHTML = `<button data-p="go">▶ Weiterspielen</button><button data-p="save">💾 Speichern unter …</button><button data-p="load">📂 Laden</button><button data-p="set">⚙️ Einstellungen</button><button data-p="main">🏠 Hauptmenü</button>`;
+  $('pausebtns').querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
+    const p = b.dataset.p;
+    if (p === 'go') hidePause();
+    if (p === 'save') { const n = prompt('Name für den Spielstand:', 'Spielstand ' + new Date().toLocaleDateString('de-DE')); if (n) saveGame(n); }
+    if (p === 'load') { $('pausemenu').style.display = 'none'; showLoad(); }
+    if (p === 'set') { $('pausemenu').style.display = 'none'; showSettings(); }
+    if (p === 'main') bootTo(null);
+  });
+}
+function hidePause() { paused = false; $('pausemenu').style.display = 'none'; $('screen').style.display = 'none'; }
+$('menubtn').onclick = () => paused ? hidePause() : showPause();
+addEventListener('keydown', e => { if (e.key === 'Escape' && !placing && !INMENU) { if ($('screen').style.display === 'block') { $('screen').style.display = 'none'; showPause(); } else paused ? hidePause() : showPause(); } });
 
 const clock = new THREE.Clock(); let infoT = 0, simT = 0, carT = 0;
 // ---------- Start / Laden ----------
 {
-  const wantSlot = sessionStorage.getItem('odws_load'); sessionStorage.removeItem('odws_load');
-  const fresh = sessionStorage.getItem('odws_new'); sessionStorage.removeItem('odws_new');
-  const slot = wantSlot || (!fresh && localStorage.getItem(SAVEKEY('auto')) ? 'auto' : null);
   let ok = false;
-  if (slot) { try { applySave(JSON.parse(localStorage.getItem(SAVEKEY(slot)))); ok = true; setTimeout(() => toast('Spielstand geladen – weiter geht\'s!'), 300); } catch (e) { console.error(e); } }
-  if (!ok) { addTerritory(0, 0, 32); placeBuilding('lager', 0, 0, 0, true); }
-  refreshPiles();
+  if (BOOT && BOOT.mode === 'load') { try { applySave(JSON.parse(localStorage.getItem('odws_save_' + BOOT.id))); ok = true; setTimeout(() => toast('Spielstand geladen – weiter geht\'s!'), 300); } catch (e) { console.error(e); toast('Spielstand konnte nicht geladen werden'); } }
+  if (!ok && !INMENU) { addTerritory(0, 0, 32); placeBuilding('lager', 0, 0, 0, true); for (const k of ['bretter', 'stein', 'stamm', 'werkzeug', 'kampfstock']) stock[k] = Math.round(stock[k] * W.start); }
+  if (INMENU) { reveal(0, 0, MAP * 1.6); document.body.classList.add('inmenu'); dist = 95; pitch = 0.55; showMain(); }
+  speed = SET.speed; $('speed').textContent = speed + '×';
+  refreshPiles(); applyLiveSettings();
+  $('loading').style.display = 'none';
 }
 // ---------- Hauptschleife ----------
 function step(dt) {
@@ -6077,13 +6278,15 @@ function step(dt) {
 }
 function animate() {
   const real = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
-  const sub = speed; for (let i = 0; i < sub; i++) step(real);
+  const sub = paused || INMENU ? 0 : speed; for (let i = 0; i < sub; i++) step(real);
+  if (INMENU) yaw += real * 0.05;
+  if (SET.edge && !INMENU && mouseIn && !pointers.size) { const m = 14, k = dist * 0.9 * real; const fw = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), rt = new V3(Math.cos(yaw), 0, -Math.sin(yaw)); if (mouseX < m) target.addScaledVector(rt, -k); if (mouseX > innerWidth - m) target.addScaledVector(rt, k); if (mouseY < m) target.addScaledVector(fw, k); if (mouseY > innerHeight - m) target.addScaledVector(fw, -k); target.x = THREE.MathUtils.clamp(target.x, -MAP + 10, MAP - 10); target.z = THREE.MathUtils.clamp(target.z, -MAP + 10, MAP - 10); }
   waterMat.uniforms.uTime.value = t;
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
   statT += real; if (statT > 1) { statT = 0; renderStats(); }
-  autoT += real; if (autoT > 60) { autoT = 0; saveGame('auto'); }
+  autoT += real; if (SET.autosave && autoT > SET.autosave && !INMENU) { autoT = 0; saveGame(null, true); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
   camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist);
