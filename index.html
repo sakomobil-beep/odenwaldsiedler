@@ -4506,7 +4506,7 @@ function mountain(x, z) {
   let h = 0;
   for (const m of MOUNTAINS) { const d = Math.hypot(x - m.x, z - m.z); if (d > m.R) continue; const k = 1 - d / m.R;
     const r1 = 1 - Math.abs(noise(x * 0.09 + m.x, z * 0.09) * 2 - 1), r2 = 1 - Math.abs(noise(x * 0.23 + 5, z * 0.23 - m.z) * 2 - 1);
-    h += m.H * Math.pow(k, 1.15) * (0.5 + 0.4 * r1 + 0.18 * r2) + (noise(x * 0.7, z * 0.7) - 0.5) * 0.9 * k; }
+    h += m.H * 0.65 * Math.pow(k, 1.15) * (0.5 + 0.4 * r1 + 0.18 * r2) + (noise(x * 0.7, z * 0.7) - 0.5) * 0.9 * k; }
   return h;
 }
 const MC = MOUNTAINS[0], MR = MOUNTAINS[0].R;
@@ -4554,10 +4554,10 @@ const baseCols = [];
       if (mh < 3.5) c.lerp(scree, THREE.MathUtils.clamp((mh - 0.4) / 3, 0, 1) * (0.4 + noise(x * 0.5, z * 0.5) * 0.6));
       const band = noise(y * 0.9, x * 0.03 + z * 0.03);
       t.copy(rockA).lerp(rockB, band * 0.6).lerp(moss, THREE.MathUtils.clamp((ny - 0.6) * 1.5, 0, 0.5));
-      const rockAmt = Math.max(sstep(0.22, 0.5, steep) * THREE.MathUtils.clamp((mh - 1) / 3, 0, 1), sstep(6, 11, mh) * 0.9);
+      const rockAmt = Math.max(sstep(0.22, 0.5, steep) * THREE.MathUtils.clamp((mh - 1) / 3, 0, 1), sstep(4.5, 8, mh) * 0.9);
       c.lerp(alp, THREE.MathUtils.clamp((mh - 1) / 4, 0, 0.5));
       c.lerp(t, rockAmt);
-      if (mh > 11) c.lerp(snow, THREE.MathUtils.clamp((mh - 11) / 3, 0, 1) * THREE.MathUtils.clamp((ny - 0.45) * 3, 0, 1));
+      if (mh > 8) c.lerp(snow, THREE.MathUtils.clamp((mh - 8) / 2.5, 0, 1) * THREE.MathUtils.clamp((ny - 0.45) * 3, 0, 1));
     }
     c.offsetHSL(0, 0, (hash(x, z) - 0.5) * 0.05); for (let k = 0; k < 3; k++) baseCols.push(c.r, c.g, c.b);
   }
