@@ -17,7 +17,7 @@ canvas{display:block;touch-action:none}
 #closeinfo{position:absolute;right:6px;top:4px;background:none;border:0;color:#f3e6cc;font-size:18px}
 #toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);background:rgba(217,162,58,.95);color:#2b1e13;padding:8px 14px;border-radius:10px;font-size:14px;transition:opacity .4s;pointer-events:none;text-align:center;max-width:85%}
 @media (min-width:900px){#res{font-size:20px;gap:6px 18px}#speed{font-size:18px;padding:8px 16px}
-#menu{left:50%;right:auto;transform:translateX(-50%)}#menu button{min-width:110px;font-size:16px;padding:8px}#menu button i{font-size:34px}#menu small{font-size:14px}
+#menu{left:50%;right:auto;transform:translateX(-50%);max-width:calc(100% - 16px);box-sizing:border-box}#menu button{min-width:110px;font-size:16px;padding:8px}#menu button i{font-size:34px}#menu small{font-size:14px}
 #place{left:50%;right:auto;transform:translateX(-50%);width:640px}#place button{font-size:18px;padding:12px}#placeinfo{font-size:16px}#info{font-size:17px;max-width:340px}#toast{font-size:18px}}
 #menu button:hover{background:#7a5636}</style></head><body>
 <div id="top" class="panel"><div id="res"></div><button id="speed">1×</button></div>
@@ -55040,6 +55040,8 @@ sun.shadow.bias = -0.0008; scene.add(sun);
 function hash(x, y) { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); }
 function noise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
 const riverX = z => Math.sin(z * 0.07) * 6 + 34;
+const MC = { x: -36, z: -30 }, MR = 19;
+function mountain(x, z) { const d = Math.hypot(x - MC.x, z - MC.z); if (d > MR) return 0; const k = 1 - d / MR; return 16 * Math.pow(k, 1.3) * (0.8 + noise(x * 0.25, z * 0.25) * 0.4); }
 function height(x, z) {
   let h = noise(x * 0.04, z * 0.04) * 8 + noise(x * 0.11, z * 0.11) * 2;
   const r = Math.hypot(x, z);
@@ -55047,7 +55049,7 @@ function height(x, z) {
   h += Math.max(0, r - 50) * 0.4;
   const dr = Math.abs(x - riverX(z));
   if (dr < 4.5) h = Math.min(h, -1.3 + dr * 0.32);
-  return h;
+  return h + mountain(x, z);
 }
 const SIZE = 150, SEG = 100;
 const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG).rotateX(-Math.PI / 2).toNonIndexed();
@@ -55057,7 +55059,7 @@ const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG).rotateX(-Math.PI / 2).
   for (let i = 0; i < pos.count; i++) pos.setY(i, height(pos.getX(i), pos.getZ(i)));
   for (let i = 0; i < pos.count; i += 3) {
     let x = 0, y = 0, z = 0; for (let k = 0; k < 3; k++) { x += pos.getX(i + k); y += pos.getY(i + k); z += pos.getZ(i + k); } x /= 3; y /= 3; z /= 3;
-    let c = g1.clone().lerp(g2, noise(x * 0.15, z * 0.15)); if (y < -0.3) c = dirt.clone(); if (y > 8) c.lerp(rock, Math.min(1, (y - 8) / 6));
+    let c = g1.clone().lerp(g2, noise(x * 0.15, z * 0.15)); if (y < -0.3) c = dirt.clone(); if (y > 5) c.lerp(rock, Math.min(1, (y - 5) / 4)); if (y > 14) c.lerp(new THREE.Color(0xf4f4f8), Math.min(1, (y - 14) / 2));
     c.offsetHSL(0, 0, (hash(x, z) - 0.5) * 0.05); for (let k = 0; k < 3; k++) cols.push(c.r, c.g, c.b);
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); geo.computeVertexNormals();
@@ -55103,7 +55105,7 @@ function addTree(x, z, grown = 1) {
 }
 for (let i = 0; i < 1100; i++) {
   const x = (hash(i, 1) - 0.5) * 140, z = (hash(i, 2) - 0.5) * 140, r = Math.hypot(x, z);
-  if (r < 14 + hash(i, 3) * 10 || Math.abs(x - riverX(z)) < 5.5 || height(x, z) > 15) continue;
+  if (r < 14 + hash(i, 3) * 10 || Math.abs(x - riverX(z)) < 5.5 || height(x, z) > 15 || Math.hypot(x - MC.x, z - MC.z) < MR * 0.85) continue;
   // dichter Wald im Nordwesten, lichter im Süden
   if (r < 30 && hash(i, 4) > (x < 0 && z < 0 ? 0.85 : 0.35)) continue;
   addTree(x, z);
@@ -55120,6 +55122,18 @@ function addRock(x, z) {
   addRock(x, z);
 });
 
+// ---------- Erzvorkommen im Gebirge ----------
+const deposits = [];
+{
+  const base = Math.atan2(-MC.z, -MC.x);
+  [['stein', -0.75, 0x8f8a84], ['eisenerz', 0, 0xb5562e], ['kohle', 0.75, 0x1e1e22]].forEach(([kind, off, col]) => {
+    const x = MC.x + Math.cos(base + off) * 10.5, z = MC.z + Math.sin(base + off) * 10.5;
+    const g = new THREE.Group(), cm = M(col);
+    for (let k = 0; k < 7; k++) { const c = mesh(new THREE.OctahedronGeometry(0.35 + hash(k, x) * 0.35, 0), cm, (hash(k, 1) - 0.5) * 2.4, 0.2, (hash(k, 2) - 0.5) * 2.4); c.scale.y = 1.6; c.rotation.set(hash(k, 3), hash(k, 4) * 6, 0); g.add(c); }
+    g.position.set(x, height(x, z), z); scene.add(g);
+    deposits.push({ kind, x, z, g });
+  });
+}
 // ---------- Waren ----------
 const ITEMS = {
   stamm: { name: 'Baumstämme', icon: '🪵', m: mat.trunk, geo: new THREE.CylinderGeometry(0.15, 0.15, 0.8, 6).rotateZ(Math.PI / 2) },
@@ -55128,13 +55142,16 @@ const ITEMS = {
   getreide: { name: 'Getreide', icon: '🌾', m: mat.grain, geo: new THREE.CylinderGeometry(0.18, 0.12, 0.45, 6) },
   mehl: { name: 'Mehl', icon: '🥡', m: mat.flour, geo: box(0.3, 0.38, 0.25) },
   wasser: { name: 'Wasser', icon: '💧', m: mat.water, geo: new THREE.CylinderGeometry(0.16, 0.13, 0.32, 8) },
+  eisenerz: { name: 'Eisenerz', icon: '🟤', m: M(0xa0522d), geo: new THREE.DodecahedronGeometry(0.22, 0) },
+  kohle: { name: 'Kohle', icon: '⚫', m: M(0x222222), geo: new THREE.DodecahedronGeometry(0.22, 0) },
+  werkzeug: { name: 'Werkzeug', icon: '🔨', m: M(0x9aa0a8), geo: box(0.12, 0.12, 0.7) },
   brot: { name: 'Brot', icon: '🍞', m: mat.bread, geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.4, 0.8, 1) },
 };
-const stock = { stamm: 0, bretter: 30, stein: 20, getreide: 0, mehl: 0, wasser: 0, brot: 0 };
+const stock = { stamm: 0, bretter: 45, stein: 30, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
 const TYPES = {
-  lager: { name: 'Lager', icon: '🏠', cost: {}, r: 3.2, desc: 'Hier landen alle Waren.' },
+  lager: { name: 'Lager', icon: '🏠', cost: {}, r: 3.2, desc: 'Hier landen alle Waren. Jeder neue Arbeiter holt sich hier 1 Werkzeug.' },
   holzfaeller: { name: 'Holzfäller', icon: '🪓', cost: { bretter: 3 }, r: 2, desc: 'Fällt Bäume → Baumstämme. Pflanzt neue Bäume nach.' },
   saegewerk: { name: 'Sägewerk', icon: '🪚', cost: { bretter: 4, stein: 2 }, r: 2.3, desc: '1 Baumstamm → 2 Bretter' },
   steinmetz: { name: 'Steinmetz', icon: '⛏️', cost: { bretter: 3 }, r: 2, desc: 'Schlägt Steine aus Felsen.' },
@@ -55142,6 +55159,10 @@ const TYPES = {
   muehle: { name: 'Mühle', icon: '🌬️', cost: { bretter: 5, stein: 3 }, r: 2, desc: '1 Getreide → 1 Mehl' },
   brunnen: { name: 'Brunnen', icon: '🪣', cost: { bretter: 1, stein: 3 }, r: 1.3, desc: 'Schöpft Wasser.' },
   baeckerei: { name: 'Bäckerei', icon: '🍞', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Mehl + 1 Wasser → 2 Brot' },
+  steinmine: { name: 'Steinbergwerk', icon: '⛰️', cost: { bretter: 4 }, r: 1.6, mine: 'stein', desc: 'Im Gebirge am grauen Vorkommen. 1 Brot → 2 Steine' },
+  eisenmine: { name: 'Eisenmine', icon: '🟤', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'eisenerz', desc: 'Im Gebirge am roten Vorkommen. 1 Brot → 2 Eisenerz' },
+  kohlemine: { name: 'Kohlemine', icon: '⚫', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'kohle', desc: 'Im Gebirge am schwarzen Vorkommen. 1 Brot → 2 Kohle' },
+  schmied: { name: 'Werkzeugschmied', icon: '🔨', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Eisenerz + 1 Kohle → 1 Werkzeug' },
 };
 function buildModel(type) {
   const g = new THREE.Group(), fx = {};
@@ -55151,7 +55172,7 @@ function buildModel(type) {
     g.add(mesh(new THREE.ExtrudeGeometry(sh, { depth: 4.6, bevelEnabled: false }).translate(0, 0, -2.3), mat.roof2, 0, 2.5, 0));
     g.add(mesh(box(5.4, 0.15, 4), mat.wood, 0, 0.08, 0));
     fx.piles = {}; let i = 0;
-    for (const k of Object.keys(ITEMS)) { const pg = new THREE.Group(); pg.position.set(-2 + (i % 4) * 1.35, 0.15, i < 4 ? -1 : 0.9); g.add(pg); fx.piles[k] = pg; i++; }
+    for (const k of Object.keys(ITEMS)) { const pg = new THREE.Group(); pg.position.set(-2.1 + (i % 4) * 1.4, 0.15, -1.3 + Math.floor(i / 4) * 1.25); g.add(pg); fx.piles[k] = pg; i++; }
   } else if (type === 'holzfaeller') {
     const h = gable(2.4, 2, 1.7, mat.roof2); g.add(h);
     g.add(mesh(new THREE.CylinderGeometry(0.4, 0.45, 0.5, 8), mat.trunk, 1.7, 0.25, 0.8));
@@ -55185,6 +55206,24 @@ function buildModel(type) {
     const sh = new THREE.Shape(); sh.moveTo(-0.9, 0); sh.lineTo(0.9, 0); sh.lineTo(0, 0.8); sh.closePath();
     g.add(mesh(new THREE.ExtrudeGeometry(sh, { depth: 2.2, bevelEnabled: false }).translate(0, 0, -1.1).rotateY(Math.PI / 2), mat.roof, 0, 1.95, 0));
     const bucket = mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.28, 8), mat.wood, 0, 1.4, 0); g.add(bucket); fx.bucket = bucket;
+  } else if (TYPES[type].mine) {
+    const col = { stein: 0x8f8a84, eisenerz: 0xb5562e, kohle: 0x1e1e22 }[TYPES[type].mine];
+    g.add(mesh(new THREE.DodecahedronGeometry(2.1, 0), mat.stone, 0, 0.6, -1.2));
+    g.add(mesh(box(1.5, 1.6, 0.6), M(0x111111), 0, 0.8, 0.55));
+    for (const sx of [-1, 1]) g.add(mesh(box(0.22, 1.9, 0.22), mat.trunk, sx * 0.85, 0.95, 0.9));
+    g.add(mesh(box(2.1, 0.25, 0.3), mat.trunk, 0, 1.95, 0.9));
+    const cart = new THREE.Group(); cart.position.set(1.4, 0, 1.6);
+    cart.add(mesh(box(0.8, 0.45, 0.55), mat.wood, 0, 0.45, 0)); cart.add(mesh(box(0.6, 0.15, 0.4), M(col), 0, 0.72, 0));
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) cart.add(mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 8).rotateZ(Math.PI / 2), mat.beam, sx * 0.4, 0.15, sz * 0.2));
+    g.add(cart);
+    for (let i = 0; i < 4; i++) g.add(mesh(new THREE.DodecahedronGeometry(0.22, 0), M(col), -1.3 + (i % 2) * 0.35, 0.2 + Math.floor(i / 2) * 0.25, 1.4));
+  } else if (type === 'schmied') {
+    const h = gable(2.8, 2.2, 1.9); g.add(h);
+    g.add(mesh(box(0.7, 0.35, 0.35), M(0x3a3a40), 1.9, 0.75, 0.9)); g.add(mesh(box(0.35, 0.55, 0.3), mat.trunk, 1.9, 0.28, 0.9));
+    const forge = mesh(box(1, 0.8, 0.9), mat.stone, -1.9, 0.4, 0.6); g.add(forge);
+    const glowM = new THREE.MeshStandardMaterial({ color: 0x331100, emissive: 0xff5a10, emissiveIntensity: 0.2 });
+    g.add(mesh(box(0.6, 0.12, 0.5), glowM, -1.9, 0.85, 0.6)); fx.glow = glowM;
+    g.add(mesh(box(0.4, 1.4, 0.4), mat.stone, -0.6, 3.1, -0.3)); fx.smokeAt = new V3(-0.6, 3.9, -0.3); fx.sparkAt = new V3(1.9, 1.0, 0.9);
   } else if (type === 'baeckerei') {
     g.add(gable(2.8, 2.2, 1.9));
     g.add(mesh(new THREE.SphereGeometry(0.9, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), M(0xb06a48), 1.9, 0, 0.3));
@@ -55236,9 +55275,15 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
 function finishBuilding(b) {
   b.g.scale.set(1, 1, 1); if (b.scaffold) scene.remove(b.scaffold);
   if (b.type === 'lager') return;
-  const w = makeWorker(b.type); w.g.position.copy(lagerDoor()); b.worker = w; w.home = b; workers.push(w);
-  b.status = 'Arbeiter kommt …'; moveTo(w, b.door); w.queue.push({ fn: () => { b.status = 'Bereit'; } });
+  b.needsWorker = true; b.status = 'Wartet auf Werkzeug 🔨';
   toast(`${TYPES[b.type].name} ist fertig!`);
+}
+function trySpawnWorker(b) {
+  if (stock.werkzeug < 1) { b.status = b.type === 'schmied' ? 'Kein Werkzeug mehr im Lager – der Schmied kann nicht anfangen!' : 'Kein Werkzeug im Lager – Werkzeugschmied liefert nach'; return; }
+  stock.werkzeug--; refreshPiles(); b.needsWorker = false;
+  const w = makeWorker(b.type); w.g.position.copy(lagerDoor()); b.worker = w; w.home = b; workers.push(w);
+  setCarry(w, 'werkzeug');
+  b.status = 'Arbeiter holt Werkzeug und kommt …'; moveTo(w, b.door); w.queue.push({ fn: () => { setCarry(w, null); b.status = 'Bereit'; } });
 }
 
 // ---------- Felder ----------
@@ -55275,7 +55320,14 @@ function freeSpot(x, z, r, ignore) {
   return true;
 }
 function placeReason(type, x, z) {
-  const r = TYPES[type].r;
+  const r = TYPES[type].r, mk = TYPES[type].mine;
+  if (mk) {
+    const dep = deposits.find(d => d.kind === mk && Math.hypot(d.x - x, d.z - z) < 4.5);
+    if (!dep) return 'Muss direkt am ' + { stein: 'grauen Stein', eisenerz: 'roten Eisenerz', kohle: 'schwarzen Kohle' }[mk] + '-Vorkommen im Gebirge stehen';
+    if (!freeSpot(x, z, r)) return 'Zu nah an einem Gebäude';
+    return null;
+  }
+  if (mountain(x, z) > 2.5) return 'Im Gebirge können nur Bergwerke gebaut werden';
   if (Math.hypot(x, z) > 56) return 'Zu weit draußen';
   if (Math.abs(x - riverX(z)) < 5 + r) return 'Zu nah am Fluss';
   for (const k of rocks) if (k.amount > 0 && Math.hypot(k.x - x, k.z - z) < r + 1.6) return 'Zu nah an einem Felsen';
@@ -55345,7 +55397,9 @@ function planNext(b) {
     work(w, 3, 'pull', () => { setCarry(w, 'wasser'); b.status = 'Bringt Wasser ins Lager'; });
     deliver(w, 'wasser', 1); moveTo(w, b.door);
   } else {
-    const rec = { saegewerk: [{ stamm: 1 }, 'bretter', 2, 4, 'Sägt Bretter'], muehle: [{ getreide: 1 }, 'mehl', 1, 4, 'Mahlt Mehl'], baeckerei: [{ mehl: 1, wasser: 1 }, 'brot', 2, 5, 'Backt Brot'] }[T];
+    const rec = { saegewerk: [{ stamm: 1 }, 'bretter', 2, 4, 'Sägt Bretter'], muehle: [{ getreide: 1 }, 'mehl', 1, 4, 'Mahlt Mehl'], baeckerei: [{ mehl: 1, wasser: 1 }, 'brot', 2, 5, 'Backt Brot'],
+      steinmine: [{ brot: 1 }, 'stein', 2, 6, 'Arbeitet im Stollen'], eisenmine: [{ brot: 1 }, 'eisenerz', 2, 6, 'Baut Eisenerz ab'], kohlemine: [{ brot: 1 }, 'kohle', 2, 6, 'Baut Kohle ab'],
+      schmied: [{ eisenerz: 1, kohle: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
     const [inp, out, n, t, verb] = rec;
     if (!canAfford(inp)) { const miss = Object.keys(inp).filter(k => stock[k] < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
     b.working = false; b.status = 'Holt ' + Object.keys(inp).map(k => ITEMS[k].name).join(' + ');
@@ -55361,7 +55415,7 @@ function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - 
 function refreshPiles() {
   const lager = buildings[0]; if (!lager) return;
   for (const [k, pg] of Object.entries(lager.fx.piles)) {
-    const n = Math.min(12, stock[k]);
+    const n = Math.min(8, stock[k]);
     while (pg.children.length < n) { const i = pg.children.length, m = new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m); m.castShadow = true; m.position.set((i % 2) * 0.45 - 0.22, 0.12 + Math.floor(i / 4) * 0.3, (Math.floor(i / 2) % 2) * 0.4 - 0.2); pg.add(m); }
     while (pg.children.length > n) pg.remove(pg.children[pg.children.length - 1]);
   }
@@ -55481,6 +55535,7 @@ const clock = new THREE.Clock(); let infoT = 0, simT = 0;
 function step(dt) {
   simT += dt;
   // Bau
+  for (const b of [...buildings].sort((a, c) => (c.type === 'schmied') - (a.type === 'schmied'))) if (b.needsWorker) trySpawnWorker(b);
   for (const b of buildings) if (b.progress < 1) { b.progress = Math.min(1, b.progress + dt / 8); b.g.scale.set(1, 0.02 + 0.98 * b.progress, 1); if (b.progress >= 1) finishBuilding(b); }
   // Arbeiter
   for (const w of workers) {
@@ -55514,6 +55569,9 @@ function step(dt) {
   // Effekte
   for (const b of buildings) {
     if (b.fx.spin && b.working) b.fx.spin.rotation.z -= dt * (b.type === 'muehle' ? 1.2 : 9);
+    if (b.fx.glow) b.fx.glow.emissiveIntensity = b.working ? 1.6 + Math.sin(simT * 9) * 0.5 : 0.2;
+    if (b.type === 'schmied' && b.working && Math.random() < dt * 3) puff(b.fx.smokeAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position));
+    if (b.type === 'schmied' && b.working && Math.random() < dt * 8) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), new THREE.MeshBasicMaterial({ color: 0xffb030 })); s.position.copy(b.fx.sparkAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position)); scene.add(s); puffs.push({ m: s, t: 0, chip: new V3((Math.random() - 0.5) * 3, 3, (Math.random() - 0.5) * 3) }); }
     if (b.type === 'baeckerei' && b.working && Math.random() < dt * 4) puff(b.fx.smokeAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position));
     if (b.type === 'saegewerk' && b.working && Math.random() < dt * 6) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), mat.plank); s.position.copy(new V3(0.3, 0.9, 2.1).applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position)); scene.add(s); puffs.push({ m: s, t: 0, chip: new V3((Math.random() - 0.5) * 2, 2, (Math.random() - 0.5) * 2) }); }
     if (b.type === 'muehle' && b.working && Math.random() < dt * 3) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })); s.position.copy(new V3(0, 0.5, 1.7).applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position)); scene.add(s); puffs.push({ m: s, t: 0 }); }
@@ -55543,5 +55601,5 @@ function animate() {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
 toast('Willkommen! Wähle unten ein Gebäude und tippe auf einen Platz.');
-window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, trees };
+window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target };
 </script></body></html>
