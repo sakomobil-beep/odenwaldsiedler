@@ -5057,23 +5057,60 @@ function buildModel(type) {
 // ---------- Gebäude & Arbeiter ----------
 const buildings = [], workers = [];
 const shirt = { traeger: 0x8a5a2a, schweinezucht: 0x7a8a3a, metzger: 0xeeeeee, fischer: 0x2f8a8a, waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
+const HAIR = [0x3b2a1a, 0x6b4a2b, 0xa0763a, 0xd8b060, 0x2a2a2a, 0x8a3a1a, 0xbdbdbd];
+const SKIN = [0xf0c8a0, 0xe8b890, 0xd9a47a, 0xf5d2b0];
+const PANTS = [0x5a4a3a, 0x4a4f5a, 0x6a5a3a, 0x3f4a3a];
+const LOOK = { // Kleidung & Kopfbedeckung je Beruf
+  holzfaeller: { c: 0x4f8a3b, hat: 'cap', hc: 0x2f5a2a }, saegewerk: { c: 0xc79a2b, hat: 'cap', hc: 0x7a5a2a, apron: 0x8a6a45 }, steinmetz: { c: 0x8a8a8a, hat: 'none', apron: 0x6a5a4a },
+  bauernhof: { c: 0xb6433b, hat: 'straw' }, muehle: { c: 0xe8e0d0, hat: 'cap', hc: 0xffffff }, brunnen: { c: 0x3b6fb6, hat: 'scarf', hc: 0xd8c070 }, baeckerei: { c: 0xf4f0e8, hat: 'chef', apron: 0xffffff },
+  steinmine: { c: 0x5a5048, hat: 'miner' }, eisenmine: { c: 0x6a4a3a, hat: 'miner' }, kohlemine: { c: 0x3a3a40, hat: 'miner' }, goldmine: { c: 0x7a6a3a, hat: 'miner' },
+  schmelze: { c: 0x8a4a2a, hat: 'none', apron: 0x4a3020 }, schmied: { c: 0x5a3a2a, hat: 'none', apron: 0x3a2618 }, muenzpraege: { c: 0x7a5aa0, hat: 'cap', hc: 0x4a3a6a, apron: 0x3a2618 },
+  waffenschnitzer: { c: 0x8a6a3a, hat: 'cap', hc: 0x5a3e22 }, fischer: { c: 0x2f8a8a, hat: 'bucket', hc: 0x6a7a5a }, schweinezucht: { c: 0x7a8a3a, hat: 'straw' }, metzger: { c: 0xeeeeee, hat: 'cap', hc: 0xffffff, apron: 0xd8a0a0 },
+  traeger: { c: 0x8a5a2a, hat: 'cap', hc: 0x5a3e22 }, waechter: { c: 0x2f4fa0, hat: 'helmet' },
+};
 function makeWorker(type) {
+  const L = LOOK[type] || { c: 0x8a7a5a, hat: 'cap', hc: 0x5a3e22 }, seed = Math.random() * 1000;
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const skinM = M(pick(SKIN)), shirtM = M(L.c), pantsM = M(pick(PANTS)), bootM = M(0x2e2218), hairM = M(pick(HAIR));
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  body.add(mesh(new THREE.CylinderGeometry(0.18, 0.26, 0.6, 6), M(shirt[type]), 0, 0.55, 0));
-  body.add(mesh(new THREE.IcosahedronGeometry(0.17, 0), mat.skin, 0, 1.0, 0));
-  body.add(mesh(type === 'baeckerei' ? new THREE.CylinderGeometry(0.15, 0.13, 0.25, 6) : new THREE.ConeGeometry(0.22, 0.2, 6), M(type === 'baeckerei' ? 0xffffff : 0x5a3e22), 0, 1.2, 0));
-  const legs = [-1, 1].map(s => { const l = mesh(box(0.1, 0.3, 0.1), mat.beam, s * 0.09, 0.15, 0); g.add(l); return l; });
-  const arm = new THREE.Group(); arm.position.set(0.24, 0.75, 0); body.add(arm);
-  arm.add(mesh(box(0.08, 0.4, 0.08), mat.skin, 0, -0.2, 0));
-  const tool = new THREE.Group(); tool.position.y = -0.38; arm.add(tool);
-  if (type === 'holzfaeller' || type === 'steinmetz') { tool.add(mesh(box(0.05, 0.6, 0.05), mat.trunk, 0, 0, 0.25).rotateX(Math.PI / 2)); tool.add(mesh(box(0.08, 0.2, 0.12), M(0x9aa0a8), 0, 0, 0.5)); }
-  if (type === 'traeger') body.add(mesh(box(0.38, 0.45, 0.22), mat.wood, 0, 0.7, -0.25));
-  if (type === 'fischer') { const rod = mesh(new THREE.CylinderGeometry(0.02, 0.03, 1.8, 4), mat.trunk, 0, 0, 0.8); rod.rotation.x = Math.PI / 2; tool.add(rod); }
-  if (type === 'bauernhof') tool.add(mesh(box(0.05, 0.05, 0.7), mat.trunk, 0, 0, 0.3));
-  if (type === 'waechter') { tool.add(mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.1, 5), M(0x7a5230), 0, 0.3, 0)); body.add(mesh(new THREE.SphereGeometry(0.2, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2), M(0x8a8f98), 0, 1.06, 0)); body.add(mesh(box(0.45, 0.5, 0.06), M(0x2f6fd0), 0, 0.6, -0.2)); }
-  const carry = new THREE.Mesh(ITEMS.stamm.geo, ITEMS.stamm.m); carry.position.set(0, 1.45, 0); carry.visible = false; carry.castShadow = true; g.add(carry);
+  // Rumpf, Kittel, Gürtel
+  body.add(mesh(new THREE.CylinderGeometry(0.15, 0.19, 0.42, 8), shirtM, 0, 0.66, 0));
+  body.add(mesh(new THREE.CylinderGeometry(0.19, 0.24, 0.16, 8), shirtM, 0, 0.42, 0));
+  body.add(mesh(new THREE.CylinderGeometry(0.195, 0.195, 0.05, 8), M(0x3a2616), 0, 0.5, 0));
+  if (L.apron) body.add(mesh(box(0.26, 0.42, 0.03), M(L.apron), 0, 0.5, 0.185));
+  if (type === 'waechter') { body.add(mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.36, 8), M(0x9aa0aa), 0, 0.7, 0)); }
+  // Kopf mit Gesicht
+  const head = new THREE.Group(); head.position.set(0, 1.0, 0); body.add(head);
+  head.add(mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 6), skinM, 0, -0.13, 0));
+  head.add(mesh(new THREE.SphereGeometry(0.135, 10, 8), skinM, 0, 0, 0));
+  for (const s of [-1, 1]) head.add(mesh(new THREE.SphereGeometry(0.018, 5, 4), mat.dark, s * 0.048, 0.02, 0.122));
+  head.add(mesh(new THREE.ConeGeometry(0.025, 0.06, 5).rotateX(Math.PI / 2), skinM, 0, -0.01, 0.14));
+  for (const s of [-1, 1]) head.add(mesh(new THREE.SphereGeometry(0.03, 5, 4), skinM, s * 0.135, 0, 0));
+  head.add(mesh(new THREE.SphereGeometry(0.142, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), hairM, 0, 0.012, -0.01));
+  if (Math.random() < 0.35 && type !== 'waechter') head.add(mesh(new THREE.SphereGeometry(0.09, 8, 5, 0, Math.PI * 2, Math.PI * 0.45, Math.PI * 0.55), hairM, 0, -0.03, 0.07));
+  const hc = M(L.hc || 0x5a3e22);
+  if (L.hat === 'cap') { head.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.07, 10), hc, 0, 0.1, 0)); head.add(mesh(new THREE.SphereGeometry(0.15, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), hc, 0, 0.12, 0)); }
+  if (L.hat === 'straw') { head.add(mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.02, 12), M(0xd8c070), 0, 0.09, 0)); head.add(mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.1, 10), M(0xd8c070), 0, 0.15, 0)); }
+  if (L.hat === 'chef') head.add(mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.22, 10), M(0xffffff), 0, 0.2, 0));
+  if (L.hat === 'miner') { head.add(mesh(new THREE.SphereGeometry(0.155, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), M(0xc9a032), 0, 0.03, 0)); head.add(mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.04, 8).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffee88, emissiveIntensity: 1.5 }), 0, 0.1, 0.15)); }
+  if (L.hat === 'bucket') head.add(mesh(new THREE.CylinderGeometry(0.13, 0.19, 0.12, 10), hc, 0, 0.12, 0));
+  if (L.hat === 'scarf') head.add(mesh(new THREE.SphereGeometry(0.148, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.55), hc, 0, 0.01, -0.01));
+  if (L.hat === 'helmet') { head.add(mesh(new THREE.SphereGeometry(0.16, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), M(0x8a8f98), 0, 0.02, 0)); head.add(mesh(box(0.03, 0.12, 0.04), M(0x8a8f98), 0, -0.03, 0.15)); }
+  // Beine (Hüftgelenk) mit Stiefeln
+  const legs = [-1, 1].map(s => { const l = new THREE.Group(); l.position.set(s * 0.085, 0.36, 0); l.add(mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.28, 6), pantsM, 0, -0.14, 0)); l.add(mesh(box(0.1, 0.09, 0.15), bootM, 0, -0.3, 0.02)); g.add(l); return l; });
+  // Arme (Schultergelenk): rechts mit Werkzeug, links schwingt
+  const mkArm = s => { const a = new THREE.Group(); a.position.set(s * 0.21, 0.83, 0); a.add(mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.24, 6), shirtM, 0, -0.12, 0)); a.add(mesh(new THREE.CylinderGeometry(0.04, 0.038, 0.18, 6), skinM, 0, -0.32, 0)); a.add(mesh(new THREE.SphereGeometry(0.045, 6, 5), skinM, 0, -0.42, 0)); body.add(a); return a; };
+  const arm = mkArm(1), arm2 = mkArm(-1);
+  const tool = new THREE.Group(); tool.position.y = -0.42; arm.add(tool);
+  if (type === 'holzfaeller' || type === 'steinmetz' || TYPES[type] && TYPES[type].mine) { tool.add(mesh(box(0.04, 0.04, 0.65), mat.trunk, 0, 0, 0.25)); tool.add(mesh(type === 'holzfaeller' ? box(0.03, 0.18, 0.12) : box(0.03, 0.06, 0.28), M(0x9aa0a8), 0, type === 'holzfaeller' ? 0.06 : 0, 0.54)); }
+  if (type === 'schmied' || type === 'muenzpraege' || type === 'waffenschnitzer') { tool.add(mesh(box(0.035, 0.035, 0.35), mat.trunk, 0, 0, 0.12)); tool.add(mesh(box(0.08, 0.08, 0.12), M(0x5a5e66), 0, 0, 0.3)); }
+  if (type === 'traeger') { const pack = new THREE.Group(); pack.position.set(0, 0.72, -0.24); pack.add(mesh(new THREE.CylinderGeometry(0.17, 0.13, 0.4, 8, 1, true), M(0xa8824a), 0, 0, 0)); pack.add(mesh(box(0.04, 0.5, 0.04), mat.trunk, -0.15, 0, 0.05)); pack.add(mesh(box(0.04, 0.5, 0.04), mat.trunk, 0.15, 0, 0.05)); body.add(pack); }
+  if (type === 'fischer') { const rod = mesh(new THREE.CylinderGeometry(0.012, 0.025, 1.8, 4), mat.trunk, 0, 0, 0.8); rod.rotation.x = Math.PI / 2; tool.add(rod); }
+  if (type === 'bauernhof' || type === 'schweinezucht') { tool.add(mesh(box(0.035, 0.035, 0.8), mat.trunk, 0, 0, 0.3)); tool.add(mesh(box(0.2, 0.03, 0.1), M(0x9aa0a8), 0, 0, 0.7)); }
+  if (type === 'waechter') { tool.add(mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.1, 6), M(0x7a5230), 0, 0.3, 0)); const sh = new THREE.Group(); sh.position.set(0, -0.3, 0.06); sh.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 12).rotateX(Math.PI / 2), M(0x2f6fd0), 0, 0, 0)); sh.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 8).rotateX(Math.PI / 2), M(0xd8c070), 0, 0, 0.02)); arm2.add(sh); }
+  const carry = new THREE.Mesh(ITEMS.stamm.geo, ITEMS.stamm.m); carry.position.set(0, 1.42, 0.05); carry.visible = false; carry.castShadow = true; g.add(carry);
   scene.add(g);
-  return { g, body, legs, arm, carry, queue: [], anim: null, walkPh: 0 };
+  return { g, body, legs, arm, arm2, head, carry, queue: [], anim: null, walkPh: Math.random() * 6, seed };
 }
 function setCarry(w, item) { if (!item) { w.carry.visible = false; w.carrying = null; return; } w.carry.geometry = ITEMS[item].geo; w.carry.material = ITEMS[item].m; w.carry.visible = true; w.carrying = item; }
 const lagers = () => buildings.filter(b => b.type === 'lager' && b.progress >= 1 && !b.removed);
@@ -5826,8 +5863,10 @@ function step(dt) {
       if (q.anim === 'pull') { w.arm.rotation.x = -1.2 + Math.sin(ph) * 0.5; if (w.home.fx.bucket) w.home.fx.bucket.position.y = 1.0 + Math.sin(q.el * 2) * 0.4; }
       if (q.el >= q.wait) { w.queue.shift(); q.fn && q.fn(); }
     } else if (q.fn) { w.queue.shift(); q.fn(); }
-    if (walking) { w.walkPh += dt * 11; w.legs[0].rotation.x = Math.sin(w.walkPh) * 0.6; w.legs[1].rotation.x = -Math.sin(w.walkPh) * 0.6; w.body.position.y = Math.abs(Math.sin(w.walkPh)) * 0.05; }
-    else { w.legs[0].rotation.x = w.legs[1].rotation.x = 0; }
+    if (w.arm2) w.arm2.rotation.x = 0;
+    if (walking) { w.walkPh += dt * 10; const sw = Math.sin(w.walkPh); w.legs[0].rotation.x = sw * 0.65; w.legs[1].rotation.x = -sw * 0.65; w.body.position.y = Math.abs(sw) * 0.04; w.body.rotation.z = sw * 0.04;
+      if (w.carrying) { w.arm.rotation.x = -2.7; if (w.arm2) w.arm2.rotation.x = -2.7; } else { w.arm.rotation.x = -sw * 0.5; if (w.arm2) w.arm2.rotation.x = sw * 0.5; } }
+    else { w.legs[0].rotation.x = w.legs[1].rotation.x = 0; w.body.rotation.z = 0; if (w.head) w.head.rotation.y = Math.sin(simT * 0.7 + w.seed) * 0.35; }
   }
   // Felder wachsen (~35 s)
   for (const b of buildings) for (const p of b.plots) if (p.state === 'wächst') { p.growth = Math.min(1, p.growth + dt / 35); if (p.growth >= 1) p.state = 'reif'; updatePlot(p); }
@@ -5899,5 +5938,5 @@ function animate() {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); if (composer) composer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
 toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
-window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, carriers, demolish, saveGame, serialize, road, rebuildRoads, roadCellsBetween };
+window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, carriers, demolish, saveGame, mk: makeWorker, h: height, serialize, road, rebuildRoads, roadCellsBetween };
 </script></body></html>
