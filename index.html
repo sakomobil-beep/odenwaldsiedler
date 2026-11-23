@@ -38,7 +38,7 @@ canvas{display:block;touch-action:none}
 .slot span{flex:1;display:flex;flex-direction:column}
 #info{z-index:4}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><button id="statbtn" class="tb">📊</button><button id="savebtn" class="tb">💾</button><button id="speed">1×</button></div>
+<div id="top" class="panel"><div id="res"></div><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="savebtn" class="tb">💾</button><button id="speed">1×</button></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
 <div id="savemenu" class="panel pop"><button id="closesave" class="x">✕</button><div id="savebody"></div></div>
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div><div id="infobtns"></div></div>
@@ -4799,6 +4799,61 @@ function addFish(x, z) {
 }
 for (let z = -190; z <= 190; z += 22) addFish(riverX(z), z);
 for (const l of LAKES) { addFish(l.x, l.z); if (l.R > 9) { addFish(l.x + l.R * 0.45, l.z - l.R * 0.2); addFish(l.x - l.R * 0.4, l.z + l.R * 0.35); } }
+// ---------- Geräusche (werden live erzeugt, keine Dateien nötig) ----------
+let AC = null, master = null, soundOn = localStorage.getItem('odws_snd') !== 'aus';
+let ambWater = null, ambWind = null;
+function audioInit() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  master = AC.createGain(); master.gain.value = soundOn ? 0.8 : 0; master.connect(AC.destination);
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate), d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  AC.noise = noiseBuf;
+  const loop = (freq, type) => { const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; const g = AC.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(master); s.start(); return g; };
+  ambWater = loop(700, 'lowpass'); ambWind = loop(400, 'bandpass');
+}
+addEventListener('pointerdown', audioInit); addEventListener('keydown', audioInit);
+function sndSetOn(on) { soundOn = on; localStorage.setItem('odws_snd', on ? 'an' : 'aus'); if (master) master.gain.value = on ? 0.8 : 0; $('sndbtn').textContent = on ? '🔊' : '🔇'; }
+const _sv = new V3();
+function spatial(x, z) { // Lautstärke & Stereo je nach Abstand zum Blickpunkt und Zoom
+  const d = Math.hypot(x - target.x, z - target.z), reach = dist * 0.75 + 12;
+  let v = Math.max(0, 1 - d / reach) * THREE.MathUtils.clamp(1.5 - dist / 70, 0.12, 1);
+  _sv.set(x, height(x, z), z).project(camera); const pan = THREE.MathUtils.clamp(_sv.x, -1, 1) * 0.8;
+  return [v, pan];
+}
+function out(vol, pan) { const g = AC.createGain(); g.gain.value = vol; const p = AC.createStereoPanner ? AC.createStereoPanner() : null; if (p) { p.pan.value = pan; g.connect(p); p.connect(master); } else g.connect(master); return g; }
+function env(g, t0, a, peak, dec) { g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + a); g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + dec); }
+function noiseHit(dst, t0, freq, type, q, peak, dec, rate = 1) { const s = AC.createBufferSource(); s.buffer = AC.noise; s.playbackRate.value = rate; const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; const g = AC.createGain(); env(g, t0, 0.004, peak, dec); s.connect(f); f.connect(g); g.connect(dst); s.start(t0, Math.random()); s.stop(t0 + dec + 0.05); }
+function tone(dst, t0, f0, f1, type, peak, dec) { const o = AC.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + dec); const g = AC.createGain(); env(g, t0, 0.005, peak, dec); o.connect(g); g.connect(dst); o.start(t0); o.stop(t0 + dec + 0.05); }
+const SOUNDS = {
+  axe: (o, t) => { noiseHit(o, t, 1800, 'bandpass', 1.2, 0.9, 0.09); tone(o, t, 180, 70, 'sine', 0.8, 0.12); },
+  pick: (o, t) => { noiseHit(o, t, 3500, 'highpass', 0.7, 0.7, 0.06); tone(o, t, 1400, 900, 'triangle', 0.25, 0.08); },
+  hammer: (o, t) => { for (const [f, a] of [[880, 0.35], [1320, 0.22], [2150, 0.15], [3400, 0.08]]) tone(o, t, f, f * 0.995, 'sine', a, 0.35 + Math.random() * 0.1); noiseHit(o, t, 4000, 'highpass', 0.7, 0.4, 0.03); },
+  saw: (o, t) => { for (let k = 0; k < 3; k++) noiseHit(o, t + k * 0.13, 2400, 'bandpass', 3, 0.45, 0.11, 0.7); },
+  thud: (o, t) => { tone(o, t, 120, 45, 'sine', 0.9, 0.3); noiseHit(o, t, 500, 'lowpass', 0.7, 0.6, 0.35); },
+  crash: (o, t) => { noiseHit(o, t, 900, 'lowpass', 0.5, 1, 0.9); tone(o, t + 0.05, 90, 40, 'sine', 0.9, 0.6); },
+  splash: (o, t) => { noiseHit(o, t, 1500, 'bandpass', 0.8, 0.6, 0.35); noiseHit(o, t + 0.08, 3000, 'highpass', 0.5, 0.25, 0.2); },
+  grunt: (o, t) => { const osc = AC.createOscillator(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(110 + Math.random() * 30, t); osc.frequency.linearRampToValueAtTime(80, t + 0.32); const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 600; const g = AC.createGain(); const lfo = AC.createOscillator(); lfo.frequency.value = 28; const lg = AC.createGain(); lg.gain.value = 0.25; lfo.connect(lg); lg.connect(g.gain); env(g, t, 0.03, 0.45, 0.32); osc.connect(f); f.connect(g); g.connect(o); osc.start(t); lfo.start(t); osc.stop(t + 0.4); lfo.stop(t + 0.4); },
+  chirp: (o, t) => { const n = 2 + Math.floor(Math.random() * 4), base = 2600 + Math.random() * 1600; for (let k = 0; k < n; k++) tone(o, t + k * 0.09, base, base * (1.3 + Math.random() * 0.4), 'sine', 0.18, 0.06); },
+  crackle: (o, t) => { for (let k = 0; k < 4; k++) noiseHit(o, t + Math.random() * 0.4, 2500, 'highpass', 1, 0.15 + Math.random() * 0.2, 0.02); },
+  dig: (o, t) => noiseHit(o, t, 700, 'bandpass', 0.8, 0.35, 0.15),
+};
+function play(name, x, z, gain = 1) {
+  if (!AC || !soundOn || AC.state !== 'running') return;
+  const [v, pan] = spatial(x, z); if (v * gain < 0.03) return;
+  SOUNDS[name](out(v * gain, pan), AC.currentTime + 0.01);
+}
+let birdT = 0;
+function ambientSound(dt) {
+  if (!AC || !soundOn || AC.state !== 'running') return;
+  // Wasserrauschen in der Nähe von Fluss & Seen
+  let wd = Math.abs(target.x - riverX(target.z)); for (const l of LAKES) wd = Math.min(wd, Math.hypot(target.x - l.x, target.z - l.z) - l.R);
+  const zoomK = THREE.MathUtils.clamp(1.5 - dist / 70, 0.1, 1);
+  ambWater.gain.setTargetAtTime(Math.max(0, 1 - wd / 35) * 0.35 * zoomK, AC.currentTime, 0.5);
+  ambWind.gain.setTargetAtTime(0.03 + THREE.MathUtils.clamp(dist / 140, 0, 1) * 0.12, AC.currentTime, 0.8);
+  // Vögel, wenn Bäume in der Nähe sind
+  birdT -= dt; if (birdT < 0) { birdT = 0.6 + Math.random() * 2.5; let n = 0; for (let k = 0; k < 40; k++) { const t = trees[Math.floor(Math.random() * trees.length)]; if (t && Math.hypot(t.x - target.x, t.z - target.z) < dist * 0.8 + 10) n++; } if (n > 1) { const a = Math.random() * 6.28, r = Math.random() * dist * 0.6; play('chirp', target.x + Math.cos(a) * r, target.z + Math.sin(a) * r, 0.7); } }
+}
+
 // ---------- Gebiet & Grenzfähnchen ----------
 const territories = [];
 function inTerritory(x, z, margin = 0) { return territories.some(t => Math.hypot(t.x - x, t.z - z) <= t.r - margin); }
@@ -4930,6 +4985,7 @@ function buildModel(type) {
     const blade = mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.05, 12).rotateX(Math.PI / 2), M(0xb8bcc4)); saw.add(blade);
     for (let i = 0; i < 6; i++) { const t = mesh(box(0.08, 1.2, 0.06), M(0x777c84)); t.rotation.z = i * Math.PI / 6; saw.add(t); }
     g.add(saw); fx.spin = saw;
+    const lg = mesh(new THREE.CylinderGeometry(0.17, 0.17, 1.1, 7).rotateZ(Math.PI / 2), mat.trunk, -0.4, 0.95, 1.8); lg.visible = false; g.add(lg); fx.log = lg;
     for (let i = 0; i < 3; i++) g.add(mesh(box(1.4, 0.1, 0.4), mat.plank, -1.9, 0.1 + i * 0.12, 0.5));
   } else if (type === 'steinmetz') {
     const h = gable(2.4, 2, 1.7); h.children[0].material = mat.stone; g.add(h);
@@ -5399,11 +5455,23 @@ function planNext(b) {
     if ((b.out[out] || 0) >= 8) return idle('Ausgang voll – Träger holen ab', 2);
     if (!hasIn(b, inp)) { const miss = Object.keys(inp).filter(k => (b.in[k] || 0) < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
     takeIn(b, inp);
-    doFn(w, () => { b.working = true; b.status = verb; w.g.visible = false; });
-    work(w, t, null, () => { w.g.visible = true; b.working = false; setCarry(w, out); });
+    const ws = WORKSPOT[T];
+    if (ws) {
+      const stand = new V3(ws[0], 0, ws[1]).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z)), look = new V3(ws[2], 0, ws[3]).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z));
+      moveTo(w, stand);
+      doFn(w, () => { faceTo(w, look); b.working = true; b.status = verb; if (ws[5]) holdFront(w, ws[5]); if (b.fx.log) b.fx.log.visible = true; });
+      work(w, t, ws[4], () => { holdFront(w, null); if (b.fx.log) b.fx.log.visible = false; b.working = false; setCarry(w, out); });
+    } else {
+      doFn(w, () => { b.working = true; b.status = verb; w.g.visible = false; });
+      work(w, t, null, () => { w.g.visible = true; b.working = false; setCarry(w, out); });
+    }
     deliver(w, out, n);
   }
 }
+// Arbeitsplätze vor dem Haus: [stehen x, z, schaut zu x, z, Bewegung, Ware in der Hand]
+const WORKSPOT = { schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.8, 1.25, 1.8, 0.6, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
+  saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.7, 1.3, -1.7, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.6, 1.5, 1.6, 0.9, 'carve', 'kampfstock'] };
+function holdFront(w, item) { if (!item) { w.carry.position.set(0, 1.42, 0.05); w.carry.visible = false; w.holding = false; return; } w.carry.geometry = ITEMS[item].geo; w.carry.material = ITEMS[item].m; w.carry.position.set(0, 0.62, 0.42); w.carry.visible = true; w.holding = true; }
 function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - w.g.position.z); }
 
 // ---------- Lager-Anzeige ----------
@@ -5755,6 +5823,7 @@ function renderStats() {
   h += `<div class="w">🧺 Träger unterwegs: ${carriers.length}</div>`;
   $('statsbody').innerHTML = h;
 }
+$('sndbtn').textContent = soundOn ? '🔊' : '🔇'; $('sndbtn').onclick = () => { audioInit(); sndSetOn(!soundOn); toast(soundOn ? 'Ton an' : 'Ton aus'); };
 $('statbtn').onclick = () => { const s = $('stats'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; $('savemenu').style.display = 'none'; renderStats(); };
 $('closestats').onclick = () => $('stats').style.display = 'none';
 
@@ -5843,7 +5912,7 @@ function step(dt) {
     if (!w.queue.length && w.isCarrier) planCarrier(w);
     const q = w.queue[0]; if (!q) continue;
     let walking = false;
-    w.arm.rotation.x = 0; w.body.rotation.x = 0;
+    w.arm.rotation.x = 0; w.body.rotation.x = 0; if (w.arm2) w.arm2.rotation.x = 0;
     if (q.to && !q.routed) {
       q.routed = true; const p0 = w.g.position;
       const path = findPath(p0.x, p0.z, q.to.x, q.to.z);
@@ -5857,13 +5926,21 @@ function step(dt) {
       for (const br of bridgesDone()) { const lx = new V3(p.x - br.x, 0, p.z - br.z).applyAxisAngle(new V3(0, 1, 0), -br.rot); if (Math.abs(lx.z) < 1.2 && Math.abs(lx.x) < 7) { const top = Math.abs(lx.x) < 5 ? 1.12 : 1.12 - (Math.abs(lx.x) - 5) * 0.4; p.y = Math.max(p.y, top); } }
     } else if (q.wait !== undefined) {
       q.el = (q.el || 0) + dt; const ph = q.el * 7;
-      if (q.anim === 'chop') { w.arm.rotation.x = -1.6 + Math.abs(Math.sin(ph)) * 2.2; w.body.rotation.x = Math.sin(ph) * 0.1; }
+      if (q.anim === 'chop') { w.arm.rotation.x = -1.6 + Math.abs(Math.sin(ph)) * 2.2; w.body.rotation.x = Math.sin(ph) * 0.1; if (w.arm2) w.arm2.rotation.x = w.arm.rotation.x * 0.8; }
+      const hitEvery = (period, name, gain) => { q.nh = q.nh ?? period * 0.5; if (q.el >= q.nh) { q.nh += period; play(name, w.g.position.x, w.g.position.z, gain); return true; } return false; };
+      if (q.anim === 'chop') hitEvery(Math.PI / 7, w.home && w.home.type === 'holzfaeller' ? 'axe' : 'pick', 1);
+      if (q.anim === 'hammer') { const k = (q.el * 2.9) % 1; w.arm.rotation.x = k < 0.7 ? -0.6 - k / 0.7 * 1.9 : -2.5 + (k - 0.7) / 0.3 * 1.9; if (w.arm2) w.arm2.rotation.x = -0.9; w.body.rotation.x = 0.12; if (hitEvery(1 / 2.9, 'hammer', 0.8) && w.home) { const sp = w.g.position; for (let s = 0; s < 6; s++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.04), new THREE.MeshBasicMaterial({ color: 0xffc040 })); m.position.set(sp.x + Math.sin(w.g.rotation.y) * 0.5, sp.y + 0.75, sp.z + Math.cos(w.g.rotation.y) * 0.5); scene.add(m); puffs.push({ m, t: 0, chip: new V3((Math.random() - 0.5) * 3, 2.5, (Math.random() - 0.5) * 3) }); } } }
+      if (q.anim === 'push') { const k = Math.sin(q.el * 1.8); w.arm.rotation.x = w.arm2.rotation.x = -1.3 + k * 0.25; w.body.rotation.x = 0.15 + k * 0.08; w.carry.position.z = 0.42 + (k + 1) * 0.25; if (Math.random() < dt * 1.5) play('crackle', w.g.position.x, w.g.position.z, 0.8); }
+      if (q.anim === 'saw') { const k = Math.sin(q.el * 0.9); w.arm.rotation.x = w.arm2.rotation.x = -1.15; w.body.rotation.x = 0.2; if (w.home && w.home.fx.log) w.home.fx.log.position.x = -0.4 + (q.el / q.wait) * 1.4; hitEvery(0.55, 'saw', 0.7); }
+      if (q.anim === 'stoke') { w.arm.rotation.x = w.arm2.rotation.x = -1.0 + Math.sin(q.el * 3) * 0.35; w.body.rotation.x = 0.2; if (Math.random() < dt * 2) play('crackle', w.g.position.x, w.g.position.z, 1); }
+      if (q.anim === 'carve') { w.arm.rotation.x = -1.1 + Math.sin(q.el * 14) * 0.18; w.arm2.rotation.x = -1.0; w.body.rotation.x = 0.2; hitEvery(0.4, 'dig', 0.4); }
+      if (q.anim === 'dig' || q.anim === 'sow') hitEvery(0.9, 'dig', 0.6);
       if (q.anim === 'dig' || q.anim === 'sow') { w.body.rotation.x = 0.35; w.arm.rotation.x = -0.6 + Math.sin(ph) * 0.6; if (q.anim === 'sow') w.g.rotation.y += Math.sin(ph * 0.5) * dt; }
-      if (q.anim === 'fish') { w.arm.rotation.x = -0.9 + Math.sin(q.el * 1.5) * 0.15; }
+      if (q.anim === 'fish') { w.arm.rotation.x = -0.9 + Math.sin(q.el * 1.5) * 0.15; if (q.el + dt >= q.wait && !q.spl) { q.spl = 1; play('splash', w.g.position.x, w.g.position.z, 0.7); } }
+      if (q.anim === 'pull') { if (q.el + dt >= q.wait && !q.spl) { q.spl = 1; play('splash', w.g.position.x, w.g.position.z, 0.8); } }
       if (q.anim === 'pull') { w.arm.rotation.x = -1.2 + Math.sin(ph) * 0.5; if (w.home.fx.bucket) w.home.fx.bucket.position.y = 1.0 + Math.sin(q.el * 2) * 0.4; }
       if (q.el >= q.wait) { w.queue.shift(); q.fn && q.fn(); }
     } else if (q.fn) { w.queue.shift(); q.fn(); }
-    if (w.arm2) w.arm2.rotation.x = 0;
     if (walking) { w.walkPh += dt * 10; const sw = Math.sin(w.walkPh); w.legs[0].rotation.x = sw * 0.65; w.legs[1].rotation.x = -sw * 0.65; w.body.position.y = Math.abs(sw) * 0.04; w.body.rotation.z = sw * 0.04;
       if (w.carrying) { w.arm.rotation.x = -2.7; if (w.arm2) w.arm2.rotation.x = -2.7; } else { w.arm.rotation.x = -sw * 0.5; if (w.arm2) w.arm2.rotation.x = sw * 0.5; } }
     else { w.legs[0].rotation.x = w.legs[1].rotation.x = 0; w.body.rotation.z = 0; if (w.head) w.head.rotation.y = Math.sin(simT * 0.7 + w.seed) * 0.35; }
@@ -5874,7 +5951,8 @@ function step(dt) {
   let tDirty = false;
   for (let i = trees.length - 1; i >= 0; i--) {
     const t = trees[i];
-    if (t.falling) { t.falling += dt; t.fallA = Math.min(Math.PI / 2, t.falling * t.falling * 2.2); if (t.falling > 1.8) t.shrink = Math.max(0.01, 1 - (t.falling - 1.8) / 0.8); if (t.falling > 2.6) { removeTree(t); addStump(t.x, t.z, t.size); continue; } updTree(t); tDirty = true; }
+    if (t.falling) { if (t.falling < 0.75 && t.falling + dt >= 0.75) play('crash', t.x, t.z, 1);
+      t.falling += dt; t.fallA = Math.min(Math.PI / 2, t.falling * t.falling * 2.2); if (t.falling > 1.8) t.shrink = Math.max(0.01, 1 - (t.falling - 1.8) / 0.8); if (t.falling > 2.6) { removeTree(t); addStump(t.x, t.z, t.size); continue; } updTree(t); tDirty = true; }
     else if (t.growth < 1) { t.growth = Math.min(1, t.growth + dt / 60); updTree(t); tDirty = true; }
   }
   if (tDirty) treesDirty();
@@ -5888,6 +5966,7 @@ function step(dt) {
   // Effekte
   for (const b of buildings) {
     if (b.fx.spin && b.working) b.fx.spin.rotation.z -= dt * (b.type === 'muehle' ? 1.2 : 9);
+    if (b.fx.pigs && Math.random() < dt * 0.25) play('grunt', b.x, b.z, 0.8);
     if (b.fx.pigs) for (const p of b.fx.pigs) {
       p.shown += (p.growth - p.shown) * Math.min(1, dt * 1.5); p.g.scale.setScalar(0.35 + p.shown * 0.75);
       p.t -= dt; if (p.t < 0) { p.t = 2 + Math.random() * 4; p.tx = (Math.random() - 0.5) * 3.4; p.tz = (Math.random() - 0.5) * 3.4; }
@@ -5927,7 +6006,7 @@ function animate() {
   camera.lookAt(target);
   sun.position.set(target.x - 40, 55, target.z + 30); sun.target.position.copy(target);
   if (fogDirty) applyFog();
-  windU.value = clock.elapsedTime;
+  windU.value = clock.elapsedTime; ambientSound(real);
   if (grassDirty || !grassC || Math.hypot(target.x - grassC.x, target.z - grassC.z) > GRASS_R * 0.35) scatterGrass();
   const ext = THREE.MathUtils.clamp(dist * 1.05, 28, 80);
   if (Math.abs(ext - (sun.shadow.camera.right)) > 2) { Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext }); sun.shadow.camera.updateProjectionMatrix(); }
