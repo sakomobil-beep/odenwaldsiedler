@@ -55817,7 +55817,7 @@ const CATS = [
   { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
   { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'wachturm'] },
-  { name: 'Wege & Lager', icon: '🛤️', types: ['strasse', 'bruecke', 'lager'] },
+  { name: 'Wege & Lager', icon: '🛤️', types: ['bruecke', 'lager'] },
 ];
 let openCat = -1;
 $('menu').innerHTML = CATS.map((c, i) => `<button class="cat" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${c.types.length} Gebäude</small></button>`).join('');
@@ -56174,7 +56174,7 @@ function applySave(d) {
   }
   placeBuilding.noPlots = false;
   buildWalk();
-  for (const c of d.roads) road[c] = 1; roadsAny = d.roads.length > 0; rebuildRoads();
+  // Straßen sind entfernt – alte gespeicherte Straßen werden ignoriert
   if (d.cam) { target.x = d.cam[0]; target.z = d.cam[1]; yaw = d.cam[2]; pitch = d.cam[3]; dist = d.cam[4]; }
   simT = d.simT || 0; fogDirty = true;
 }
