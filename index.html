@@ -5206,7 +5206,7 @@ const TYPES = {
   muenzpraege: { name: 'Münzprägerei', icon: '🪙', cost: { bretter: 4, stein: 5 }, r: 2.2, desc: '1 Golderz + 1 Kohle → 1 Münze (für Handel und bessere Wächter)' },
   schmied: { name: 'Werkzeugschmied', icon: '🔨', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Eisenbarren → 1 Werkzeug' },
 };
-function buildModel(type) {
+function buildModelOld(type) {
   const g = new THREE.Group(), fx = {};
   if (type === 'lager') {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(mesh(box(0.3, 2.6, 0.3), mat.beam, sx * 2.6, 1.3, sz * 1.9));
@@ -5350,6 +5350,294 @@ function buildModel(type) {
   g.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
   return { g, fx };
 }
+const FLOWERS = [M(0xe74c3c), M(0xf4d03f), M(0xffffff), M(0xb07cd8)];
+const DM = { lamp: new THREE.MeshStandardMaterial({ color: 0xffd080, emissive: 0xffb040, emissiveIntensity: 0.6 }) };
+// ---------- Odenwälder Baustil ----------
+const OW = { sand: M(0xb47862), sand2: M(0x9c624e), sand3: M(0xc48a72), plasterW: M(0xf3ece0), plasterY: M(0xe8c878), plasterP: M(0xefd6cc), ox: M(0x8a2a20), brown: M(0x3e2a1c), blueg: M(0x4a5866),
+  tile: M(0xa8452c), tile2: M(0x94402a), tileL: M(0x7a3220), slate: M(0x4a4e56), shing: M(0x8a4a32), shing2: M(0x7a4028), gS: M(0x3f6b45), oS: M(0xc8602a), glass: new THREE.MeshStandardMaterial({ color: 0x2a3440, emissive: 0xffb050, emissiveIntensity: 0, roughness: 0.2, metalness: 0.3 }),
+  wood: M(0x6a4428), iron: M(0x2e2e30), gold: new THREE.MeshStandardMaterial({ color: 0xe0b040, metalness: 0.7, roughness: 0.35 }), wheat: M(0xf0e2b8) };
+const B = (g, w, h, d, m, x, y, z, rx = 0, ry = 0, rz = 0) => { const o = mesh(box(w, h, d), m, x, y, z); o.rotation.set(rx, ry, rz); g.add(o); return o; };
+// Fensterl mit Rahmen, Sprossen, Läden, optional Blumenkasten
+function owWindow(f, x, y, beam, shut, flowers, w = 0.42, h = 0.5) {
+  B(f, w + 0.1, h + 0.1, 0.05, beam, x, y, 0.05); B(f, w, h, 0.04, OW.glass, x, y, 0.07);
+  B(f, 0.03, h, 0.03, beam, x, y, 0.1); B(f, w, 0.03, 0.03, beam, x, y + h * 0.1, 0.1);
+  if (shut) for (const s of [-1, 1]) { B(f, w * 0.52, h + 0.04, 0.03, shut, x + s * (w * 0.78), y, 0.08); for (let k = -2; k <= 2; k++) B(f, w * 0.44, 0.015, 0.01, OW.brown, x + s * (w * 0.78), y + k * h * 0.18, 0.1); }
+  if (flowers) { B(f, w + 0.06, 0.09, 0.12, OW.wood, x, y - h / 2 - 0.08, 0.12); for (let k = 0; k < 5; k++) { f.add(mesh(new THREE.SphereGeometry(0.035, 5, 4), M(0x4f8a3b), x - w / 2 + 0.05 + k * w / 4.5, y - h / 2 - 0.02, 0.13)); f.add(mesh(new THREE.SphereGeometry(0.028, 5, 4), FLOWERS[k % 4], x - w / 2 + 0.07 + k * w / 4.5, y - h / 2 + 0.01, 0.16)); } }
+}
+// Fachwerkwand (lokal: Breite in x, Höhe in y, nach +z schauend)
+function owFace(g, o) {
+  const f = new THREE.Group(); f.position.set(o.x, o.y, o.z); f.rotation.y = o.ry || 0; g.add(f);
+  const { w, h, beam, plaster } = o, T = 0.1;
+  B(f, w, h, 0.06, plaster, 0, h / 2, 0);
+  B(f, w + 0.02, T, T, beam, 0, T / 2, 0.04); B(f, w + 0.02, T, T, beam, 0, h - T / 2, 0.04);
+  const n = Math.max(2, Math.round(w / 0.62)), pw = w / n, wins = new Set(o.windows || []), yb = h * 0.38;
+  B(f, w, T * 0.8, T * 0.8, beam, 0, yb, 0.04);
+  for (let i = 0; i <= n; i++) B(f, T, h, T, beam, -w / 2 + i * pw, h / 2, 0.045);
+  for (let i = 0; i < n; i++) {
+    const cx = -w / 2 + (i + 0.5) * pw;
+    if (wins.has(i)) { owWindow(f, cx, yb + (h - yb) * 0.5, beam, o.shut, o.flowers, pw * 0.62, (h - yb) * 0.62); if (o.pattern === 'raute') { const s = Math.min(pw, yb) * 0.32; B(f, s, s, 0.03, beam, cx, yb * 0.5, 0.05, 0, 0, Math.PI / 4); B(f, s * 0.6, s * 0.6, 0.035, plaster, cx, yb * 0.5, 0.055, 0, 0, Math.PI / 4); } else { const L = Math.hypot(pw, yb); for (const s of [-1, 1]) B(f, L, T * 0.7, T * 0.7, beam, cx, yb / 2, 0.05, 0, 0, s * Math.atan2(yb, pw)); } }
+    else { // „Wilder Mann“: Streben schräg nach außen oben
+      const ht = h - T, L = Math.hypot(pw / 2, ht * 0.8);
+      for (const s of [-1, 1]) B(f, L, T * 0.75, T * 0.75, beam, cx + s * pw / 4, T + ht * 0.4, 0.05, 0, 0, -s * Math.atan2(ht * 0.8, pw / 2));
+      if (o.pattern === 'kreuz') { const L2 = Math.hypot(pw, ht); for (const s of [-1, 1]) B(f, L2, T * 0.6, T * 0.6, beam, cx, h / 2, 0.052, 0, 0, s * Math.atan2(ht, pw)); }
+    }
+  }
+  return f;
+}
+// Giebeldreieck mit Fachwerk
+function owGable(g, w, gh, y, z, ry, beam, plaster, win) {
+  const f = new THREE.Group(); f.position.set(0, y, z); f.rotation.y = ry; g.add(f);
+  const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(0, gh); sh.closePath();
+  f.add(mesh(new THREE.ShapeGeometry(sh), plaster, 0, 0, 0));
+  B(f, w, 0.1, 0.1, beam, 0, 0.05, 0.04); B(f, w * 0.62, 0.09, 0.1, beam, 0, gh * 0.38, 0.04); B(f, 0.1, gh * 0.95, 0.1, beam, 0, gh * 0.47, 0.045);
+  for (const s of [-1, 1]) { B(f, 0.09, gh * 0.38, 0.1, beam, s * w * 0.24, gh * 0.19, 0.045); const L = Math.hypot(w * 0.24, gh * 0.38); B(f, L, 0.08, 0.09, beam, s * w * 0.12, gh * 0.19, 0.05, 0, 0, -s * Math.atan2(gh * 0.38, w * 0.24)); B(f, Math.hypot(w * 0.12, gh * 0.3), 0.08, 0.09, beam, s * w * 0.07, gh * 0.53, 0.05, 0, 0, s * Math.atan2(gh * 0.3, w * 0.12)); }
+  if (win) owWindow(f, 0, gh * 0.55, beam, null, false, 0.3, 0.32);
+  return f;
+}
+// Steildach mit Ziegelreihen (First entlang z)
+function owRoof(g, w, d, y, rh, ov, m1, m2, rows = 9) {
+  const a = w / 2 + ov, L = Math.hypot(a, rh), th = Math.atan2(rh, a), top = y + rh * (w / 2 + ov) / a;
+  for (const s of [-1, 1]) {
+    const nx = s * Math.sin(th), ny = Math.cos(th);
+    const pl = B(g, L, 0.08, d + 2 * ov * 0.6, m1, s * a / 2 * (L / L), 0, 0, 0, 0, -s * th); pl.position.set(s * (L / 2) * Math.cos(th), top - (L / 2) * Math.sin(th), 0);
+    for (let i = 1; i < rows; i++) { const t = i / rows * L; B(g, 0.03, 0.025, d + 2 * ov * 0.6, i % 2 ? m2 : OW.tileL, s * t * Math.cos(th) + nx * 0.05, top - t * Math.sin(th) + ny * 0.05, 0, 0, 0, -s * th); }
+  }
+  B(g, 0.16, 0.16, d + 2 * ov * 0.6 + 0.04, m2, 0, top + 0.02, 0, 0, 0, Math.PI / 4);
+  return top;
+}
+function owDormer(g, x, y, z, s, roofM, beam, plaster) { const d = new THREE.Group(); d.position.set(x, y, z); d.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(d); B(d, 0.55, 0.45, 0.5, plaster, 0, 0.22, 0); owWindow(d, 0, 0.24, beam, null, false, 0.3, 0.3); d.children.slice(-4).forEach(c => c.position.z += 0.22); const sh = new THREE.Shape(); sh.moveTo(-0.36, 0); sh.lineTo(0.36, 0); sh.lineTo(0, 0.34); sh.closePath(); d.add(mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.7, bevelEnabled: false }).translate(0, 0, -0.42), roofM, 0, 0.44, 0)); }
+function sandArch(g, x, y, z, r, ry = 0) { const a = mesh(new THREE.TorusGeometry(r, 0.07, 5, 12, Math.PI), OW.sand3, x, y, z); a.rotation.y = ry; g.add(a); for (const s of [-1, 1]) { const p = B(g, 0.14, y - 0.01, 0.12, OW.sand3, x + Math.cos(ry) * s * r, (y) / 2, z - Math.sin(ry) * s * r); p.rotation.y = ry; } }
+// Odenwälder Haus: Sandstein-Erdgeschoss + vorkragendes Fachwerk-Obergeschoss + Steildach
+function owHouse(o) {
+  const g = new THREE.Group(), { w, d } = o, h1 = o.h1 || 1.15, h2 = o.h2 || 1.15, beam = o.beam || OW.ox, plaster = o.plaster || OW.plasterW, roofM = o.roof || OW.tile, jet = 0.12;
+  // Erdgeschoss: Sandstein oder verputzt mit Sandstein-Ecken
+  B(g, w, h1, d, o.groundSand ? OW.sand : plaster, 0, h1 / 2, 0);
+  if (o.groundSand) for (let i = 0; i < 18; i++) B(g, 0.25 + Math.random() * 0.2, 0.12, 0.02, Math.random() < 0.5 ? OW.sand2 : OW.sand3, (Math.random() - 0.5) * (w - 0.3), 0.1 + Math.random() * (h1 - 0.2), d / 2 + 0.005);
+  else { for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) B(g, 0.2, 0.22, 0.2, k % 2 ? OW.sand : OW.sand3, sx * (w / 2 - 0.08), 0.13 + k * 0.27, d / 2 - 0.08); B(g, w + 0.06, 0.22, d + 0.06, OW.sand, 0, 0.11, 0); }
+  // Tür mit Sandsteinbogen
+  const dx = o.doorX ?? -w * 0.22;
+  B(g, 0.5, 0.78, 0.04, o.doorM || OW.gS, dx, 0.39, d / 2 + 0.02); g.add(mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.04, 10, 1, false, -Math.PI / 2, Math.PI), o.doorM || OW.gS, dx, 0.78, d / 2 + 0.02).rotateX(Math.PI / 2));
+  sandArch(g, dx, 0.78, d / 2 + 0.03, 0.31); B(g, 0.8, 0.1, 0.3, OW.sand2, dx, 0.05, d / 2 + 0.18);
+  if (o.groundWin !== false) owWindow(g, w * 0.22, h1 * 0.58, OW.sand3, null, false, 0.36, 0.4), g.children.slice(-4).forEach(c => c.position.z += d / 2);
+  // Obergeschoss (vorkragend) mit Fachwerk auf allen Seiten
+  const W2 = w + jet * 2, D2 = d + jet * 2, y2 = h1;
+  B(g, W2 + 0.04, 0.14, D2 + 0.04, beam, 0, y2 + 0.07, 0);
+  for (const s of [-1, 1]) for (let k = 0; k < 4; k++) B(g, 0.08, 0.1, 0.08, beam, s * (W2 / 2 - 0.05), y2 - 0.03, -D2 / 2 + (k + 0.5) * D2 / 4);
+  const fo = { h: h2, beam, plaster, shut: o.shut === undefined ? OW.gS : o.shut, flowers: o.flowers !== false, pattern: o.pattern || 'raute' };
+  owFace(g, Object.assign({}, fo, { w: W2, x: 0, y: y2 + 0.14, z: D2 / 2, ry: 0, windows: o.frontWin || [0, 2] }));
+  owFace(g, Object.assign({}, fo, { w: W2, x: 0, y: y2 + 0.14, z: -D2 / 2, ry: Math.PI, windows: [1] }));
+  owFace(g, Object.assign({}, fo, { w: D2, x: W2 / 2, y: y2 + 0.14, z: 0, ry: Math.PI / 2, windows: [1] }));
+  owFace(g, Object.assign({}, fo, { w: D2, x: -W2 / 2, y: y2 + 0.14, z: 0, ry: -Math.PI / 2, windows: [1] }));
+  B(g, W2, h2, D2, plaster, 0, y2 + 0.14 + h2 / 2, 0).scale.set(0.98, 1, 0.98);
+  // Giebel + Steildach
+  const yr = y2 + 0.14 + h2, ov = 0.25, rh = W2 * (o.steep || 0.78), gh = rh * (W2 / 2) / (W2 / 2 + ov);
+  if (!o.shingleGable) for (const s of [-1, 1]) owGable(g, W2, gh, yr, s * (D2 / 2), s > 0 ? 0 : Math.PI, beam, plaster, true);
+  else for (const s of [-1, 1]) { const sh = new THREE.Shape(); sh.moveTo(-W2 / 2, 0); sh.lineTo(W2 / 2, 0); sh.lineTo(0, gh); sh.closePath(); const tri = mesh(new THREE.ShapeGeometry(sh), OW.shing, 0, yr, s * (D2 / 2 + 0.002)); if (s < 0) tri.rotation.y = Math.PI; g.add(tri); }
+  const top = owRoof(g, W2, D2, yr, rh, ov, roofM, roofM === OW.slate ? OW.slate : OW.tile2);
+  if (o.dormer) owDormer(g, W2 * 0.22, yr + rh * 0.3, 0, 1, roofM, beam, plaster);
+  if (o.chimney !== false) { B(g, 0.32, 1.1, 0.32, OW.sand, -W2 * 0.18, top - 0.2, -D2 * 0.2); B(g, 0.4, 0.07, 0.4, OW.sand2, -W2 * 0.18, top + 0.35, -D2 * 0.2); g.userData.smokeAt = new V3(-W2 * 0.18, top + 0.45, -D2 * 0.2); }
+  g.userData.top = top; g.userData.W2 = W2; g.userData.D2 = D2; g.userData.yr = yr; g.userData.gh = gh;
+  g.traverse(c => { if (c.isMesh) c.castShadow = c.receiveShadow = true; });
+  return g;
+}
+// Bäckerei: Schindelfassade mit großer Ähre & Brezelschild
+function owBakery() {
+  const g = owHouse({ w: 2.8, d: 2.3, beam: OW.brown, plaster: OW.plasterY, roof: OW.tile, shut: null, groundSand: false, shingleGable: true, frontWin: [0, 2], doorM: OW.wood });
+  const { W2, D2, yr, gh } = g.userData, z = D2 / 2 + 0.06;
+  // Schindeln über die Front
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 14; c++) { const x = -W2 / 2 + 0.1 + c * (W2 - 0.2) / 13 + (r % 2) * 0.05, y = yr - 0.05 + r * gh / 9.5; if (Math.abs(x) > (W2 / 2) * (1 - (y - yr) / gh) - 0.05) continue; B(g, 0.17, 0.13, 0.02, r % 2 ? OW.shing : OW.shing2, x, y, z); }
+  // Ähre (weiß)
+  const ear = (x, y, ang, n) => { for (let k = 0; k < n; k++) for (const s of [-1, 1]) { const e = mesh(new THREE.SphereGeometry(0.05, 6, 4), OW.wheat, x + Math.sin(ang) * k * 0.09 + s * 0.04, y + Math.cos(ang) * k * 0.09, z + 0.03); e.scale.set(0.6, 1.4, 0.3); e.rotation.z = -ang + s * 0.4; g.add(e); } B(g, 0.025, n * 0.09, 0.02, OW.wheat, x - Math.sin(ang) * 0.06, y - 0.15 + Math.cos(ang) * n * 0.03, z + 0.02, 0, 0, -ang); };
+  ear(0, yr + 0.35, 0, 7); ear(-0.12, yr + 0.3, -0.45, 5); ear(0.12, yr + 0.3, 0.45, 5);
+  // Brezel-Zunftschild
+  const arm = new THREE.Group(); arm.position.set(W2 / 2 - 0.1, yr - 0.45, D2 / 2 + 0.05); g.add(arm);
+  B(arm, 0.04, 0.04, 0.55, OW.iron, 0, 0, 0.27); arm.add(mesh(new THREE.TorusGeometry(0.12, 0.025, 5, 14), OW.gold, 0, -0.2, 0.5));
+  for (const s of [-1, 1]) arm.add(mesh(new THREE.TorusGeometry(0.06, 0.022, 5, 10), OW.gold, s * 0.06, -0.17, 0.5));
+  B(arm, 0.012, 0.15, 0.012, OW.iron, 0, -0.07, 0.5);
+  // Backofen-Anbau
+  g.add(mesh(new THREE.SphereGeometry(0.75, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), OW.sand, 1.9, 0, 0.2));
+  g.traverse(c => { if (c.isMesh) c.castShadow = c.receiveShadow = true; });
+  return g;
+}
+// Sandstein-Windmühle mit Gitterflügeln
+function owMill() {
+  const g = new THREE.Group();
+  const tower = mesh(new THREE.CylinderGeometry(1.05, 1.5, 4.6, 14, 6), OW.sand, 0, 2.3, 0); g.add(tower);
+  for (let r = 0; r < 14; r++) for (let c = 0; c < 18; c++) { if ((r + c) % 3) continue; const y = 0.2 + r * 0.32, rad = 1.5 - (y / 4.6) * 0.45 + 0.01, a = c / 18 * 6.283 + r * 0.17; const st = B(g, 0.3, 0.12, 0.03, r % 2 ? OW.sand2 : OW.sand3, Math.sin(a) * rad, y, Math.cos(a) * rad); st.rotation.y = a; st.rotation.x = 0.1; }
+  B(g, 0.55, 0.95, 0.06, OW.gS, 0, 0.48, 1.47, 0.1); sandArch(g, 0, 0.95, 1.46, 0.3);
+  for (const [y, a] of [[2.0, 0.3], [3.2, -0.5]]) { const w = new THREE.Group(); w.position.set(Math.sin(a) * (1.5 - y / 4.6 * 0.45), y, Math.cos(a) * (1.5 - y / 4.6 * 0.45)); w.rotation.y = a; g.add(w); owWindow(w, 0, 0, OW.sand3, OW.gS, false, 0.22, 0.26); }
+  const cap = mesh(new THREE.ConeGeometry(1.3, 1.1, 14), OW.slate, 0, 5.15, 0); g.add(cap);
+  for (let r = 0; r < 4; r++) g.add(mesh(new THREE.TorusGeometry(1.2 - r * 0.28, 0.025, 4, 18).rotateX(Math.PI / 2), M(0x3a3e46), 0, 4.7 + r * 0.25, 0));
+  const hub = new THREE.Group(); hub.position.set(0, 4.7, 1.35); g.add(hub);
+  hub.add(mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.4, 8).rotateX(Math.PI / 2), OW.brown, 0, 0, 0));
+  for (let i = 0; i < 4; i++) { const arm = new THREE.Group(); arm.rotation.z = i * Math.PI / 2 + 0.3; hub.add(arm); B(arm, 0.1, 3.6, 0.08, OW.brown, 0, 1.8, 0.1); for (let k = 0; k < 11; k++) B(arm, 0.6, 0.035, 0.03, OW.brown, 0.3, 0.6 + k * 0.28, 0.12); for (const x of [0.1, 0.35, 0.6]) B(arm, 0.03, 3.0, 0.03, OW.brown, x, 2.1, 0.12); }
+  g.userData.spin = hub;
+  for (let k = 0; k < 24; k++) { const a = k / 24 * 6.283; B(g, 0.06, 0.5 + Math.random() * 0.15, 0.04, M(0xb8a888), Math.sin(a) * 2.4, 0.27, Math.cos(a) * 2.4, 0, a, 0); }
+  g.traverse(c => { if (c.isMesh) c.castShadow = c.receiveShadow = true; });
+  return g;
+}
+// Lager im Stil des Michelstädter Rathauses
+function owRathaus() {
+  const g = new THREE.Group(), w = 4.4, d = 3.6, h1 = 1.5, h2 = 1.25;
+  B(g, w + 0.3, 0.35, d + 0.3, OW.sand, 0, 0.17, 0);
+  // offene Halle mit Holzständern und geschwungenen Kopfbändern
+  for (const sx of [-1, -1 / 3, 1 / 3, 1]) for (const sz of [-1, 0, 1]) { if (Math.abs(sx) < 1 && sz === 0) continue; const x = sx * w / 2, z = sz * d / 2; B(g, 0.2, h1, 0.2, OW.brown, x, 0.35 + h1 / 2, z); for (const s of [-1, 1]) { const kb = B(g, 0.09, 0.62, 0.1, OW.brown, x + s * 0.2, 0.35 + h1 - 0.24, z); kb.rotation.z = s * 0.75; } }
+  const y2 = 0.35 + h1;
+  B(g, w + 0.32, 0.18, d + 0.32, OW.brown, 0, y2 + 0.09, 0);
+  const fo = { h: h2, beam: OW.brown, plaster: OW.plasterW, shut: null, flowers: false, pattern: 'kreuz' };
+  owFace(g, Object.assign({}, fo, { w: w + 0.3, x: 0, y: y2 + 0.18, z: d / 2 + 0.15, ry: 0, windows: [1, 2, 4, 5] }));
+  owFace(g, Object.assign({}, fo, { w: w + 0.3, x: 0, y: y2 + 0.18, z: -d / 2 - 0.15, ry: Math.PI, windows: [1, 4] }));
+  owFace(g, Object.assign({}, fo, { w: d + 0.3, x: w / 2 + 0.15, y: y2 + 0.18, z: 0, ry: Math.PI / 2, windows: [1, 3] }));
+  owFace(g, Object.assign({}, fo, { w: d + 0.3, x: -w / 2 - 0.15, y: y2 + 0.18, z: 0, ry: -Math.PI / 2, windows: [1, 3] }));
+  B(g, w + 0.25, h2, d + 0.25, OW.plasterW, 0, y2 + 0.18 + h2 / 2, 0);
+  // Uhr und Wappen
+  const clock = new THREE.Group(); clock.position.set(0, y2 + 0.18 + h2 * 0.72, d / 2 + 0.24); g.add(clock);
+  clock.add(mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.04, 16).rotateX(Math.PI / 2), M(0x2a4a8a), 0, 0, 0)); clock.add(mesh(new THREE.TorusGeometry(0.22, 0.03, 4, 16), OW.gold, 0, 0, 0.02));
+  B(clock, 0.02, 0.15, 0.02, OW.gold, 0, 0.06, 0.04); B(clock, 0.1, 0.02, 0.02, OW.gold, 0.04, 0, 0.04);
+  // steiles Dach + spitze Ecktürmchen + Dachreiter
+  const yr = y2 + 0.18 + h2, W2 = w + 0.3, D2 = d + 0.3, rh = W2 * 0.85;
+  for (const s of [-1, 1]) { const gh = rh * (W2 / 2) / (W2 / 2 + 0.25); const sh = new THREE.Shape(); sh.moveTo(-W2 / 2, 0); sh.lineTo(W2 / 2, 0); sh.lineTo(0, gh); sh.closePath(); const tri = mesh(new THREE.ShapeGeometry(sh), OW.tile, 0, yr, s * (D2 / 2 + 0.002)); if (s < 0) tri.rotation.y = Math.PI; g.add(tri); }
+  const top = owRoof(g, W2, D2, yr, rh, 0.25, OW.tile, OW.tile2, 12);
+  for (const sx of [-1, 1]) { const t = new THREE.Group(); t.position.set(sx * (W2 / 2 - 0.05), yr - 0.1, D2 / 2 - 0.05); g.add(t); t.add(mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.5, 8), OW.plasterW, 0, 0.25, 0)); owWindow(t, 0, 0.27, OW.brown, null, false, 0.2, 0.22); t.children.slice(-4).forEach(c => c.position.z += 0.4); t.add(mesh(new THREE.ConeGeometry(0.52, 2.2, 8), OW.tile, 0, 1.6, 0)); t.add(mesh(new THREE.SphereGeometry(0.07, 6, 5), OW.gold, 0, 2.75, 0)); }
+  const dr = new THREE.Group(); dr.position.set(0, top - 0.05, 0.3); g.add(dr);
+  dr.add(mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.5, 8), OW.slate, 0, 0.25, 0)); dr.add(mesh(new THREE.SphereGeometry(0.26, 8, 6), OW.slate, 0, 0.62, 0)); dr.add(mesh(new THREE.ConeGeometry(0.12, 0.75, 8), OW.slate, 0, 1.15, 0));
+  B(dr, 0.02, 0.35, 0.02, OW.gold, 0, 1.65, 0); B(dr, 0.2, 0.14, 0.01, OW.gold, 0.1, 1.75, 0);
+  for (const s of [-1, 1]) owDormer(g, s * W2 * 0.2, yr + rh * 0.25, -D2 * 0.15, s, OW.tile, OW.brown, OW.plasterW);
+  g.traverse(c => { if (c.isMesh) c.castShadow = c.receiveShadow = true; });
+  return g;
+}
+
+// ---------- Gebäude im Odenwälder Stil: jedes nach seiner Bestimmung ----------
+const PALETTE = [ // Balken, Gefache, Läden
+  [OW.ox, OW.plasterW, OW.gS], [OW.brown, OW.plasterW, OW.gS], [OW.brown, OW.plasterY, OW.oS], [OW.blueg, OW.plasterY, OW.oS], [OW.ox, OW.plasterP, OW.gS], [OW.brown, OW.plasterP, OW.shutR || OW.oS],
+];
+const pal = () => PALETTE[Math.floor(Math.random() * PALETTE.length)];
+function signBoard(g, x, y, z, emblem) { // Zunftschild am schmiedeeisernen Ausleger
+  const a = new THREE.Group(); a.position.set(x, y, z); g.add(a);
+  B(a, 0.035, 0.035, 0.5, OW.iron, 0, 0, 0.25); a.add(mesh(new THREE.TorusGeometry(0.12, 0.012, 4, 10, Math.PI), OW.iron, 0, -0.06, 0.2).rotateY(Math.PI / 2));
+  B(a, 0.012, 0.1, 0.012, OW.iron, 0, -0.06, 0.45); const em = emblem(); em.position.set(0, -0.22, 0.45); a.add(em); return a;
+}
+const logPile = (g, x, z, n = 3, ry = 0) => { const p = new THREE.Group(); p.position.set(x, 0, z); p.rotation.y = ry; g.add(p); let k = 0; for (let row = 0; row < n; row++) for (let i = 0; i < n - row; i++) { const l = makeItem('stamm'); l.scale.set(1.4, 1.3, 1.3); l.rotation.y = Math.PI / 2; l.position.set((i - (n - row - 1) / 2) * 0.32, 0.16 + row * 0.28, 0); p.add(l); k++; } return p; };
+const barrel = (g, x, z, s = 1) => { const b = new THREE.Group(); b.position.set(x, 0, z); b.scale.setScalar(s); b.add(mesh(new THREE.CylinderGeometry(0.2, 0.17, 0.48, 10), M(0x8a6038), 0, 0.24, 0)); for (const y of [0.1, 0.38]) b.add(mesh(new THREE.TorusGeometry(0.195, 0.015, 4, 12).rotateX(Math.PI / 2), M(0x5e6268), 0, y, 0)); g.add(b); return b; };
+const crate = (g, x, z, s = 1, ry = 0) => { const c = new THREE.Group(); c.position.set(x, 0.17 * s, z); c.rotation.y = ry; c.add(mesh(box(0.34 * s, 0.34 * s, 0.34 * s), M(0xb08550))); for (const r of [-1, 1]) c.add(mesh(box(0.36 * s, 0.05 * s, 0.05 * s), M(0x7a5530), 0, r * 0.12 * s, 0.17 * s)); g.add(c); return c; };
+const sack = (g, x, z, item = 'mehl', ry = 0) => { const s = makeItem(item); s.position.set(x, 0.24, z); s.rotation.y = ry; g.add(s); return s; };
+const anvil = (g, x, z) => { const a = new THREE.Group(); a.position.set(x, 0, z); g.add(a); a.add(mesh(new THREE.CylinderGeometry(0.2, 0.26, 0.5, 8), M(0x6a4428), 0, 0.25, 0)); a.add(mesh(box(0.5, 0.16, 0.2), M(0x3a3a40), 0, 0.58, 0)); a.add(mesh(new THREE.ConeGeometry(0.1, 0.24, 6).rotateZ(-Math.PI / 2), M(0x3a3a40), 0.36, 0.6, 0)); return a; };
+function shedRoof(g, w, d, h, x, z, m) { // einfacher Unterstand
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.12, h, 0.12, OW.brown, x + sx * w / 2, h / 2, z + sz * d / 2);
+  const r = B(g, w + 0.4, 0.07, d + 0.35, m || OW.tile, x, h + 0.12, z, 0.18, 0, 0); for (let k = 0; k < 6; k++) B(g, 0.025, 0.02, d + 0.35, OW.tileL, x - w / 2 + k * w / 5, h + 0.17, z, 0.18, 0, 0); return r;
+}
+function buildModel(type) {
+  const fx = {}; let g;
+  const P = pal(), H = o => owHouse(Object.assign({ beam: P[0], plaster: P[1], shut: P[2] }, o));
+  if (type === 'lager') {
+    g = owRathaus(); fx.piles = {}; let i = 0;
+    for (const k of Object.keys(ITEMS)) { const pg = new THREE.Group(); pg.position.set(-1.9 + (i % 5) * 0.95, 0.36, -1.3 + Math.floor(i / 5) * 0.95); g.add(pg); fx.piles[k] = pg; i++; }
+    crate(g, 2.6, 2.1, 1.1, 0.3); barrel(g, -2.6, 2.1); barrel(g, -2.95, 1.8, 0.9);
+  } else if (type === 'holzfaeller') {
+    g = H({ w: 2.0, d: 1.7, h1: 1.0, h2: 1.0, roof: OW.slate, dormer: false, frontWin: [1] });
+    logPile(g, -1.75, 0, 4, Math.PI / 2); const blk = mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.45, 9), [OW.wood, mat.plank, mat.plank], 1.55, 0.22, 0.9); g.add(blk);
+    const axe = makeItem('werkzeug'); axe.position.set(1.55, 0.52, 0.9); axe.rotation.set(0, 0.3, 1.1); g.add(axe);
+    for (const sx of [-1, 1]) { const leg = B(g, 0.06, 0.6, 0.06, OW.wood, 1.5 + sx * 0.2, 0.28, -0.55); leg.rotation.z = sx * 0.4; } B(g, 0.8, 0.08, 0.08, OW.wood, 1.5, 0.5, -0.55);
+    signBoard(g, 0.9, 1.0, 0.95, () => { const s = new THREE.Group(); s.add(mesh(box(0.3, 0.22, 0.03), OW.wood)); const t = makeItem('stamm'); t.scale.setScalar(0.3); t.position.z = 0.03; s.add(t); return s; });
+  } else if (type === 'saegewerk') {
+    g = H({ w: 2.3, d: 1.9, h1: 1.05, h2: 0.95, frontWin: [2], chimney: false });
+    shedRoof(g, 2.4, 1.2, 1.35, 0.3, 1.85, OW.tile);
+    g.add(mesh(box(2.2, 0.8, 1), M(0x8a6038), 0.3, 0.4, 1.8));
+    const saw = new THREE.Group(); saw.position.set(0.3, 0.9, 1.8);
+    saw.add(mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.04, 20).rotateX(Math.PI / 2), M(0xc0c4cc, { metalness: 0.7, roughness: 0.3 })));
+    for (let i = 0; i < 20; i++) { const t = mesh(new THREE.ConeGeometry(0.05, 0.1, 3), M(0x9aa0a8), Math.cos(i / 20 * 6.28) * 0.58, Math.sin(i / 20 * 6.28) * 0.58, 0); t.rotation.z = i / 20 * 6.28 - Math.PI / 2; saw.add(t); }
+    g.add(saw); fx.spin = saw;
+    const lg = makeItem('stamm'); lg.scale.set(1.2, 1.3, 1.3); lg.position.set(-0.4, 0.97, 1.8); lg.visible = false; g.add(lg); fx.log = lg;
+    for (let k = 0; k < 4; k++) { const b = makeItem('bretter'); b.position.set(-1.85, 0.06 + k * 0.16, 0.6); b.rotation.y = Math.PI / 2; g.add(b); }
+    logPile(g, 2.2, 0.0, 3, Math.PI / 2);
+    // Wasserrad an der Seite
+    const wh = new THREE.Group(); wh.position.set(-1.45, 0.75, -0.3); wh.rotation.y = Math.PI / 2; g.add(wh);
+    wh.add(mesh(new THREE.TorusGeometry(0.7, 0.05, 5, 18), OW.brown)); for (let i = 0; i < 8; i++) { const sp = B(wh, 0.05, 1.4, 0.05, OW.brown, 0, 0, 0); sp.rotation.z = i * Math.PI / 8; B(wh, 0.12, 0.3, 0.25, OW.wood, Math.cos(i * Math.PI / 4) * 0.72, Math.sin(i * Math.PI / 4) * 0.72, 0).rotation.z = i * Math.PI / 4; }
+    fx.spin2 = wh;
+  } else if (type === 'steinmetz') {
+    g = H({ w: 2.0, d: 1.8, groundSand: true, beam: OW.brown, frontWin: [1] });
+    for (let i = 0; i < 4; i++) B(g, 0.45, 0.4, 0.45, i % 2 ? OW.sand : OW.sand3, 1.55, 0.2 + (i === 3 ? 0.4 : 0), -0.4 + (i % 3) * 0.5);
+    const col = mesh(new THREE.CylinderGeometry(0.18, 0.2, 0.9, 10), OW.sand3, -1.55, 0.45, 0.8); g.add(col); g.add(mesh(box(0.5, 0.12, 0.5), OW.sand2, -1.55, 0.96, 0.8));
+    B(g, 0.9, 0.08, 0.5, OW.wood, -1.55, 0.6, -0.3); for (const sx of [-1, 1]) B(g, 0.06, 0.6, 0.4, OW.wood, -1.55 + sx * 0.38, 0.3, -0.3);
+    signBoard(g, 0.75, 1.0, 1.0, () => { const s = new THREE.Group(); s.add(mesh(box(0.3, 0.22, 0.03), OW.wood)); const h = makeItem('werkzeug'); h.scale.setScalar(0.6); h.position.z = 0.03; s.add(h); return s; });
+  } else if (type === 'bauernhof') {
+    g = H({ w: 2.6, d: 2.2, frontWin: [0, 2], dormer: true });
+    const barn = new THREE.Group(); barn.position.set(-2.6, 0, -0.3); barn.rotation.y = Math.PI / 2; g.add(barn);
+    B(barn, 2.4, 0.3, 2.0, OW.sand, 0, 0.15, 0); B(barn, 2.3, 1.7, 1.9, M(0x6a4a30), 0, 1.15, 0);
+    for (let k = 0; k < 12; k++) B(barn, 0.03, 1.7, 0.02, M(0x4a3020), -1.1 + k * 0.2, 1.15, 0.96);
+    B(barn, 1.0, 1.25, 0.04, M(0x5a3a22), 0, 0.92, 0.97); for (const s of [-1, 1]) B(barn, 1.0, 0.06, 0.03, OW.brown, 0, 0.92, 0.99, 0, 0, s * 0.9);
+    const rf = owRoof(barn, 2.3, 1.9, 2.0, 1.4, 0.2, OW.tile, OW.tile2, 7);
+    for (const s of [-1, 1]) { const sh = new THREE.Shape(); sh.moveTo(-1.15, 0); sh.lineTo(1.15, 0); sh.lineTo(0, 1.4 * 1.15 / 1.35); sh.closePath(); const tri = mesh(new THREE.ShapeGeometry(sh), M(0x6a4a30), 0, 2.0, s * 0.951); if (s < 0) tri.rotation.y = Math.PI; barn.add(tri); }
+    B(barn, 0.5, 0.35, 0.05, M(0xe0bf55), 0, 2.35, 0.97);
+    for (let k = 0; k < 3; k++) { const hb = mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.45, 10).rotateZ(Math.PI / 2), M(0xd8b450), 1.7, 0.28, -1.2 + k * 0.6); g.add(hb); }
+    const cart = new THREE.Group(); cart.position.set(1.75, 0, 1.1); cart.rotation.y = 0.4; g.add(cart); B(cart, 0.9, 0.3, 0.6, OW.wood, 0, 0.45, 0); for (const s of [-1, 1]) cart.add(mesh(new THREE.TorusGeometry(0.24, 0.04, 4, 10), OW.brown, 0, 0.26, s * 0.32)); B(cart, 0.9, 0.04, 0.04, OW.wood, 0.75, 0.4, 0, 0, 0, 0.3); sack(cart, 0, 0, 'getreide');
+  } else if (type === 'muehle') {
+    g = owMill(); g.scale.setScalar(0.92); fx.spin = g.userData.spin;
+    sack(g, 1.25, 1.25, 'mehl', 0.3); sack(g, 1.55, 1.0, 'mehl', 1); sack(g, -1.3, 1.25, 'getreide');
+  } else if (type === 'baeckerei') {
+    g = owBakery(); fx.smokeAt = g.userData.smokeAt || new V3(0.6, 3.9, -0.3);
+    const tbl = new THREE.Group(); tbl.position.set(-1.9, 0, 0.6); g.add(tbl); B(tbl, 0.8, 0.06, 0.5, OW.wood, 0, 0.6, 0); for (const sx of [-1, 1]) B(tbl, 0.06, 0.6, 0.45, OW.wood, sx * 0.35, 0.3, 0); const br = makeItem('brot'); br.position.set(0, 0.7, 0); tbl.add(br);
+    sack(g, -1.85, -0.3, 'mehl'); barrel(g, 2.0, 1.3, 0.9);
+  } else if (type === 'metzger') {
+    g = H({ w: 2.5, d: 2.0, beam: OW.ox, plaster: OW.plasterW, shut: OW.shutR || OW.oS, frontWin: [0, 2] });
+    const rack = new THREE.Group(); rack.position.set(1.6, 0, 0.7); g.add(rack);
+    for (const sx of [-1, 1]) B(rack, 0.08, 1.5, 0.08, OW.brown, sx * 0.45, 0.75, 0); B(rack, 1.0, 0.07, 0.07, OW.brown, 0, 1.45, 0);
+    for (let i = 0; i < 3; i++) { B(rack, 0.015, 0.18, 0.015, OW.iron, -0.28 + i * 0.28, 1.33, 0); const h = makeItem('schinken'); h.rotation.x = Math.PI; h.position.set(-0.28 + i * 0.28, 1.05, 0); rack.add(h); }
+    B(g, 1.0, 0.5, 0.55, OW.wood, -1.85, 0.3, 0.7); B(g, 1.05, 0.08, 0.6, M(0xc8a070), -1.85, 0.58, 0.7);
+    signBoard(g, 0.9, 1.0, 1.15, () => { const s = new THREE.Group(); s.add(mesh(box(0.34, 0.24, 0.03), M(0xe8d8b8))); const p = makeItem('schwein'); p.scale.setScalar(0.55); p.position.z = 0.04; s.add(p); return s; });
+  } else if (type === 'fischer') {
+    g = H({ w: 1.8, d: 1.5, h1: 0.95, h2: 0.9, beam: OW.blueg, plaster: OW.plasterW, shut: OW.gS, frontWin: [1], dormer: false });
+    const rack = new THREE.Group(); rack.position.set(1.5, 0, 0.5); g.add(rack);
+    for (const sx of [-1, 1]) B(rack, 0.06, 1.2, 0.06, OW.brown, sx * 0.45, 0.6, 0); B(rack, 1.0, 0.05, 0.05, OW.brown, 0, 1.15, 0);
+    for (let i = 0; i < 4; i++) { const f = makeItem('fisch'); f.scale.setScalar(0.8); f.rotation.set(0, Math.PI / 2, Math.PI / 2); f.position.set(-0.3 + i * 0.2, 0.92, 0); rack.add(f); }
+    const net = mesh(new THREE.PlaneGeometry(1.0, 0.8, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6a5a40, wireframe: true }), -1.3, 0.65, 0.4); net.rotation.y = Math.PI / 2; g.add(net); for (const z of [0, 0.8]) B(g, 0.05, 1.1, 0.05, OW.brown, -1.3, 0.55, z);
+    const boat = new THREE.Group(); boat.position.set(0.3, 0.25, 1.4); boat.rotation.set(Math.PI, 0.2, 0); g.add(boat); const hull = mesh(new THREE.SphereGeometry(0.4, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), M(0x6a4428), 0, 0, 0); hull.scale.set(2.0, 0.6, 0.8); boat.add(hull);
+  } else if (type === 'waffenschnitzer') {
+    g = H({ w: 2.3, d: 1.9, frontWin: [1] });
+    B(g, 1.3, 0.1, 0.55, OW.wood, 1.85, 0.75, 0.9); for (const sx of [-1, 1]) B(g, 0.08, 0.75, 0.5, OW.brown, 1.85 + sx * 0.55, 0.37, 0.9);
+    const rack = new THREE.Group(); rack.position.set(-1.65, 0, 0.6); g.add(rack); B(rack, 0.08, 1.4, 0.08, OW.brown, -0.4, 0.7, 0); B(rack, 0.08, 1.4, 0.08, OW.brown, 0.4, 0.7, 0); B(rack, 0.9, 0.07, 0.1, OW.brown, 0, 1.2, 0);
+    for (let i = 0; i < 5; i++) { const st = makeItem('kampfstock'); st.rotation.z = Math.PI / 2 + 0.1; st.position.set(-0.3 + i * 0.15, 0.65, 0.07); rack.add(st); }
+    const shield = new THREE.Group(); shield.position.set(0.9, 1.65, 1.2); g.add(shield); shield.add(mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.04, 14).rotateX(Math.PI / 2), M(0x2f6fd0))); shield.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 8).rotateX(Math.PI / 2), OW.gold, 0, 0, 0.02));
+  } else if (type === 'schmied') {
+    g = H({ w: 2.6, d: 2.1, groundSand: true, beam: OW.brown, plaster: OW.plasterW, chimney: false, frontWin: [2] });
+    const pipe = mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.6, 8), OW.iron, -0.6, g.userData.top - 0.2, -0.3); g.add(pipe); g.add(mesh(new THREE.ConeGeometry(0.16, 0.18, 8), OW.iron, -0.6, g.userData.top + 0.65, -0.3)); fx.smokeAt = new V3(-0.6, g.userData.top + 0.75, -0.3);
+    anvil(g, 1.9, 0.9);
+    const forge = new THREE.Group(); forge.position.set(-1.9, 0, 0.6); g.add(forge); B(forge, 1.0, 0.8, 0.9, OW.sand, 0, 0.4, 0); const glowM = new THREE.MeshStandardMaterial({ color: 0x331100, emissive: 0xff5a10, emissiveIntensity: 0.2 }); B(forge, 0.6, 0.12, 0.5, glowM, 0, 0.85, 0); fx.glow = glowM;
+    const bel = mesh(new THREE.SphereGeometry(0.25, 8, 5), M(0x5a3a22), -0.7, 0.75, 0); bel.scale.set(1.4, 0.4, 0.8); forge.add(bel);
+    barrel(g, 1.95, -0.3, 0.9); fx.sparkAt = new V3(1.9, 1.0, 0.9);
+    signBoard(g, 0.9, 1.1, 1.15, () => { const s = new THREE.Group(); s.add(mesh(new THREE.TorusGeometry(0.12, 0.035, 5, 12, Math.PI * 1.5), OW.iron, 0, 0, 0).rotateZ(-Math.PI / 4)); return s; });
+  } else if (type === 'muenzpraege') {
+    g = H({ w: 2.3, d: 2.0, groundSand: true, beam: OW.ox, plaster: OW.plasterY, shut: OW.gS, frontWin: [0, 2], dormer: true });
+    anvil(g, 1.95, 1.0);
+    const glowM = new THREE.MeshStandardMaterial({ color: 0x331100, emissive: 0xffb020, emissiveIntensity: 0.2 }); B(g, 0.9, 0.75, 0.8, OW.sand, 1.95, 0.38, -0.2); B(g, 0.6, 0.12, 0.5, glowM, 1.95, 0.8, -0.2); fx.glow = glowM; fx.sparkAt = new V3(1.95, 1.0, 1.0); fx.smokeAt = g.userData.smokeAt;
+    signBoard(g, 0.9, 1.0, 1.15, () => { const c = mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 16).rotateX(Math.PI / 2), OW.gold); return c; });
+    const chest = new THREE.Group(); chest.position.set(-1.65, 0, 0.8); g.add(chest); B(chest, 0.6, 0.35, 0.4, M(0x6a4428), 0, 0.18, 0); B(chest, 0.62, 0.05, 0.42, OW.gold, 0, 0.3, 0);
+  } else if (type === 'wachturm') {
+    g = new THREE.Group();
+    const st = mesh(new THREE.CylinderGeometry(1.05, 1.25, 2.4, 4, 1).rotateY(Math.PI / 4), OW.sand, 0, 1.2, 0); g.add(st);
+    for (let i = 0; i < 20; i++) { const a = Math.floor(Math.random() * 4) * Math.PI / 2, y = 0.2 + Math.random() * 2.1; const p = B(g, 0.3, 0.12, 0.02, i % 2 ? OW.sand2 : OW.sand3, Math.sin(a) * (1.2 - y * 0.07), y, Math.cos(a) * (1.2 - y * 0.07)); p.rotation.y = a; }
+    B(g, 0.55, 0.9, 0.05, OW.gS, 0, 0.45, 1.18); sandArch(g, 0, 0.9, 1.19, 0.3);
+    B(g, 2.1, 0.16, 2.1, OW.brown, 0, 2.48, 0);
+    const fo = { h: 1.2, beam: OW.ox, plaster: OW.plasterW, shut: null, flowers: false, pattern: 'kreuz' };
+    for (let k = 0; k < 4; k++) owFace(g, Object.assign({}, fo, { w: 1.9, x: Math.sin(k * Math.PI / 2) * 0.95, y: 2.56, z: Math.cos(k * Math.PI / 2) * 0.95, ry: k * Math.PI / 2, windows: [1] }));
+    B(g, 1.85, 1.2, 1.85, OW.plasterW, 0, 3.16, 0);
+    g.add(mesh(new THREE.ConeGeometry(1.6, 2.6, 4).rotateY(Math.PI / 4), OW.tile, 0, 5.05, 0));
+    for (let r = 1; r < 6; r++) g.add(mesh(new THREE.CylinderGeometry(1.6 - r * 0.27 + 0.03, 1.6 - r * 0.27 + 0.03, 0.03, 4, 1, true).rotateY(Math.PI / 4), OW.tileL, 0, 3.75 + r * 0.43, 0));
+    B(g, 0.05, 1.4, 0.05, OW.iron, 0, 6.9, 0); g.add(mesh(new THREE.SphereGeometry(0.08, 6, 5), OW.gold, 0, 6.35, 0));
+    const fl = mesh(box(0.9, 0.55, 0.03), M(0x2f6fd0), 0.47, 7.3, 0); g.add(fl); fx.flag = fl;
+  } else {
+    const old = buildModelOld(type); g = old.g; Object.assign(fx, old.fx);
+    if (type === 'brunnen') { g.traverse(o => { if (o.isMesh && o.material === mat.stone) o.material = OW.sand; if (o.isMesh && o.material === mat.roof) o.material = OW.tile; if (o.isMesh && o.material === mat.beam) o.material = OW.brown; }); const crank = new THREE.Group(); crank.position.set(0, 1.65, 0); g.add(crank); crank.add(mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.7, 8).rotateZ(Math.PI / 2), M(0x8a6038))); B(crank, 0.04, 0.3, 0.04, OW.iron, 0.9, -0.12, 0); B(crank, 0.04, 0.04, 0.2, OW.iron, 0.9, -0.27, 0.1); barrel(g, 1.0, 0.7, 0.75); }
+    if (TYPES[type] && TYPES[type].mine) { g.traverse(o => { if (o.isMesh && o.material === mat.trunk) o.material = OW.brown; }); sandArch(g, 0, 1.55, 0.88, 0.8); const lamp = new THREE.Group(); lamp.position.set(0.95, 1.45, 1.0); g.add(lamp); B(lamp, 0.12, 0.16, 0.12, OW.lamp || DM.lamp, 0, 0, 0); const hut = H({ w: 1.3, d: 1.1, h1: 0.75, h2: 0.7, frontWin: [1], dormer: false, chimney: false }); hut.scale.setScalar(0.75); hut.position.set(-1.9, 0, 1.4); hut.rotation.y = 0.4; g.add(hut); }
+    if (type === 'schmelze') g.traverse(o => { if (o.isMesh && o.material === mat.stone) o.material = OW.sand; if (o.isMesh && o.material === mat.roof2) o.material = OW.tile; });
+    if (type === 'schweinezucht') g.traverse(o => { if (o.isMesh && o.material === mat.roof2) o.material = OW.tile; });
+    if (type === 'bruecke') { for (const s of [-1, 1]) { const p = mesh(box(1.0, 1.4, 2.4), OW.sand, s * 6.2, 0.2, 0); g.add(p); } g.traverse(o => { if (o.isMesh && o.material === mat.trunk) o.material = OW.sand2; }); }
+  }
+  if (!fx.smokeAt && g.userData && g.userData.smokeAt && type !== 'schmied') fx.houseSmoke = g.userData.smokeAt;
+  g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return { g, fx };
+}
+
 
 // ---------- Gebäude & Arbeiter ----------
 const buildings = [], workers = [];
@@ -5710,8 +5998,8 @@ function planNext(b) {
   }
 }
 // Arbeitsplätze vor dem Haus: [stehen x, z, schaut zu x, z, Bewegung, Ware in der Hand]
-const WORKSPOT = { schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.8, 1.25, 1.8, 0.6, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
-  saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.7, 1.3, -1.7, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.6, 1.5, 1.6, 0.9, 'carve', 'kampfstock'] };
+const WORKSPOT = { schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.95, 1.6, 1.95, 1.0, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
+  saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.85, 1.3, -1.85, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.85, 1.5, 1.85, 0.9, 'carve', 'kampfstock'] };
 function holdFront(w, item) { w.holding = !!item; placeCarry(w, item, 'work'); }
 function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - w.g.position.z); }
 
@@ -6366,6 +6654,8 @@ function step(dt) {
       if (L > 0.1) { const sp = Math.min(L, dt * 0.6); p.x += dx / L * sp; p.z += dz / L * sp; p.g.rotation.y = Math.atan2(-dz, dx); p.g.position.y = Math.abs(Math.sin(simT * 9 + p.x)) * 0.04; }
       p.g.position.x = p.x; p.g.position.z = p.z;
     }
+    if (b.fx.spin2 && b.working) b.fx.spin2.rotation.z -= dt * 1.5;
+    if (b.fx.houseSmoke && b.progress >= 1 && Math.random() < dt * 0.6) puff(b.fx.houseSmoke.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position));
     if (b.fx.flag) b.fx.flag.rotation.y = Math.sin(simT * 3 + b.x) * 0.35;
     if (b.fx.glow) b.fx.glow.emissiveIntensity = b.working ? 1.6 + Math.sin(simT * 9) * 0.5 : 0.2;
     if ((b.type === 'schmied' || b.type === 'schmelze' || b.type === 'muenzpraege') && b.working && Math.random() < dt * (b.type === 'schmelze' ? 6 : 3)) puff(b.fx.smokeAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position));
