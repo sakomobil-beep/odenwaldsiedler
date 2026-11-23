@@ -19,10 +19,18 @@ canvas{display:block;touch-action:none}
 @media (min-width:900px){#res{font-size:20px;gap:6px 18px}#speed{font-size:18px;padding:8px 16px}
 #menu{left:50%;right:auto;transform:translateX(-50%);max-width:calc(100% - 16px);box-sizing:border-box}#menu button{min-width:110px;font-size:16px;padding:8px}#menu button i{font-size:34px}#menu small{font-size:14px}
 #place{left:50%;right:auto;transform:translateX(-50%);width:640px}#place button{font-size:18px;padding:12px}#placeinfo{font-size:16px}#info{font-size:17px;max-width:340px}#toast{font-size:18px}}
-#menu button:hover{background:#7a5636}</style></head><body>
+#menu button:hover{background:#7a5636}#menu{justify-content:center}#menu .cat{flex:1 1 0;min-width:0}#menu .cat.on{background:#d9a23a;color:#2b1e13;border-color:#f3d08a}
+#sub{bottom:92px;left:8px;right:8px;display:none;flex-direction:column;gap:6px;padding:8px;max-height:55vh;overflow-y:auto}
+.subhead{font-weight:bold;font-size:15px;padding:2px 4px}
+#sub button{display:flex;align-items:center;gap:10px;text-align:left;background:#5a4029;color:#f3e6cc;border:1px solid #8a6a45;border-radius:10px;padding:8px 10px;font:14px Georgia}
+#sub button i{font-style:normal;font-size:28px}#sub button span{display:flex;flex-direction:column}#sub button small{opacity:.85;font-size:12px;margin-top:2px}
+#sub button.no{opacity:.45}#sub button:hover{background:#7a5636}
+@media (min-width:900px){#sub{left:50%;right:auto;transform:translateX(-50%);width:560px;bottom:118px}#sub button{font-size:17px}#sub button small{font-size:14px}#menu .cat{min-width:150px}.subhead{font-size:18px}}
+</style></head><body>
 <div id="top" class="panel"><div id="res"></div><button id="speed">1×</button></div>
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div></div>
 <div id="toast"></div>
+<div id="sub" class="panel"></div>
 <div id="menu" class="panel"></div>
 <div id="place" class="panel"><span id="placeinfo"></span><div><button id="cancel">✕</button><button id="rotate">⟳ Drehen</button><button id="confirm">✔ Bauen</button></div></div>
 <script>var exports={};
@@ -55447,23 +55455,39 @@ refreshPiles();
 
 function updateHUD() {
   $('res').innerHTML = Object.entries(ITEMS).map(([k, it]) => `<span title="${it.name}">${it.icon}<b>${stock[k]}</b></span>`).join('');
-  document.querySelectorAll('#menu button[data-t]').forEach(btn => btn.classList.toggle('no', !canAfford(TYPES[btn.dataset.t].cost)));
+  document.querySelectorAll('#sub button[data-t]').forEach(btn => btn.classList.toggle('no', !canAfford(TYPES[btn.dataset.t].cost)));
 }
 const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).join(' ');
-$('menu').innerHTML = Object.entries(TYPES).filter(([k]) => k !== 'lager').map(([k, T]) => `<button data-t="${k}"><i>${T.icon}</i>${T.name}<small>${costStr(T.cost)}</small></button>`).join('');
+const CATS = [
+  { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'saegewerk', 'steinmetz'] },
+  { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei'] },
+  { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine'] },
+  { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied'] },
+];
+let openCat = -1;
+$('menu').innerHTML = CATS.map((c, i) => `<button class="cat" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${c.types.length} Gebäude</small></button>`).join('');
+function renderSub() {
+  const sub = $('sub');
+  document.querySelectorAll('#menu .cat').forEach(b => b.classList.toggle('on', +b.dataset.c === openCat));
+  if (openCat < 0) { sub.style.display = 'none'; return; }
+  sub.innerHTML = `<div class="subhead">${CATS[openCat].icon} ${CATS[openCat].name}</div>` + CATS[openCat].types.map(k => { const T = TYPES[k]; return `<button data-t="${k}"><i>${T.icon}</i><span><b>${T.name}</b><small>${costStr(T.cost)} · ${T.desc}</small></span></button>`; }).join('');
+  sub.style.display = 'flex';
+  sub.querySelectorAll('button[data-t]').forEach(btn => btn.onclick = () => {
+    const t = btn.dataset.t;
+    if (!canAfford(TYPES[t].cost)) return toast('Nicht genug Material: ' + costStr(TYPES[t].cost));
+    openCat = -1; renderSub(); startPlacing(t);
+  });
+  updateHUD();
+}
+document.querySelectorAll('#menu .cat').forEach(btn => btn.onclick = () => { const c = +btn.dataset.c; openCat = openCat === c ? -1 : c; renderSub(); });
 let ghostLocked = false, placing = null, ghost = null, ghostRot = 0, selected = null;
 const ringMat = new THREE.MeshBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.45, depthWrite: false });
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 32).rotateX(-Math.PI / 2), ringMat); ring.visible = false; scene.add(ring);
-document.querySelectorAll('#menu button').forEach(btn => btn.onclick = () => {
-  const t = btn.dataset.t;
-  if (!canAfford(TYPES[t].cost)) return toast('Nicht genug Material: ' + costStr(TYPES[t].cost));
-  startPlacing(t);
-});
 function startPlacing(t) {
   cancelPlacing(); placing = t; ghost = buildModel(t).g;
   ghost.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; o.castShadow = false; } });
   scene.add(ghost); ghost.visible = false; ring.scale.setScalar(TYPES[t].r + 0.4);
-  $('place').style.display = 'flex'; $('menu').style.display = 'none'; selectB(null);
+  $('place').style.display = 'flex'; $('menu').style.display = 'none'; $('sub').style.display = 'none'; selectB(null);
   $('placeinfo').textContent = `${TYPES[t].name}: ${TYPES[t].desc} – Klicke auf einen grünen Platz, dann ✔ Bauen. Neu klicken = anderer Platz, Rechtsklick/✕ = abbrechen.`;
 }
 function cancelPlacing() { ghostLocked = false; if (ghost) scene.remove(ghost); ghost = null; placing = null; ring.visible = false; $('place').style.display = 'none'; $('menu').style.display = 'flex'; }
@@ -55502,7 +55526,7 @@ const target = new V3(0, 0, 0);
 const pointers = new Map(); let gesture = null, downInfo = null;
 const el = renderer.domElement, ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 el.addEventListener('contextmenu', e => { e.preventDefault(); });
-el.addEventListener('pointerdown', e => { if (placing && e.button === 2) cancelPlacing(); });
+el.addEventListener('pointerdown', e => { if (placing && e.button === 2) cancelPlacing(); if (openCat >= 0) { openCat = -1; renderSub(); } });
 el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); downInfo = pointers.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, btn: e.button } : null; gesture = null; });
 el.addEventListener('pointermove', e => {
   const p = pointers.get(e.pointerId);
@@ -55613,6 +55637,6 @@ function animate() {
 }
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
-toast('Willkommen! Wähle unten ein Gebäude und tippe auf einen Platz.');
+toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
 window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding };
 </script></body></html>
