@@ -55067,6 +55067,10 @@ function mountain(x, z) {
   return h;
 }
 const MC = MOUNTAINS[0], MR = MOUNTAINS[0].R;
+const LAKES = [{ x: 15, z: 22, R: 6.5 }, { x: 60, z: 90, R: 14 }, { x: -70, z: -40, R: 12 }, { x: -60, z: 140, R: 16 }, { x: 115, z: -15, R: 10 }, { x: 15, z: -80, R: 12 }, { x: -155, z: 20, R: 15 }, { x: 170, z: 60, R: 11 }];
+function lakeDepth(x, z) { let h = 99; for (const l of LAKES) { const d = Math.hypot(x - l.x, z - l.z) / l.R; if (d < 1.5) h = Math.min(h, -1.7 + Math.max(0, d) * d * 1.75); } return h; }
+const riverSide = (x, z) => x - riverX(z) > 0 ? 1 : -1;
+const riverDX = z => (riverX(z + 0.5) - riverX(z - 0.5));
 function height(x, z) {
   let h = noise(x * 0.04, z * 0.04) * 8 + noise(x * 0.11, z * 0.11) * 2 + noise(x * 0.012, z * 0.012) * 6;
   const r = Math.hypot(x, z);
@@ -55074,6 +55078,7 @@ function height(x, z) {
   const edge = Math.max(Math.abs(x), Math.abs(z)); h += Math.max(0, edge - 185) * 1.2;
   const dr = Math.abs(x - riverX(z));
   if (dr < 4.5) h = Math.min(h, -1.3 + dr * 0.32);
+  h = Math.min(h, lakeDepth(x, z));
   return h + mountain(x, z);
 }
 const SIZE = MAP * 2, SEG = 240;
@@ -55133,6 +55138,7 @@ function applyFog() {
   treesDirty();
   for (const r of rocks) r.g.visible = isExplored(r.x, r.z);
   for (const d of deposits) d.g.visible = isExplored(d.x, d.z);
+  for (const f of fishSpots) f.g.visible = isExplored(f.x, f.z);
 }
 
 // ---------- Materialien & Helfer ----------
@@ -55190,7 +55196,7 @@ for (let i = 0; i < 60000 && nextIdx < TCAP - 2000; i++) {
   const x = (hash(i, 1) - 0.5) * (SIZE - 16), z = (hash(i, 2) - 0.5) * (SIZE - 16), r = Math.hypot(x, z);
   const dens = noise(x * 0.025 + 3, z * 0.025 + 7);
   if (hash(i, 5) > Math.pow(dens, 2.2) * 1.4) continue;
-  if (r < 14 + hash(i, 3) * 10 || Math.abs(x - riverX(z)) < 5.5 || mountain(x, z) > 2) continue;
+  if (r < 14 + hash(i, 3) * 10 || Math.abs(x - riverX(z)) < 5.5 || mountain(x, z) > 2 || height(x, z) < 0.15) continue;
   if (r < 30 && hash(i, 4) > (x < 0 && z < 0 ? 0.85 : 0.35)) continue;
   addTree(x, z);
 }
@@ -55202,7 +55208,7 @@ function addRock(x, z) {
   rocks.push({ g, x, z, amount: 8, max: 8, reserved: false });
 }
 const rockSpots = [[18, -14], [21, -10], [16, -19], [-22, 18], [-18, 22]];
-for (let i = 0; i < 400 && rockSpots.length < 45; i++) { const x = (hash(i, 11) - 0.5) * 360, z = (hash(i, 12) - 0.5) * 360; if (Math.hypot(x, z) > 45 && mountain(x, z) < 1 && Math.abs(x - riverX(z)) > 8) rockSpots.push([x, z]); }
+for (let i = 0; i < 400 && rockSpots.length < 45; i++) { const x = (hash(i, 11) - 0.5) * 360, z = (hash(i, 12) - 0.5) * 360; if (Math.hypot(x, z) > 45 && mountain(x, z) < 1 && Math.abs(x - riverX(z)) > 8 && lakeDepth(x, z) > 1) rockSpots.push([x, z]); }
 rockSpots.forEach(([x, z]) => { clearTrees(x, z, 3); addRock(x, z); });
 
 // ---------- Erzvorkommen in den Gebirgen ----------
@@ -55219,6 +55225,18 @@ MOUNTAINS.forEach((m, mi) => {
     deposits.push({ kind, x, z, g });
   });
 });
+// ---------- Fischschwärme ----------
+const fishSpots = [];
+const rippleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false });
+const fishMat = M(0x9fb4c0);
+function addFish(x, z) {
+  const g = new THREE.Group(); g.position.set(x, -0.38, z);
+  const rings = [0, 1].map(k => { const r = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 20).rotateX(-Math.PI / 2), rippleMat.clone()); g.add(r); return r; });
+  const fish = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.55, 5).rotateZ(Math.PI / 2), fishMat); fish.visible = false; g.add(fish);
+  scene.add(g); fishSpots.push({ x, z, g, rings, fish, amount: 6, max: 6, reserved: false, regen: 0, jump: hash(x, z) * 5 });
+}
+for (let z = -190; z <= 190; z += 22) addFish(riverX(z), z);
+for (const l of LAKES) { addFish(l.x, l.z); if (l.R > 9) { addFish(l.x + l.R * 0.45, l.z - l.R * 0.2); addFish(l.x - l.R * 0.4, l.z + l.R * 0.35); } }
 // ---------- Gebiet & Grenzfähnchen ----------
 const territories = [];
 function inTerritory(x, z, margin = 0) { return territories.some(t => Math.hypot(t.x - x, t.z - z) <= t.r - margin); }
@@ -55255,11 +55273,12 @@ const ITEMS = {
   eisenerz: { name: 'Eisenerz', icon: '🟤', m: M(0xa0522d), geo: new THREE.DodecahedronGeometry(0.22, 0) },
   kohle: { name: 'Kohle', icon: '⚫', m: M(0x222222), geo: new THREE.DodecahedronGeometry(0.22, 0) },
   eisenbarren: { name: 'Eisenbarren', icon: '🧱', m: M(0x6f7480), geo: box(0.45, 0.14, 0.2) },
+  fisch: { name: 'Fisch', icon: '🐟', m: fishMat, geo: new THREE.ConeGeometry(0.14, 0.55, 5).rotateZ(Math.PI / 2) },
   kampfstock: { name: 'Kampfstöcke', icon: '🏏', m: M(0x7a5230), geo: new THREE.CylinderGeometry(0.06, 0.08, 1.1, 6).rotateZ(Math.PI / 2.4) },
   werkzeug: { name: 'Werkzeug', icon: '🔨', m: M(0x9aa0a8), geo: box(0.12, 0.12, 0.7) },
   brot: { name: 'Brot', icon: '🍞', m: mat.bread, geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.4, 0.8, 1) },
 };
-const stock = { stamm: 0, bretter: 45, stein: 30, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, kampfstock: 2, werkzeug: 10 };
+const stock = { stamm: 0, bretter: 45, stein: 30, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, kampfstock: 2, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
 const TYPES = {
@@ -55271,9 +55290,11 @@ const TYPES = {
   muehle: { name: 'Mühle', icon: '🌬️', cost: { bretter: 5, stein: 3 }, r: 2, desc: '1 Getreide → 1 Mehl' },
   brunnen: { name: 'Brunnen', icon: '🪣', cost: { bretter: 1, stein: 3 }, r: 1.3, desc: 'Schöpft Wasser.' },
   baeckerei: { name: 'Bäckerei', icon: '🍞', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Mehl + 1 Wasser → 2 Brot' },
-  steinmine: { name: 'Steinbergwerk', icon: '⛰️', cost: { bretter: 4 }, r: 1.6, mine: 'stein', desc: 'Im Gebirge am grauen Vorkommen. 1 Brot → 2 Steine' },
-  eisenmine: { name: 'Eisenmine', icon: '🟤', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'eisenerz', desc: 'Im Gebirge am roten Vorkommen. 1 Brot → 2 Eisenerz' },
-  kohlemine: { name: 'Kohlemine', icon: '⚫', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'kohle', desc: 'Im Gebirge am schwarzen Vorkommen. 1 Brot → 2 Kohle' },
+  steinmine: { name: 'Steinbergwerk', icon: '⛰️', cost: { bretter: 4 }, r: 1.6, mine: 'stein', desc: 'Im Gebirge am grauen Vorkommen. 1 Brot oder Fisch → 2 Steine' },
+  eisenmine: { name: 'Eisenmine', icon: '🟤', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'eisenerz', desc: 'Im Gebirge am roten Vorkommen. 1 Brot oder Fisch → 2 Eisenerz' },
+  kohlemine: { name: 'Kohlemine', icon: '⚫', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'kohle', desc: 'Im Gebirge am schwarzen Vorkommen. 1 Brot oder Fisch → 2 Kohle' },
+  fischer: { name: 'Fischer', icon: '🎣', cost: { bretter: 3 }, r: 1.6, desc: 'Am Ufer von Fluss oder See. Fängt Fische – Essen für die Bergwerke.' },
+  bruecke: { name: 'Brücke', icon: '🌉', cost: { bretter: 8, stein: 4 }, r: 1, desc: 'Über den Fluss. Siedler können dann ans andere Ufer.' },
   schmelze: { name: 'Eisenschmelze', icon: '🔥', cost: { bretter: 3, stein: 5 }, r: 2.1, desc: '1 Eisenerz + 1 Kohle → 1 Eisenbarren' },
   waffenschnitzer: { name: 'Waffenschnitzer', icon: '🏏', cost: { bretter: 3, stein: 1 }, r: 2.1, desc: '1 Brett → 1 Kampfstock' },
   wachturm: { name: 'Wachturm', icon: '🗼', cost: { bretter: 5, stein: 4 }, r: 1.6, desc: 'Ein Wächter mit Kampfstock zieht ein und erweitert dein Gebiet.' },
@@ -55332,6 +55353,20 @@ function buildModel(type) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) cart.add(mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 8).rotateZ(Math.PI / 2), mat.beam, sx * 0.4, 0.15, sz * 0.2));
     g.add(cart);
     for (let i = 0; i < 4; i++) g.add(mesh(new THREE.DodecahedronGeometry(0.22, 0), M(col), -1.3 + (i % 2) * 0.35, 0.2 + Math.floor(i / 2) * 0.25, 1.4));
+  } else if (type === 'fischer') {
+    g.add(gable(2.2, 1.8, 1.6, mat.roof2));
+    const rack = new THREE.Group(); rack.position.set(1.6, 0, 0.6);
+    for (const sx of [-1, 1]) rack.add(mesh(box(0.08, 1.2, 0.08), mat.beam, sx * 0.5, 0.6, 0));
+    rack.add(mesh(box(1.1, 0.06, 0.06), mat.beam, 0, 1.15, 0));
+    for (let i = 0; i < 4; i++) { const f = mesh(new THREE.ConeGeometry(0.1, 0.4, 5), fishMat, -0.35 + i * 0.23, 0.9, 0); rack.add(f); }
+    g.add(rack);
+    g.add(mesh(box(1.4, 0.3, 0.6), mat.wood, -1.5, 0.15, 0.6));
+  } else if (type === 'bruecke') {
+    const L = 14;
+    g.add(mesh(box(L - 4, 0.25, 2.2), mat.plank, 0, 1.0, 0));
+    for (const sx of [-1, 1]) { const ramp = mesh(box(2.4, 0.25, 2.2), mat.plank, sx * (L / 2 - 1.1), 0.75, 0); ramp.rotation.z = -sx * 0.22; g.add(ramp); }
+    for (let i = -2; i <= 2; i++) for (const sz of [-1, 1]) { g.add(mesh(box(0.25, 2.4, 0.25), mat.trunk, i * 2.2, -0.1, sz * 0.95)); }
+    for (const sz of [-1, 1]) { g.add(mesh(box(L - 4, 0.1, 0.1), mat.beam, 0, 1.75, sz * 1.05)); for (let i = -2; i <= 2; i++) g.add(mesh(box(0.1, 0.75, 0.1), mat.beam, i * 2.2, 1.4, sz * 1.05)); }
   } else if (type === 'waffenschnitzer') {
     g.add(gable(2.6, 2.1, 1.8, mat.roof2));
     g.add(mesh(box(1.4, 0.12, 0.6), mat.wood, 1.6, 0.75, 0.9)); for (const sx of [-1, 1]) g.add(mesh(box(0.1, 0.75, 0.5), mat.beam, 1.6 + sx * 0.6, 0.37, 0.9));
@@ -55376,7 +55411,7 @@ function buildModel(type) {
 
 // ---------- Gebäude & Arbeiter ----------
 const buildings = [], workers = [];
-const shirt = { waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
+const shirt = { fischer: 0x2f8a8a, waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
 function makeWorker(type) {
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   body.add(mesh(new THREE.CylinderGeometry(0.18, 0.26, 0.6, 6), M(shirt[type]), 0, 0.55, 0));
@@ -55387,6 +55422,7 @@ function makeWorker(type) {
   arm.add(mesh(box(0.08, 0.4, 0.08), mat.skin, 0, -0.2, 0));
   const tool = new THREE.Group(); tool.position.y = -0.38; arm.add(tool);
   if (type === 'holzfaeller' || type === 'steinmetz') { tool.add(mesh(box(0.05, 0.6, 0.05), mat.trunk, 0, 0, 0.25).rotateX(Math.PI / 2)); tool.add(mesh(box(0.08, 0.2, 0.12), M(0x9aa0a8), 0, 0, 0.5)); }
+  if (type === 'fischer') { const rod = mesh(new THREE.CylinderGeometry(0.02, 0.03, 1.8, 4), mat.trunk, 0, 0, 0.8); rod.rotation.x = Math.PI / 2; tool.add(rod); }
   if (type === 'bauernhof') tool.add(mesh(box(0.05, 0.05, 0.7), mat.trunk, 0, 0, 0.3));
   if (type === 'waechter') { tool.add(mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.1, 5), M(0x7a5230), 0, 0.3, 0)); body.add(mesh(new THREE.SphereGeometry(0.2, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2), M(0x8a8f98), 0, 1.06, 0)); body.add(mesh(box(0.45, 0.5, 0.06), M(0x2f6fd0), 0, 0.6, -0.2)); }
   const carry = new THREE.Mesh(ITEMS.stamm.geo, ITEMS.stamm.m); carry.position.set(0, 1.45, 0); carry.visible = false; carry.castShadow = true; g.add(carry);
@@ -55402,7 +55438,7 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
   // Bäume im Weg fällen
   clearTrees(x, z, T.r + 1.2);
   const { g, fx } = buildModel(type);
-  g.position.set(x, height(x, z), z); g.rotation.y = rot; scene.add(g);
+  g.position.set(x, type === 'bruecke' ? 0 : height(x, z), z); g.rotation.y = rot; scene.add(g);
   const b = { type, g, fx, x, z, rot, progress: instant ? 1 : 0, working: false, status: 'Wird gebaut …', worker: null, plots: [] };
   const door = new V3(0, 0, (T.r + 0.6)).applyAxisAngle(new V3(0, 1, 0), rot); b.door = new V3(x + door.x, 0, z + door.z);
   if (!instant) {
@@ -55417,6 +55453,7 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
 function finishBuilding(b) {
   b.g.scale.set(1, 1, 1); if (b.scaffold) scene.remove(b.scaffold);
   if (b.type === 'lager') return;
+  if (b.type === 'bruecke') { b.status = 'Fertig – Siedler können den Fluss überqueren'; toast('Die Brücke ist fertig!'); return; }
   if (b.type === 'wachturm') { b.needsGuard = true; b.status = 'Wartet auf Kampfstock 🏏'; toast('Wachturm ist fertig!'); return; }
   b.needsWorker = true; b.status = 'Wartet auf Werkzeug 🔨';
   toast(`${TYPES[b.type].name} ist fertig!`);
@@ -55466,13 +55503,24 @@ function updatePlot(p) {
 // ---------- Platz prüfen ----------
 function freeSpot(x, z, r, ignore) {
   if (Math.abs(x) > MAP - 15 || Math.abs(z) > MAP - 15) return false;
-  if (Math.abs(x - riverX(z)) < 5 + r) return false;
+  if (Math.abs(x - riverX(z)) < 3.2 + r) return false;
   for (const b of buildings) { if (b === ignore) continue; if (Math.hypot(b.x - x, b.z - z) < TYPES[b.type].r + r + 1) return false; for (const p of b.plots) if (Math.hypot(p.x - x, p.z - z) < r + 1.6) return false; }
   for (const k of rocks) if (k.amount > 0 && Math.hypot(k.x - x, k.z - z) < r + 1.6) return false;
   return true;
 }
+const bridgeRot = z => Math.atan2(riverDX(z), 1);
+const bridgesDone = () => buildings.filter(b => b.type === 'bruecke' && b.progress >= 1);
+const reachable = (x, z) => riverSide(x, z) === riverSide(0, 0) || bridgesDone().length > 0;
 function placeReason(type, x, z) {
   const r = TYPES[type].r, mk = TYPES[type].mine;
+  if (type === 'bruecke') {
+    if (Math.abs(x - riverX(z)) > 3) return 'Eine Brücke muss über den Fluss gebaut werden';
+    if (!isExplored(x, z)) return 'Unerforschtes Land';
+    if (!inTerritory(x, z, 0)) return 'Außerhalb deines Gebiets';
+    if (buildings.some(b => b.type === 'bruecke' && Math.hypot(b.x - x, b.z - z) < 12)) return 'Hier steht schon eine Brücke';
+    return null;
+  }
+  if (!reachable(x, z)) return 'Auf der anderen Flussseite – baue zuerst eine Brücke';
   if (mk) {
     if (!inTerritory(x, z, 0.5)) return 'Außerhalb deines Gebiets – baue einen Wachturm am Rand';
     const dep = deposits.find(d => d.kind === mk && Math.hypot(d.x - x, d.z - z) < 4.5);
@@ -55483,7 +55531,9 @@ function placeReason(type, x, z) {
   if (mountain(x, z) > 2.5) return 'Im Gebirge können nur Bergwerke gebaut werden';
   if (!isExplored(x, z)) return 'Unerforschtes Land';
   if (!inTerritory(x, z, r * 0.5)) return 'Außerhalb deines Gebiets – baue einen Wachturm am Rand';
-  if (Math.abs(x - riverX(z)) < 5 + r) return 'Zu nah am Fluss';
+  if (type !== 'fischer' && Math.abs(x - riverX(z)) < 5 + r) return 'Zu nah am Fluss';
+  if (type !== 'fischer' && lakeDepth(x, z) < 0.6 + r * 0.2) return 'Zu nah am See';
+  if (type === 'fischer') { if (Math.abs(x - riverX(z)) < 3.2 + r || lakeDepth(x, z) < 0.3) return 'Steht im Wasser'; if (!fishSpots.some(f => Math.hypot(f.x - x, f.z - z) < 16)) return 'Kein Fischgrund in der Nähe – an Fluss oder See bauen'; }
   for (const k of rocks) if (k.amount > 0 && Math.hypot(k.x - x, k.z - z) < r + 1.6) return 'Zu nah an einem Felsen';
   if (!freeSpot(x, z, r)) return 'Zu nah an einem Gebäude oder Feld';
   let lo = 99, hi = -99; for (let a = 0; a < 8; a++) { const h = height(x + Math.cos(a) * r, z + Math.sin(a) * r); lo = Math.min(lo, h); hi = Math.max(hi, h); }
@@ -55512,7 +55562,7 @@ function planNext(b) {
   const idle = (msg, t = 2) => { b.status = msg; b.working = false; work(w, t, null); };
   if (T === 'holzfaeller') {
     let best = null, bd = 30;
-    for (const t of trees) { if (!t.alive || t.reserved || t.growth < 1) continue; const d = Math.hypot(t.x - b.x, t.z - b.z); if (d < bd) { bd = d; best = t; } }
+    for (const t of trees) { if (!t.alive || t.reserved || t.growth < 1 || !reachable(t.x, t.z) && riverSide(t.x, t.z) !== riverSide(b.x, b.z)) continue; const d = Math.hypot(t.x - b.x, t.z - b.z); if (d < bd) { bd = d; best = t; } }
     if (!best) return idle('Keine großen Bäume in der Nähe', 3);
     best.reserved = true; b.status = 'Geht zum Baum'; b.working = true;
     moveTo(w, approach(best, b.door, 1.1));
@@ -55527,7 +55577,7 @@ function planNext(b) {
     moveTo(w, b.door);
   } else if (T === 'steinmetz') {
     let best = null, bd = 40;
-    for (const k of rocks) { if (k.amount <= 0 || k.reserved) continue; const d = Math.hypot(k.x - b.x, k.z - b.z); if (d < bd) { bd = d; best = k; } }
+    for (const k of rocks) { if (k.amount <= 0 || k.reserved || riverSide(k.x, k.z) !== riverSide(b.x, b.z) && !bridgesDone().length) continue; const d = Math.hypot(k.x - b.x, k.z - b.z); if (d < bd) { bd = d; best = k; } }
     if (!best) return idle('Keine Felsen in Reichweite', 3);
     best.reserved = true; b.status = 'Geht zum Felsen'; b.working = true;
     moveTo(w, approach(best, b.door, 1.6)); doFn(w, () => { b.status = 'Schlägt Stein'; faceTo(w, best); });
@@ -55546,6 +55596,16 @@ function planNext(b) {
       work(w, 2.5, 'sow', () => { empty.state = 'wächst'; empty.growth = 0; empty.reserved = false; updatePlot(empty); });
       moveTo(w, b.door);
     } else idle('Wartet, bis das Getreide reif ist', 2);
+  } else if (T === 'fischer') {
+    let best = null, bd = 26;
+    for (const f of fishSpots) { if (f.amount <= 0 || f.reserved || riverSide(f.x, f.z) !== riverSide(b.x, b.z) && Math.abs(f.x - riverX(f.z)) > 1 && !bridgesDone().length) continue; const d = Math.hypot(f.x - b.x, f.z - b.z); if (d < bd) { bd = d; best = f; } }
+    if (!best) return idle('Keine Fische in der Nähe – warten, bis sie nachwachsen', 3);
+    best.reserved = true; b.working = true; b.status = 'Geht ans Ufer';
+    const dir = new V3(b.x - best.x, 0, b.z - best.z).normalize(); const shore = new V3(best.x, 0, best.z);
+    for (let k = 0; k < 40 && height(shore.x, shore.z) < 0.1; k++) shore.addScaledVector(dir, 0.5);
+    moveTo(w, shore); doFn(w, () => { b.status = 'Angelt'; faceTo(w, best); });
+    work(w, 5, 'fish', () => { best.amount--; best.reserved = false; setCarry(w, 'fisch'); b.status = 'Bringt Fisch ins Lager'; });
+    deliver(w, 'fisch', 1); moveTo(w, b.door);
   } else if (T === 'brunnen') {
     b.working = true; b.status = 'Schöpft Wasser'; doFn(w, () => faceTo(w, b));
     work(w, 3, 'pull', () => { setCarry(w, 'wasser'); b.status = 'Bringt Wasser ins Lager'; });
@@ -55556,8 +55616,9 @@ function planNext(b) {
       schmelze: [{ eisenerz: 1, kohle: 1 }, 'eisenbarren', 1, 6, 'Schmilzt Eisen'],
       waffenschnitzer: [{ bretter: 1 }, 'kampfstock', 1, 5, 'Schnitzt einen Kampfstock'],
       schmied: [{ eisenbarren: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
-    const [inp, out, n, t, verb] = rec;
-    if (!canAfford(inp)) { const miss = Object.keys(inp).filter(k => stock[k] < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
+    let [inp, out, n, t, verb] = rec;
+    if (TYPES[T].mine) inp = stock.fisch > 0 && (stock.fisch >= stock.brot || stock.brot < 1) ? { fisch: 1 } : { brot: 1 };
+    if (!canAfford(inp)) { if (TYPES[T].mine) return idle('Wartet auf Essen (Brot oder Fisch)', 2); const miss = Object.keys(inp).filter(k => stock[k] < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
     b.working = false; b.status = 'Holt ' + Object.keys(inp).map(k => ITEMS[k].name).join(' + ');
     fetchInputs(w, b, inp);
     doFn(w, () => { setCarry(w, null); b.working = true; b.status = verb; w.g.visible = false; });
@@ -55596,10 +55657,11 @@ function updateHUD() {
 const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).join(' ');
 const CATS = [
   { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'saegewerk', 'steinmetz'] },
-  { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei'] },
+  { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer'] },
   { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied'] },
   { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'wachturm'] },
+  { name: 'Wege', icon: '🌉', types: ['bruecke'] },
 ];
 let openCat = -1;
 $('menu').innerHTML = CATS.map((c, i) => `<button class="cat" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${c.types.length} Gebäude</small></button>`).join('');
@@ -55638,7 +55700,7 @@ function doBuild() {
   const why = placeReason(placing, x, z); if (why) return toast('Hier geht es nicht: ' + why);
   if (!canAfford(TYPES[placing].cost)) return toast('Nicht genug Material');
   for (const [k, v] of Object.entries(TYPES[placing].cost)) stock[k] -= v;
-  const t = placing; placeBuilding(placing, x, z, ghostRot); refreshPiles(); cancelPlacing(); toast(TYPES[t].name + ' wird gebaut');
+  const t = placing; placeBuilding(placing, x, z, placing === 'bruecke' ? bridgeRot(z) : ghostRot); refreshPiles(); cancelPlacing(); toast(TYPES[t].name + ' wird gebaut');
 }
 function selectB(b) {
   selected = b; const p = $('info');
@@ -55693,9 +55755,11 @@ function hoverGhost(cx, cy) {
   if (ghostLocked) return;
   const p = groundHit(cx, cy); if (!p || !ghost) return;
   const x = Math.round(p.x * 2) / 2, z = Math.round(p.z * 2) / 2;
-  ghost.position.set(x, height(x, z), z); ghost.visible = true;
-  const ok = canPlace(placing, x, z); ringMat.color.set(ok ? 0x55ff55 : 0xff4444);
-  ring.position.set(x, height(x, z) + 0.15, z); ring.visible = true;
+  ghost.position.set(placing === 'bruecke' ? riverX(z) : x, placing === 'bruecke' ? 0 : height(x, z), z); ghost.visible = true;
+  if (placing === 'bruecke') ghost.rotation.y = bridgeRot(z);
+  const gx = ghost.position.x;
+  const ok = canPlace(placing, gx, z); ringMat.color.set(ok ? 0x55ff55 : 0xff4444);
+  ring.position.set(gx, Math.max(-0.2, height(gx, z)) + 0.15, z); ring.visible = true;
 }
 function tap(cx, cy) {
   if (placing) { ghostLocked = false; hoverGhost(cx, cy); ghostLocked = true; const why = ghost && ghost.visible && placeReason(placing, ghost.position.x, ghost.position.z); toast(why ? 'Hier geht es nicht: ' + why : 'Platz gewählt – jetzt ✔ Bauen drücken (oder Enter)'); return; }
@@ -55758,15 +55822,30 @@ function step(dt) {
     const q = w.queue[0]; if (!q) continue;
     let walking = false;
     w.arm.rotation.x = 0; w.body.rotation.x = 0;
+    if (q.to && !q.routed) {
+      q.routed = true; const p0 = w.g.position;
+      if (riverSide(p0.x, p0.z) !== riverSide(q.to.x, q.to.z)) {
+        let best = null, bd = 1e9;
+        for (const br of bridgesDone()) { const d = Math.hypot(br.x - p0.x, br.z - p0.z) + Math.hypot(br.x - q.to.x, br.z - q.to.z); if (d < bd) { bd = d; best = br; } }
+        if (best) {
+          const ax = new V3(7.5, 0, 0).applyAxisAngle(new V3(0, 1, 0), best.rot), A = new V3(best.x + ax.x, 0, best.z + ax.z), B = new V3(best.x - ax.x, 0, best.z - ax.z);
+          const [e1, e2] = riverSide(A.x, A.z) === riverSide(p0.x, p0.z) ? [A, B] : [B, A];
+          w.queue.unshift({ to: e1, routed: true }, { to: new V3(best.x, 0, best.z), routed: true, bridge: true }, { to: e2, routed: true });
+          continue;
+        }
+      }
+    }
     if (q.to) {
       const p = w.g.position, d = new V3(q.to.x - p.x, 0, q.to.z - p.z), L = d.length(), sp = 2.4 * dt;
       if (L <= sp) { p.x = q.to.x; p.z = q.to.z; w.queue.shift(); }
       else { d.multiplyScalar(sp / L); p.x += d.x; p.z += d.z; w.g.rotation.y = Math.atan2(d.x, d.z); walking = true; }
       p.y = height(p.x, p.z);
+      for (const br of bridgesDone()) { const lx = new V3(p.x - br.x, 0, p.z - br.z).applyAxisAngle(new V3(0, 1, 0), -br.rot); if (Math.abs(lx.z) < 1.2 && Math.abs(lx.x) < 7) { const top = Math.abs(lx.x) < 5 ? 1.12 : 1.12 - (Math.abs(lx.x) - 5) * 0.4; p.y = Math.max(p.y, top); } }
     } else if (q.wait !== undefined) {
       q.el = (q.el || 0) + dt; const ph = q.el * 7;
       if (q.anim === 'chop') { w.arm.rotation.x = -1.6 + Math.abs(Math.sin(ph)) * 2.2; w.body.rotation.x = Math.sin(ph) * 0.1; }
       if (q.anim === 'dig' || q.anim === 'sow') { w.body.rotation.x = 0.35; w.arm.rotation.x = -0.6 + Math.sin(ph) * 0.6; if (q.anim === 'sow') w.g.rotation.y += Math.sin(ph * 0.5) * dt; }
+      if (q.anim === 'fish') { w.arm.rotation.x = -0.9 + Math.sin(q.el * 1.5) * 0.15; }
       if (q.anim === 'pull') { w.arm.rotation.x = -1.2 + Math.sin(ph) * 0.5; if (w.home.fx.bucket) w.home.fx.bucket.position.y = 1.0 + Math.sin(q.el * 2) * 0.4; }
       if (q.el >= q.wait) { w.queue.shift(); q.fn && q.fn(); }
     } else if (q.fn) { w.queue.shift(); q.fn(); }
@@ -55783,6 +55862,13 @@ function step(dt) {
     else if (t.growth < 1) { t.growth = Math.min(1, t.growth + dt / 60); updTree(t); tDirty = true; }
   }
   if (tDirty) treesDirty();
+  // Fische: wachsen nach, springen
+  for (const f of fishSpots) {
+    if (f.amount < f.max) { f.regen += dt; if (f.regen > 30) { f.regen = 0; f.amount++; } }
+    const k = f.amount / f.max; f.rings.forEach((r, i) => { const ph = (simT * 0.5 + i * 0.5) % 1; r.scale.setScalar(0.4 + ph * 1.6 * (0.3 + k)); r.material.opacity = 0.45 * (1 - ph) * (k > 0 ? 1 : 0); });
+    f.jump -= dt; if (f.jump < 0 && f.amount > 0) { f.jump = 3 + Math.random() * 6; f.jt = 0; f.fish.visible = true; f.ja = Math.random() * 6; }
+    if (f.fish.visible) { f.jt += dt; const u = f.jt / 0.8; f.fish.position.set(Math.cos(f.ja) * (u - 0.5) * 1.2, Math.sin(u * Math.PI) * 0.9, Math.sin(f.ja) * (u - 0.5) * 1.2); f.fish.rotation.set(0, -f.ja, (0.5 - u) * 2); if (u >= 1) f.fish.visible = false; }
+  }
   // Effekte
   for (const b of buildings) {
     if (b.fx.spin && b.working) b.fx.spin.rotation.z -= dt * (b.type === 'muehle' ? 1.2 : 9);
@@ -55822,5 +55908,5 @@ function animate() {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
 toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
-window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories };
+window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX };
 </script></body></html>
