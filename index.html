@@ -4585,6 +4585,8 @@ function applyFog() {
   { const wp = wgeo.attributes.position, wc = wgeo.attributes.color; for (let i = 0; i < wp.count; i++) { const v = isExplored(wp.getX(i), wp.getZ(i)) ? 1 : 0.2; wc.setXYZ(i, v, v, v); } wc.needsUpdate = true; }
   for (const t of trees) { const v = isExplored(t.x, t.z); if (v !== t.vis) { t.vis = v; updTree(t); } }
   treesDirty();
+  for (const u of under) { const v = isExplored(u.x, u.z); if (v !== u.vis) { u.vis = v; updUnder(u); } }
+  for (const st of stumps) if (st && !st.gone && !st.dead) updStump(st);
   for (const r of rocks) r.g.visible = isExplored(r.x, r.z);
   for (const d of deposits) d.g.visible = isExplored(d.x, d.z);
   for (const f of fishSpots) f.g.visible = isExplored(f.x, f.z);
@@ -4607,45 +4609,138 @@ function gable(w, d, h, roofM) { // Fachwerkhaus-Korpus mit Satteldach, Front = 
   return g;
 }
 
-// ---------- Natur: Bäume (instanziert, damit viele möglich sind) & Felsen ----------
+// ---------- Natur: Bäume (instanziert, detailliert) ----------
 const leafCols = [0x3f6b34, 0x557a35, 0x6f8a2e, 0xc9822e, 0xb4532a].map(c => new THREE.Color(c));
-const TCAP = 16000;
-const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true }); addWind(leafMat, 0.05, 1.0);
-const trunkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true });
-const trunkIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.22, 1.2, 5).translate(0, 0.6, 0), trunkMat, TCAP);
-const cTrunk = new THREE.Color(0x6b4a2b), cBirch = new THREE.Color(0xe8e4da), cFir = [new THREE.Color(0x2b5232), new THREE.Color(0x335e3a)], cBirchLeaf = [new THREE.Color(0x9cbf4a), new THREE.Color(0xd8c050), new THREE.Color(0xb8c84a)];
-const coneIM = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1.4, 6), leafMat, TCAP * 3);
-const crownIM = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.1, 0), leafMat, TCAP);
-for (const im of [trunkIM, coneIM, crownIM]) { im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; scene.add(im); }
+const TCAP = 16000, HQ = QUALITY === 'hoch';
+const NB = HQ ? 4 : 2, NCN = HQ ? 6 : 3; // Kronen-Klumpen / Tannen-Etagen je Baum
+function gradGeo(geo, lo, hi, jit = 0.06) {
+  geo = geo.index ? geo.toNonIndexed() : geo; geo.computeBoundingBox();
+  const p = geo.attributes.position, y0 = geo.boundingBox.min.y, y1 = geo.boundingBox.max.y, col = [];
+  for (let i = 0; i < p.count; i += 3) { const yc = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, f = lo + (hi - lo) * (yc - y0) / (y1 - y0 || 1) + (hash(i, 3) - 0.5) * jit; for (let k = 0; k < 3; k++) col.push(f, f, f); }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals(); return geo;
+}
+function trunkGeoMake(spots) {
+  const g = new THREE.CylinderGeometry(0.12, 0.2, 1.3, 7, 3).translate(0, 0.65, 0);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < 0.05) { const a = Math.atan2(p.getZ(i), p.getX(i)), f = 1.5 + 0.35 * Math.sin(a * 3); p.setX(i, p.getX(i) * f); p.setZ(i, p.getZ(i) * f); } }
+  const ng = g.toNonIndexed(), np = ng.attributes.position, col = [];
+  for (let i = 0; i < np.count; i += 3) { const yc = (np.getY(i) + np.getY(i + 1) + np.getY(i + 2)) / 3; let f = 0.75 + yc * 0.2; if (spots && yc > 0.2 && hash(i, 7) < 0.28) f = 0.12; for (let k = 0; k < 3; k++) col.push(f, f, f); }
+  ng.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); ng.computeVertexNormals(); return ng;
+}
+const vMat = () => new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true });
+const leafMat = vMat(); addWind(leafMat, 0.05, 1.0);
+const trunkMat = vMat();
+const trunkIM = new THREE.InstancedMesh(trunkGeoMake(false), trunkMat, TCAP);
+const birchIM = new THREE.InstancedMesh(trunkGeoMake(true), trunkMat, TCAP);
+const coneIM = new THREE.InstancedMesh(gradGeo(new THREE.ConeGeometry(1, 1.4, 7), 0.55, 1.12), leafMat, TCAP * NCN);
+const crownIM = new THREE.InstancedMesh(gradGeo(new THREE.IcosahedronGeometry(1, 0), 0.6, 1.15), leafMat, TCAP * NB);
+const branchIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.07, 1.1, 5).translate(0, 0.55, 0), new THREE.MeshStandardMaterial({ color: 0x6a6258, flatShading: true }), TCAP * 3);
+const stumpIM = new THREE.InstancedMesh(gradGeo(new THREE.CylinderGeometry(0.2, 0.26, 0.3, 7).translate(0, 0.15, 0), 0.7, 1.25, 0), new THREE.MeshStandardMaterial({ color: 0x8a6a48, vertexColors: true, flatShading: true }), 4000);
+for (const im of [trunkIM, birchIM, coneIM, crownIM, branchIM, stumpIM]) { im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; scene.add(im); }
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
-for (let i = 0; i < TCAP; i++) { trunkIM.setMatrixAt(i, ZERO); trunkIM.setColorAt(i, cTrunk); crownIM.setMatrixAt(i, ZERO); crownIM.setColorAt(i, leafCols[0]); for (let k = 0; k < 3; k++) { coneIM.setMatrixAt(i * 3 + k, ZERO); coneIM.setColorAt(i * 3 + k, leafCols[0]); } }
+const dirtyIM = new Map();
+function setM(im, i, m) { im.setMatrixAt(i, m); const d = dirtyIM.get(im); if (!d) dirtyIM.set(im, [i, i]); else { if (i < d[0]) d[0] = i; if (i > d[1]) d[1] = i; } }
+function setC(im, i, c) { im.setColorAt(i, c); const d = dirtyIM.get(im); if (!d) dirtyIM.set(im, [i, i]); else { if (i < d[0]) d[0] = i; if (i > d[1]) d[1] = i; } }
+function flushDirty() {
+  for (const [im, [a, b]] of dirtyIM) {
+    im.instanceMatrix.clearUpdateRanges(); im.instanceMatrix.addUpdateRange(a * 16, (b - a + 1) * 16); im.instanceMatrix.needsUpdate = true;
+    if (im.instanceColor) { im.instanceColor.clearUpdateRanges(); im.instanceColor.addUpdateRange(a * 3, (b - a + 1) * 3); im.instanceColor.needsUpdate = true; }
+  }
+  dirtyIM.clear();
+}
+const WHITE = new THREE.Color(1, 1, 1);
+for (let i = 0; i < TCAP; i++) { trunkIM.setMatrixAt(i, ZERO); birchIM.setMatrixAt(i, ZERO); trunkIM.setColorAt(i, WHITE); birchIM.setColorAt(i, WHITE); for (let k = 0; k < NB; k++) { crownIM.setMatrixAt(i * NB + k, ZERO); crownIM.setColorAt(i * NB + k, WHITE); } for (let k = 0; k < NCN; k++) { coneIM.setMatrixAt(i * NCN + k, ZERO); coneIM.setColorAt(i * NCN + k, WHITE); } for (let k = 0; k < 3; k++) branchIM.setMatrixAt(i * 3 + k, ZERO); }
+for (let i = 0; i < 4000; i++) stumpIM.setMatrixAt(i, ZERO);
 const trees = [], freeIdx = [];
 let nextIdx = 0;
 const _m = new THREE.Matrix4(), _l = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new V3(), _s = new V3();
+const cTrunk = new THREE.Color(0x7a5a3a), cBirch = new THREE.Color(0xf2efe6), cDead = new THREE.Color(0x7a7064);
+const cFir = [new THREE.Color(0x2b5232), new THREE.Color(0x30603a), new THREE.Color(0x26482c)], cBirchLeaf = [new THREE.Color(0x9cbf4a), new THREE.Color(0xd8c050), new THREE.Color(0xb8c84a)];
 function updTree(t) {
   const i = t.idx;
-  if (!t.alive && !t.falling || !t.vis) { trunkIM.setMatrixAt(i, ZERO); crownIM.setMatrixAt(i, ZERO); for (let k = 0; k < 3; k++) coneIM.setMatrixAt(i * 3 + k, ZERO); return; }
-  const s = t.size * Math.max(0.05, t.growth) * (t.shrink || 1);
-  _e.set(Math.cos(t.fallDir || 0) * (t.fallA || 0), t.rotY, -Math.sin(t.fallDir || 0) * (t.fallA || 0), 'YXZ');
-  _m.compose(_p.set(t.x, t.y, t.z), _q.setFromEuler(_e), _s.set(s, s, s));
-  const sp = t.species;
-  _l.compose(_p.set(0, 0, 0), _q.identity(), sp === 'birch' ? _s.set(0.7, 1.7, 0.7) : sp === 'fir' ? _s.set(1, 1.2, 1) : _s.set(1, 1, 1)); trunkIM.setMatrixAt(i, _l.premultiply(_m));
-  if (t.conifer) { crownIM.setMatrixAt(i, ZERO); for (let k = 0; k < 3; k++) { if (sp === 'fir') { const r = 0.85 - k * 0.22; _l.compose(_p.set(0, 1.6 + k * 1.0, 0), _q.identity(), _s.set(r, 1.5, r)); } else { const r = 1.1 - k * 0.28; _l.compose(_p.set(0, 1.4 + k * 0.75, 0), _q.identity(), _s.set(r, 1, r)); } coneIM.setMatrixAt(i * 3 + k, _l.premultiply(_m)); } }
-  else { for (let k = 0; k < 3; k++) coneIM.setMatrixAt(i * 3 + k, ZERO); if (sp === 'birch') _l.compose(_p.set(0, 2.6, 0), _q.identity(), _s.set(0.72, 1.45, 0.72)); else _l.compose(_p.set(0, 2.1, 0), _q.identity(), _s.set(1.15, 1.1, 1.15)); crownIM.setMatrixAt(i, _l.premultiply(_m)); }
+  const hide = !t.alive && !t.falling || !t.vis;
+  if (hide) { setM(trunkIM, i, ZERO); setM(birchIM, i, ZERO); for (let k = 0; k < NB; k++) setM(crownIM, i * NB + k, ZERO); for (let k = 0; k < NCN; k++) setM(coneIM, i * NCN + k, ZERO); for (let k = 0; k < 3; k++) setM(branchIM, i * 3 + k, ZERO); return; }
+  const s = t.size * Math.max(0.05, t.growth) * (t.shrink || 1), sp = t.species, fa = t.fallA || 0, fd = t.fallDir || 0;
+  _e.set(Math.cos(fd) * fa + t.lx, t.rotY, -Math.sin(fd) * fa + t.lz, 'YXZ');
+  _m.compose(_p.set(t.x, t.y, t.z), _q.setFromEuler(_e), _s.set(s, s * t.sy, s));
+  const tim = sp === 'birch' ? birchIM : trunkIM; setM(sp === 'birch' ? trunkIM : birchIM, i, ZERO);
+  _l.compose(_p.set(0, 0, 0), _q.identity(), sp === 'birch' ? _s.set(0.65, 2.0, 0.65) : sp === 'fir' ? _s.set(1, 1.3, 1) : sp === 'dead' ? _s.set(0.9, 1.9, 0.9) : _s.set(1.1, 1.15, 1.1)); setM(tim, i, _l.premultiply(_m));
+  // Kegel (Nadelbäume)
+  const nt = sp === 'fir' ? NCN : sp === 'pine' ? Math.min(NCN, HQ ? 4 : 3) : 0;
+  for (let k = 0; k < NCN; k++) {
+    if (k >= nt) { setM(coneIM, i * NCN + k, ZERO); continue; }
+    const u = k / Math.max(1, nt - 1);
+    if (sp === 'fir') { const r = 1.0 - u * 0.72; _l.compose(_p.set(0, 1.5 + u * 3.2, 0), _q.setFromEuler(_e.set(0, k * 0.9, 0)), _s.set(r, 1.25 - u * 0.3, r)); }
+    else { const r = 1.15 - u * 0.55; _l.compose(_p.set(0, 1.6 + u * 1.9, 0), _q.setFromEuler(_e.set(0, k * 0.7, 0)), _s.set(r, 1.05, r)); }
+    setM(coneIM, i * NCN + k, _l.premultiply(_m));
+  }
+  // Kronen-Klumpen (Laubbäume)
+  for (let k = 0; k < NB; k++) {
+    if (t.conifer || sp === 'dead') { setM(crownIM, i * NB + k, ZERO); continue; }
+    const b = t.blobs[k]; _l.compose(_p.set(b[0], b[1], b[2]), _q.setFromEuler(_e.set(b[4], b[5], 0)), _s.set(b[3], b[3] * (sp === 'birch' ? 1.35 : 0.9), b[3])); setM(crownIM, i * NB + k, _l.premultiply(_m));
+  }
+  // Äste (tote Bäume)
+  for (let k = 0; k < 3; k++) {
+    if (sp !== 'dead') { setM(branchIM, i * 3 + k, ZERO); continue; }
+    _l.compose(_p.set(0, 1.3 + k * 0.45, 0), _q.setFromEuler(_e.set(0.9 - k * 0.15, k * 2.1 + t.rotY, 0, 'YXZ')), _s.set(1, 1 - k * 0.2, 1)); setM(branchIM, i * 3 + k, _l.premultiply(_m));
+  }
 }
-function treesDirty() { trunkIM.instanceMatrix.needsUpdate = coneIM.instanceMatrix.needsUpdate = crownIM.instanceMatrix.needsUpdate = true; if (trunkIM.instanceColor) trunkIM.instanceColor.needsUpdate = true; if (coneIM.instanceColor) coneIM.instanceColor.needsUpdate = true; if (crownIM.instanceColor) crownIM.instanceColor.needsUpdate = true; }
+function treesDirty() {}
 function addTree(x, z, grown = 1) {
   const idx = freeIdx.length ? freeIdx.pop() : nextIdx++; if (idx >= TCAP) return null;
   const seed = x * 7 + z, conifer = hash(seed, 1) > 0.5, col = leafCols[Math.floor(hash(seed, 2) * (conifer ? 2 : 5))];
-  const species = conifer ? (hash(seed, 4) > 0.55 ? 'fir' : 'pine') : (hash(seed, 4) > 0.7 ? 'birch' : 'oak');
-  const t = { idx, x, z, y: height(x, z), size: 0.7 + hash(x, z) * 0.6, growth: grown, alive: true, reserved: false, falling: 0, conifer, species, rotY: hash(seed, 3) * 6, vis: isExplored(x, z) };
-  const lc = species === 'fir' ? cFir[Math.floor(hash(seed, 5) * 2)] : species === 'birch' ? cBirchLeaf[Math.floor(hash(seed, 5) * 3)] : col;
-  trunkIM.setColorAt(idx, species === 'birch' ? cBirch : cTrunk);
-  if (conifer) for (let k = 0; k < 3; k++) coneIM.setColorAt(idx * 3 + k, lc); else crownIM.setColorAt(idx, lc);
-  trees.push(t); updTree(t); treesDirty(); return t;
+  let species = conifer ? (hash(seed, 4) > 0.55 ? 'fir' : 'pine') : (hash(seed, 4) > 0.7 ? 'birch' : 'oak');
+  if (hash(seed, 9) < 0.025) species = 'dead';
+  const blobs = [];
+  for (let k = 0; k < NB; k++) {
+    const a = k / NB * 6.283 + hash(seed, 10 + k) * 1.2, rr = k === 0 ? 0 : 0.45 + hash(seed, 20 + k) * 0.35;
+    if (species === 'birch') blobs.push([Math.cos(a) * rr * 0.6, 2.4 + k * 0.42, Math.sin(a) * rr * 0.6, 0.55 + hash(seed, 30 + k) * 0.2, hash(k, seed) * 0.5, hash(seed, k) * 6]);
+    else blobs.push([Math.cos(a) * rr, 2.0 + (k === 0 ? 0.55 : hash(seed, 40 + k) * 0.6), Math.sin(a) * rr, (k === 0 ? 1.0 : 0.7 + hash(seed, 30 + k) * 0.25) * (HQ ? 1 : 1.25), hash(k, seed) * 0.5, hash(seed, k) * 6]);
+  }
+  const t = { idx, x, z, y: height(x, z), size: 0.7 + hash(x, z) * 0.6, growth: grown, alive: true, reserved: false, falling: 0, conifer: species === 'pine' || species === 'fir', species, blobs,
+    rotY: hash(seed, 3) * 6, lx: (hash(seed, 6) - 0.5) * 0.12, lz: (hash(seed, 7) - 0.5) * 0.12, sy: 0.85 + hash(seed, 8) * 0.35, vis: isExplored(x, z) };
+  if (species === 'dead') { t.size *= 0.9; }
+  const lc = species === 'fir' ? cFir[Math.floor(hash(seed, 5) * 3)] : species === 'birch' ? cBirchLeaf[Math.floor(hash(seed, 5) * 3)] : col;
+  setC(species === 'birch' ? birchIM : trunkIM, idx, species === 'birch' ? cBirch : species === 'dead' ? cDead : cTrunk);
+  const tmp = new THREE.Color();
+  for (let k = 0; k < NCN; k++) setC(coneIM, idx * NCN + k, tmp.copy(lc).multiplyScalar(0.92 + hash(seed, 50 + k) * 0.16));
+  for (let k = 0; k < NB; k++) setC(crownIM, idx * NB + k, tmp.copy(lc).offsetHSL((hash(seed, 60 + k) - 0.5) * 0.03, 0, (hash(seed, 70 + k) - 0.5) * 0.08));
+  trees.push(t); updTree(t); return t;
 }
-function removeTree(t) { const i = trees.indexOf(t); if (i >= 0) trees.splice(i, 1); t.alive = false; t.falling = 0; updTree(t); freeIdx.push(t.idx); treesDirty(); }
-function clearTrees(x, z, r) { for (let i = trees.length - 1; i >= 0; i--) if (Math.hypot(trees[i].x - x, trees[i].z - z) < r) removeTree(trees[i]); }
+function removeTree(t) { const i = trees.indexOf(t); if (i >= 0) trees.splice(i, 1); t.alive = false; t.falling = 0; updTree(t); freeIdx.push(t.idx); }
+// Baumstümpfe
+const stumps = []; let stumpNext = 0;
+function addStump(x, z, s = 1) {
+  const i = stumpNext++ % 4000; if (stumps[i]) stumps[i].dead = true;
+  const st = { i, x, z, s }; stumps[i] = st; updStump(st); return st;
+}
+function updStump(st) { if (!isExplored(st.x, st.z)) { setM(stumpIM, st.i, ZERO); return; } _m.compose(_p.set(st.x, height(st.x, st.z), st.z), _q.setFromEuler(_e.set(0, st.x, 0)), _s.set(st.s, st.s, st.s)); setM(stumpIM, st.i, _m); }
+function clearStumps(x, z, r) { for (const st of stumps) if (st && Math.hypot(st.x - x, st.z - z) < r) setM(stumpIM, st.i, ZERO), st.gone = true; }
+// Unterholz: Büsche & Farne
+const UCAP = HQ ? 9000 : 4000;
+const fernGeo = (() => {
+  const pos = [], col = [];
+  for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283, c = Math.cos(a), s = Math.sin(a), w = 0.09;
+    const A = [-s * w, 0.02, c * w], B = [s * w, 0.02, -c * w], C = [c * 0.55, 0.38, s * 0.55], D = [c * 0.95, 0.12, s * 0.95];
+    pos.push(...A, ...B, ...C, ...B, ...A, ...C, ...C, ...B, ...D, ...B, ...C, ...D);
+    for (let q = 0; q < 4; q++) col.push(0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 1.05, 1.05, 1.05); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(new Array(pos.length / 3).fill(0).flatMap(() => [0, 1, 0]), 3)); return g;
+})();
+const bushMat = vMat(); addWind(bushMat, 0.04, 0.3);
+const fernMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }); addWind(fernMat, 0.12, 0);
+const bushIM = new THREE.InstancedMesh(gradGeo(new THREE.IcosahedronGeometry(0.55, 0).translate(0, 0.35, 0), 0.6, 1.1), bushMat, UCAP);
+const fernIM = new THREE.InstancedMesh(fernGeo, fernMat, UCAP);
+for (const im of [bushIM, fernIM]) { im.castShadow = im === bushIM; im.receiveShadow = true; im.frustumCulled = false; scene.add(im); }
+for (let i = 0; i < UCAP; i++) { bushIM.setMatrixAt(i, ZERO); fernIM.setMatrixAt(i, ZERO); }
+const under = [];
+function updUnder(u) {
+  const im = u.kind === 'bush' ? bushIM : fernIM;
+  if (u.gone || !isExplored(u.x, u.z)) { setM(im, u.i, ZERO); return; }
+  _m.compose(_p.set(u.x, height(u.x, u.z) - 0.05, u.z), _q.setFromEuler(_e.set(0, u.r, 0)), _s.set(u.s, u.s * u.sy, u.s)); setM(im, u.i, _m);
+}
+function clearUnder(x, z, r) { for (const u of under) if (!u.gone && Math.hypot(u.x - x, u.z - z) < r) { u.gone = true; updUnder(u); } }
+function clearTrees(x, z, r) { for (let i = trees.length - 1; i >= 0; i--) if (Math.hypot(trees[i].x - x, trees[i].z - z) < r) removeTree(trees[i]); clearUnder(x, z, r); clearStumps(x, z, r); }
 // Wälder per Rauschen über die ganze Karte
 for (let i = 0; i < 60000 && nextIdx < TCAP - 2000; i++) {
   const x = (hash(i, 1) - 0.5) * (SIZE - 16), z = (hash(i, 2) - 0.5) * (SIZE - 16), r = Math.hypot(x, z);
@@ -4654,6 +4749,18 @@ for (let i = 0; i < 60000 && nextIdx < TCAP - 2000; i++) {
   if (r < 14 + hash(i, 3) * 10 || Math.abs(x - riverX(z)) < 5.5 || mountain(x, z) > 2 || height(x, z) < 0.15) continue;
   if (r < 30 && hash(i, 4) > (x < 0 && z < 0 ? 0.85 : 0.35)) continue;
   addTree(x, z);
+}
+{
+  let nb = 0, nf = 0;
+  for (let i = 0; i < trees.length && (nb < UCAP || nf < UCAP); i++) {
+    const t = trees[i]; if (hash(i, 77) > 0.75) continue;
+    const a = hash(i, 78) * 6.283, d = 1.4 + hash(i, 79) * 2.6, x = t.x + Math.cos(a) * d, z = t.z + Math.sin(a) * d;
+    if (height(x, z) < 0.15 || Math.abs(x - riverX(z)) < 5 || mountain(x, z) > 2) continue;
+    const kind = hash(i, 80) > 0.5 ? 'bush' : 'fern'; if (kind === 'bush' ? nb >= UCAP : nf >= UCAP) continue;
+    const u = { kind, i: kind === 'bush' ? nb++ : nf++, x, z, r: hash(i, 81) * 6.28, s: kind === 'bush' ? 0.7 + hash(i, 82) * 0.8 : 0.8 + hash(i, 82) * 0.7, sy: 0.7 + hash(i, 83) * 0.5 };
+    const c = new THREE.Color(kind === 'bush' ? [0x3f6b34, 0x557a35, 0x4a7a3a, 0x6a8a2e][Math.floor(hash(i, 84) * 4)] : [0x5f8f3a, 0x6fa040, 0x7a9a3a][Math.floor(hash(i, 84) * 3)]);
+    (kind === 'bush' ? bushIM : fernIM).setColorAt(u.i, c); under.push(u); updUnder(u);
+  }
 }
 const rocks = [];
 function addRock(x, z) {
@@ -5728,7 +5835,7 @@ function step(dt) {
   let tDirty = false;
   for (let i = trees.length - 1; i >= 0; i--) {
     const t = trees[i];
-    if (t.falling) { t.falling += dt; t.fallA = Math.min(Math.PI / 2, t.falling * t.falling * 2.2); if (t.falling > 1.8) t.shrink = Math.max(0.01, 1 - (t.falling - 1.8) / 0.8); if (t.falling > 2.6) { removeTree(t); continue; } updTree(t); tDirty = true; }
+    if (t.falling) { t.falling += dt; t.fallA = Math.min(Math.PI / 2, t.falling * t.falling * 2.2); if (t.falling > 1.8) t.shrink = Math.max(0.01, 1 - (t.falling - 1.8) / 0.8); if (t.falling > 2.6) { removeTree(t); addStump(t.x, t.z, t.size); continue; } updTree(t); tDirty = true; }
     else if (t.growth < 1) { t.growth = Math.min(1, t.growth + dt / 60); updTree(t); tDirty = true; }
   }
   if (tDirty) treesDirty();
@@ -5785,6 +5892,7 @@ function animate() {
   if (grassDirty || !grassC || Math.hypot(target.x - grassC.x, target.z - grassC.z) > GRASS_R * 0.35) scatterGrass();
   const ext = THREE.MathUtils.clamp(dist * 1.05, 28, 80);
   if (Math.abs(ext - (sun.shadow.camera.right)) > 2) { Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext }); sun.shadow.camera.updateProjectionMatrix(); }
+  flushDirty();
   if (composer) composer.render(); else renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
