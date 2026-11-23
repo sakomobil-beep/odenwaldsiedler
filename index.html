@@ -55384,7 +55384,7 @@ function updateHUD() {
 }
 const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).join(' ');
 $('menu').innerHTML = Object.entries(TYPES).filter(([k]) => k !== 'lager').map(([k, T]) => `<button data-t="${k}"><i>${T.icon}</i>${T.name}<small>${costStr(T.cost)}</small></button>`).join('');
-let placing = null, ghost = null, ghostRot = 0, selected = null;
+let ghostLocked = false, placing = null, ghost = null, ghostRot = 0, selected = null;
 const ringMat = new THREE.MeshBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.45, depthWrite: false });
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 32).rotateX(-Math.PI / 2), ringMat); ring.visible = false; scene.add(ring);
 document.querySelectorAll('#menu button').forEach(btn => btn.onclick = () => {
@@ -55397,12 +55397,13 @@ function startPlacing(t) {
   ghost.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; o.castShadow = false; } });
   scene.add(ghost); ghost.visible = false; ring.scale.setScalar(TYPES[t].r + 0.4);
   $('place').style.display = 'flex'; $('menu').style.display = 'none'; selectB(null);
-  $('placeinfo').textContent = `${TYPES[t].name}: ${TYPES[t].desc} – Klicke/tippe auf einen grünen Platz, dann wird sofort gebaut. Rechtsklick oder ✕ = abbrechen.`;
+  $('placeinfo').textContent = `${TYPES[t].name}: ${TYPES[t].desc} – Klicke auf einen grünen Platz, dann ✔ Bauen. Neu klicken = anderer Platz, Rechtsklick/✕ = abbrechen.`;
 }
-function cancelPlacing() { if (ghost) scene.remove(ghost); ghost = null; placing = null; ring.visible = false; $('place').style.display = 'none'; $('menu').style.display = 'flex'; }
+function cancelPlacing() { ghostLocked = false; if (ghost) scene.remove(ghost); ghost = null; placing = null; ring.visible = false; $('place').style.display = 'none'; $('menu').style.display = 'flex'; }
 $('cancel').onclick = cancelPlacing;
 $('rotate').onclick = () => { ghostRot += Math.PI / 2; if (ghost) ghost.rotation.y = ghostRot; };
 $('confirm').onclick = () => doBuild();
+addEventListener('keydown', e => { if (!placing) return; if (e.key === 'Enter') doBuild(); if (e.key === 'Escape') cancelPlacing(); if (e.key === 'r' || e.key === 'R') $('rotate').click(); });
 function doBuild() {
   if (!ghost || !ghost.visible) return toast('Klicke zuerst auf einen Platz');
   const { x, z } = ghost.position;
@@ -55460,6 +55461,7 @@ el.addEventListener('pointerup', endPointer); el.addEventListener('pointercancel
 el.addEventListener('wheel', e => { dist = THREE.MathUtils.clamp(dist * (1 + e.deltaY * 0.001), 12, 95); }, { passive: true });
 function groundHit(cx, cy) { ndc.set(cx / innerWidth * 2 - 1, -cy / innerHeight * 2 + 1); ray.setFromCamera(ndc, camera); const h = ray.intersectObject(ground)[0]; return h ? h.point : null; }
 function hoverGhost(cx, cy) {
+  if (ghostLocked) return;
   const p = groundHit(cx, cy); if (!p || !ghost) return;
   const x = Math.round(p.x * 2) / 2, z = Math.round(p.z * 2) / 2;
   ghost.position.set(x, height(x, z), z); ghost.visible = true;
@@ -55467,7 +55469,7 @@ function hoverGhost(cx, cy) {
   ring.position.set(x, height(x, z) + 0.15, z); ring.visible = true;
 }
 function tap(cx, cy) {
-  if (placing) { hoverGhost(cx, cy); return doBuild(); }
+  if (placing) { ghostLocked = false; hoverGhost(cx, cy); ghostLocked = true; const why = ghost && ghost.visible && placeReason(placing, ghost.position.x, ghost.position.z); toast(why ? 'Hier geht es nicht: ' + why : 'Platz gewählt – jetzt ✔ Bauen drücken (oder Enter)'); return; }
   const p = groundHit(cx, cy); if (!p) return;
   let best = null, bd = 99; for (const b of buildings) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < TYPES[b.type].r + 1 && d < bd) { bd = d; best = b; } }
   if (!best) for (const b of buildings) for (const pl of b.plots) if (Math.hypot(pl.x - p.x, pl.z - p.z) < 1.3) best = b;
