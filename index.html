@@ -4938,7 +4938,7 @@ const ITEMS = {
   werkzeug: { name: 'Werkzeug', icon: '🔨', m: M(0x9aa0a8), geo: box(0.12, 0.12, 0.7) },
   brot: { name: 'Brot', icon: '🍞', m: mat.bread, geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.4, 0.8, 1) },
 };
-const stock = { stamm: 0, bretter: 45, stein: 30, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, kampfstock: 2, werkzeug: 10 };
+const stock = { stamm: 8, bretter: 80, stein: 55, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, kampfstock: 2, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
 const TYPES = {
@@ -5832,7 +5832,7 @@ const SAVEKEY = k => 'odws_' + k;
 const r1 = v => Math.round(v * 10) / 10;
 function serialize() {
   return {
-    v: 1, t: Date.now(), simT, stock: { ...stock }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 1, bonus1: true, t: Date.now(), simT, stock: { ...stock }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     trees: trees.filter(t => t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount), roads: Array.from(road).reduce((a, v, i) => (v && a.push(i), a), []),
     cam: [target.x, target.z, yaw, pitch, dist],
@@ -5865,6 +5865,7 @@ function applySave(d) {
   // Straßen sind entfernt – alte gespeicherte Straßen werden ignoriert
   if (d.cam) { target.x = d.cam[0]; target.z = d.cam[1]; yaw = d.cam[2]; pitch = d.cam[3]; dist = d.cam[4]; }
   simT = d.simT || 0; fogDirty = true;
+  if (!d.bonus1) { stock.bretter += 35; stock.stein += 25; stock.stamm += 8; setTimeout(() => toast('Startbonus: +35 Bretter, +25 Steine, +8 Stämme'), 2500); }
 }
 function renderSaveMenu() {
   const fmt = k => { try { const d = JSON.parse(localStorage.getItem(SAVEKEY(k)) || 'null'); return d ? new Date(d.t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' Uhr' : null; } catch (e) { return null; } };
