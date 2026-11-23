@@ -55453,7 +55453,7 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
 function finishBuilding(b) {
   b.g.scale.set(1, 1, 1); if (b.scaffold) scene.remove(b.scaffold);
   if (b.type === 'lager') return;
-  if (b.type === 'bruecke') { b.status = 'Fertig – Siedler können den Fluss überqueren'; toast('Die Brücke ist fertig!'); return; }
+  if (b.type === 'bruecke') { markBridge(b); b.status = 'Fertig – Siedler können den Fluss überqueren'; toast('Die Brücke ist fertig!'); return; }
   if (b.type === 'wachturm') { b.needsGuard = true; b.status = 'Wartet auf Kampfstock 🏏'; toast('Wachturm ist fertig!'); return; }
   b.needsWorker = true; b.status = 'Wartet auf Werkzeug 🔨';
   toast(`${TYPES[b.type].name} ist fertig!`);
@@ -55769,6 +55769,74 @@ function tap(cx, cy) {
   selectB(best);
 }
 
+// ---------- Wegfindung (A* auf einem 2-m-Raster) ----------
+const PC = 2, PN = SIZE / PC;
+const walk = new Uint8Array(PN * PN);
+const pIdx = (x, z) => { const i = Math.floor((x + MAP) / PC), j = Math.floor((z + MAP) / PC); return (i < 0 || j < 0 || i >= PN || j >= PN) ? -1 : j * PN + i; };
+const pCenter = c => [(c % PN) * PC - MAP + PC / 2, Math.floor(c / PN) * PC - MAP + PC / 2];
+function buildWalk() {
+  for (let j = 0; j < PN; j++) for (let i = 0; i < PN; i++) {
+    const x = i * PC - MAP + PC / 2, z = j * PC - MAP + PC / 2;
+    walk[j * PN + i] = height(x, z) > -0.2 ? 1 : 0;
+  }
+  for (const b of buildings) if (b.type === 'bruecke' && b.progress >= 1) markBridge(b);
+}
+function markBridge(b) {
+  for (let s = -7.5; s <= 7.5; s += 0.5) for (let t = -1; t <= 1; t += 0.5) {
+    const v = new V3(s, 0, t).applyAxisAngle(new V3(0, 1, 0), b.rot), c = pIdx(b.x + v.x, b.z + v.z); if (c >= 0) walk[c] = 1;
+  }
+}
+function nearestWalk(c) {
+  if (c < 0) return -1; if (walk[c]) return c;
+  const i0 = c % PN, j0 = Math.floor(c / PN);
+  for (let r = 1; r < 12; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+    if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue; const i = i0 + di, j = j0 + dj;
+    if (i >= 0 && j >= 0 && i < PN && j < PN && walk[j * PN + i]) return j * PN + i;
+  }
+  return -1;
+}
+const gScore = new Float32Array(PN * PN), came = new Int32Array(PN * PN), stamp = new Uint32Array(PN * PN), closed = new Uint32Array(PN * PN);
+let runId = 0;
+function lineFree(ax, az, bx, bz) {
+  const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / (PC * 0.5));
+  for (let k = 1; k < n; k++) { const c = pIdx(ax + (bx - ax) * k / n, az + (bz - az) * k / n); if (c < 0 || !walk[c]) return false; }
+  return true;
+}
+function findPath(ax, az, bx, bz) {
+  if (lineFree(ax, az, bx, bz)) return [[bx, bz]];
+  const s = nearestWalk(pIdx(ax, az)), g = nearestWalk(pIdx(bx, bz));
+  if (s < 0 || g < 0) return null;
+  runId++;
+  const heap = [], push = (c, f) => { heap.push([f, c]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top[1]; };
+  const gi = g % PN, gj = Math.floor(g / PN), hf = c => { const dx = Math.abs(c % PN - gi), dz = Math.abs(Math.floor(c / PN) - gj); return (dx + dz) + (1.4142 - 2) * Math.min(dx, dz); };
+  stamp[s] = runId; gScore[s] = 0; came[s] = -1; push(s, hf(s));
+  let found = false, iter = 0;
+  while (heap.length && iter++ < 60000) {
+    const c = pop(); if (closed[c] === runId) continue; closed[c] = runId;
+    if (c === g) { found = true; break; }
+    const ci = c % PN, cj = Math.floor(c / PN);
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue; const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= PN || nj >= PN) continue;
+      const n = nj * PN + ni; if (!walk[n] || closed[n] === runId) continue;
+      if (di && dj && (!walk[cj * PN + ni] || !walk[nj * PN + ci])) continue;
+      const ng = gScore[c] + (di && dj ? 1.4142 : 1);
+      if (stamp[n] !== runId || ng < gScore[n]) { stamp[n] = runId; gScore[n] = ng; came[n] = c; push(n, ng + hf(n)); }
+    }
+  }
+  if (!found) return null;
+  const cells = []; for (let c = g; c !== -1; c = came[c]) cells.push(c); cells.reverse();
+  const pts = cells.map(pCenter); pts.push([bx, bz]);
+  // Glätten: so weit wie möglich geradeaus
+  const out = []; let cx = ax, cz = az, k = 0;
+  while (k < pts.length) {
+    let far = k; for (let m = pts.length - 1; m > k; m--) if (lineFree(cx, cz, pts[m][0], pts[m][1])) { far = m; break; }
+    out.push(pts[far]); cx = pts[far][0]; cz = pts[far][1]; k = far + 1;
+  }
+  return out;
+}
+
+buildWalk();
 // ---------- Minikarte ----------
 const mini = $('mini'), mctx = mini.getContext('2d'), MP = 200, MS = SIZE / MP;
 const miniBase = mctx.createImageData(MP, MP);
@@ -55824,16 +55892,8 @@ function step(dt) {
     w.arm.rotation.x = 0; w.body.rotation.x = 0;
     if (q.to && !q.routed) {
       q.routed = true; const p0 = w.g.position;
-      if (riverSide(p0.x, p0.z) !== riverSide(q.to.x, q.to.z)) {
-        let best = null, bd = 1e9;
-        for (const br of bridgesDone()) { const d = Math.hypot(br.x - p0.x, br.z - p0.z) + Math.hypot(br.x - q.to.x, br.z - q.to.z); if (d < bd) { bd = d; best = br; } }
-        if (best) {
-          const ax = new V3(7.5, 0, 0).applyAxisAngle(new V3(0, 1, 0), best.rot), A = new V3(best.x + ax.x, 0, best.z + ax.z), B = new V3(best.x - ax.x, 0, best.z - ax.z);
-          const [e1, e2] = riverSide(A.x, A.z) === riverSide(p0.x, p0.z) ? [A, B] : [B, A];
-          w.queue.unshift({ to: e1, routed: true }, { to: new V3(best.x, 0, best.z), routed: true, bridge: true }, { to: e2, routed: true });
-          continue;
-        }
-      }
+      const path = findPath(p0.x, p0.z, q.to.x, q.to.z);
+      if (path && path.length > 1) { w.queue.shift(); w.queue.unshift(...path.map(([x, z]) => ({ to: new V3(x, 0, z), routed: true }))); continue; }
     }
     if (q.to) {
       const p = w.g.position, d = new V3(q.to.x - p.x, 0, q.to.z - p.z), L = d.length(), sp = 2.4 * dt;
@@ -55908,5 +55968,5 @@ function animate() {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
 toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
-window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX };
+window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath };
 </script></body></html>
