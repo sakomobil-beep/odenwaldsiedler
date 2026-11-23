@@ -5123,6 +5123,7 @@ const ITEMS = {
   schinken: { name: 'Schinken', icon: '🍖', m: M(0xc0605a), geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.5, 1, 1) },
   golderz: { name: 'Golderz', icon: '🟡', m: M(0xe8c040), geo: new THREE.DodecahedronGeometry(0.22, 0) },
   muenzen: { name: 'Münzen', icon: '🪙', m: new THREE.MeshStandardMaterial({ color: 0xf0c850, metalness: 0.7, roughness: 0.3 }), geo: new THREE.CylinderGeometry(0.18, 0.18, 0.08, 10) },
+  karren: { name: 'Karren', icon: '🛒', m: M(0x8a6038), geo: box(0.5, 0.3, 0.4) },
   kampfstock: { name: 'Kampfstöcke', icon: '🏏', m: M(0x7a5230), geo: new THREE.CylinderGeometry(0.06, 0.08, 1.1, 6).rotateZ(Math.PI / 2.4) },
   werkzeug: { name: 'Werkzeug', icon: '🔨', m: M(0x9aa0a8), geo: box(0.12, 0.12, 0.7) },
   brot: { name: 'Brot', icon: '🍞', m: mat.bread, geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.4, 0.8, 1) },
@@ -5136,6 +5137,7 @@ const IMAT = { bark: IM(0x5e4128), endw: IM(0xd9b27a), ring: IM(0xb8895a), plank
 const im = (geo, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = true; return o; };
 const rockGeo = (s, seed) => { const g = new THREE.DodecahedronGeometry(s, 0), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const f = 0.8 + hash(i, seed) * 0.4; p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.8, p.getZ(i) * f); } g.computeVertexNormals(); return g; };
 const ITEM_MAKE = {
+  karren: () => { const c = cartModel(); c.scale.setScalar(0.55); c.position.y = -0.2; return c; },
   stamm: () => { const g = new THREE.Group(); const log = im(new THREE.CylinderGeometry(0.12, 0.14, 0.95, 9), [IMAT.bark, IMAT.endw, IMAT.endw], 0, 0, 0, 0, 0, Math.PI / 2); g.add(log); for (const s of [-1, 1]) g.add(im(new THREE.RingGeometry(0.05, 0.07, 10), IMAT.ring, s * 0.476 * (s > 0 ? 1 : 1.02), 0, 0, 0, s * Math.PI / 2, 0)); return g; },
   bretter: () => { const g = new THREE.Group(); for (let k = 0; k < 3; k++) g.add(im(new THREE.BoxGeometry(1.0, 0.045, 0.16), k % 2 ? IMAT.plank2 : IMAT.plank, (k - 1) * 0.02, k * 0.05, (k - 1) * 0.02)); return g; },
   stein: () => { const g = new THREE.Group(); g.add(im(rockGeo(0.17, 1), IMAT.stone, -0.06, 0, 0)); g.add(im(rockGeo(0.13, 2), IMAT.stone2, 0.12, 0.02, 0.05)); g.add(im(rockGeo(0.1, 3), IMAT.stone, 0.02, 0.13, -0.04)); return g; },
@@ -5184,7 +5186,7 @@ function placeCarry(w, item, style) {
   }
   rt.dispose(); renderer.setClearColor(sky, 1);
 }
-const stock = { stamm: 8, bretter: 80, stein: 55, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, kampfstock: 2, werkzeug: 10 };
+const stock = { stamm: 8, bretter: 80, stein: 55, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, karren: 0, kampfstock: 2, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
 const TYPES = {
@@ -5205,6 +5207,7 @@ const TYPES = {
   fischer: { name: 'Fischer', icon: '🎣', cost: { bretter: 3 }, r: 1.6, desc: 'Am Ufer von Fluss oder See. Fängt Fische – Essen für die Bergwerke.' },
   bruecke: { name: 'Brücke', icon: '🌉', cost: { bretter: 8, stein: 4 }, r: 1, desc: 'Über den Fluss. Siedler können dann ans andere Ufer.' },
   schmelze: { name: 'Eisenschmelze', icon: '🔥', cost: { bretter: 3, stein: 5 }, r: 2.1, desc: '1 Eisenerz + 1 Kohle → 1 Eisenbarren' },
+  wagner: { name: 'Wagner', icon: '🛒', cost: { bretter: 5, stein: 2 }, r: 2.3, desc: 'Baut auf Auftrag Karren (2 Bretter + 1 Eisenbarren). Träger mit Karren tragen 4 Waren auf einmal.' },
   waffenschnitzer: { name: 'Waffenschnitzer', icon: '🏏', cost: { bretter: 3, stein: 1 }, r: 2.1, desc: '1 Brett → 1 Kampfstock' },
   wachturm: { name: 'Wachturm', icon: '🗼', cost: { bretter: 5, stein: 4 }, r: 1.6, desc: 'Ein Wächter mit Kampfstock zieht ein und erweitert dein Gebiet.' },
   goldmine: { name: 'Goldmine', icon: '🟡', cost: { bretter: 5, stein: 2 }, r: 1.6, mine: 'gold', desc: 'Im Gebirge am gelben Vorkommen. 1 Brot, Fisch oder Schinken → 2 Golderz' },
@@ -5608,6 +5611,12 @@ function buildModel(type) {
     for (let i = 0; i < 4; i++) { const f = makeItem('fisch'); f.scale.setScalar(0.8); f.rotation.set(0, Math.PI / 2, Math.PI / 2); f.position.set(-0.3 + i * 0.2, 0.92, 0); rack.add(f); }
     const net = mesh(new THREE.PlaneGeometry(1.0, 0.8, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6a5a40, wireframe: true }), -1.3, 0.65, 0.4); net.rotation.y = Math.PI / 2; g.add(net); for (const z of [0, 0.8]) B(g, 0.05, 1.1, 0.05, OW.brown, -1.3, 0.55, z);
     const boat = new THREE.Group(); boat.position.set(0.3, 0.25, 1.4); boat.rotation.set(Math.PI, 0.2, 0); g.add(boat); const hull = mesh(new THREE.SphereGeometry(0.4, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), M(0x6a4428), 0, 0, 0); hull.scale.set(2.0, 0.6, 0.8); boat.add(hull);
+  } else if (type === 'wagner') {
+    g = H({ w: 2.4, d: 2.0, frontWin: [2], beam: OW.brown });
+    B(g, 1.3, 0.1, 0.6, OW.wood, 1.75, 0.75, 0.9); for (const sx of [-1, 1]) B(g, 0.08, 0.75, 0.55, OW.brown, 1.75 + sx * 0.55, 0.37, 0.9);
+    const half = cartModel(); half.position.set(-1.9, 0, 0.7); half.rotation.y = 0.5; g.add(half);
+    for (let i = 0; i < 3; i++) { const wh = new THREE.Group(); wh.position.set(-1.35 + i * 0.12, 0.3, -0.6 - i * 0.05); wh.rotation.set(0, Math.PI / 2, 0.15); g.add(wh); wh.add(mesh(new THREE.TorusGeometry(0.28, 0.04, 5, 14), OW.brown)); for (let k = 0; k < 3; k++) { const sp = mesh(box(0.03, 0.54, 0.03), OW.brown); sp.rotation.z = k * Math.PI / 3; wh.add(sp); } }
+    signBoard(g, 0.95, 1.05, 1.1, () => { const s = new THREE.Group(); s.add(mesh(new THREE.TorusGeometry(0.11, 0.025, 5, 12), OW.gold)); for (let k = 0; k < 3; k++) { const sp = mesh(box(0.015, 0.22, 0.015), OW.gold); sp.rotation.z = k * Math.PI / 3; s.add(sp); } return s; });
   } else if (type === 'waffenschnitzer') {
     g = H({ w: 2.3, d: 1.9, frontWin: [1] });
     B(g, 1.3, 0.1, 0.55, OW.wood, 1.85, 0.75, 0.9); for (const sx of [-1, 1]) B(g, 0.08, 0.75, 0.5, OW.brown, 1.85 + sx * 0.55, 0.37, 0.9);
@@ -5695,6 +5704,7 @@ const LOOK = { // Kleidung & Kopfbedeckung je Beruf
   schmelze: { c: 0x8a4a2a, hat: 'none', apron: 0x4a3020 }, schmied: { c: 0x5a3a2a, hat: 'none', apron: 0x3a2618 }, muenzpraege: { c: 0x7a5aa0, hat: 'cap', hc: 0x4a3a6a, apron: 0x3a2618 },
   waffenschnitzer: { c: 0x8a6a3a, hat: 'cap', hc: 0x5a3e22 }, fischer: { c: 0x2f8a8a, hat: 'bucket', hc: 0x6a7a5a }, schweinezucht: { c: 0x7a8a3a, hat: 'straw' }, metzger: { c: 0xeeeeee, hat: 'cap', hc: 0xffffff, apron: 0xd8a0a0 },
   bauarbeiter: { c: 0x6a6a5a, hat: 'cap', hc: 0xd87a28, apron: 0x8a6a45 },
+  wagner: { c: 0x6a5a3a, hat: 'cap', hc: 0x3a2a1a, apron: 0x8a6a45 },
   traeger: { c: 0x8a5a2a, hat: 'cap', hc: 0x5a3e22 }, waechter: { c: 0x2f4fa0, hat: 'helmet' },
 };
 function makeWorker(type) {
@@ -5732,7 +5742,7 @@ function makeWorker(type) {
   const arm = mkArm(1), arm2 = mkArm(-1);
   const tool = new THREE.Group(); tool.position.y = -0.42; arm.add(tool);
   if (type === 'holzfaeller' || type === 'steinmetz' || TYPES[type] && TYPES[type].mine) { tool.add(mesh(box(0.04, 0.04, 0.65), mat.trunk, 0, 0, 0.25)); tool.add(mesh(type === 'holzfaeller' ? box(0.03, 0.18, 0.12) : box(0.03, 0.06, 0.28), M(0x9aa0a8), 0, type === 'holzfaeller' ? 0.06 : 0, 0.54)); }
-  if (type === 'schmied' || type === 'muenzpraege' || type === 'waffenschnitzer' || type === 'bauarbeiter') { tool.add(mesh(box(0.035, 0.035, 0.35), mat.trunk, 0, 0, 0.12)); tool.add(mesh(box(0.08, 0.08, 0.12), M(0x5a5e66), 0, 0, 0.3)); }
+  if (type === 'schmied' || type === 'muenzpraege' || type === 'waffenschnitzer' || type === 'bauarbeiter' || type === 'wagner') { tool.add(mesh(box(0.035, 0.035, 0.35), mat.trunk, 0, 0, 0.12)); tool.add(mesh(box(0.08, 0.08, 0.12), M(0x5a5e66), 0, 0, 0.3)); }
   if (type === 'traeger') { const pack = new THREE.Group(); pack.position.set(0, 0.72, -0.24); pack.add(mesh(new THREE.CylinderGeometry(0.17, 0.13, 0.4, 8, 1, true), M(0xa8824a), 0, 0, 0)); pack.add(mesh(box(0.04, 0.5, 0.04), mat.trunk, -0.15, 0, 0.05)); pack.add(mesh(box(0.04, 0.5, 0.04), mat.trunk, 0.15, 0, 0.05)); body.add(pack); }
   if (type === 'fischer') { const rod = mesh(new THREE.CylinderGeometry(0.012, 0.025, 1.8, 4), mat.trunk, 0, 0, 0.8); rod.rotation.x = Math.PI / 2; tool.add(rod); }
   if (type === 'bauernhof' || type === 'schweinezucht') { tool.add(mesh(box(0.035, 0.035, 0.8), mat.trunk, 0, 0, 0.3)); tool.add(mesh(box(0.2, 0.03, 0.1), M(0x9aa0a8), 0, 0, 0.7)); }
@@ -5862,13 +5872,14 @@ function stat(kind, item, n) { statLog.push([simT, kind, item, n]); if (statLog.
 
 // ---------- Träger ----------
 const carriers = [];
-const RECIPE_IN = { saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 } };
+const RECIPE_IN = { saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 }, wagner: { bretter: 2, eisenbarren: 1 } };
 const isActive = b => b.progress >= 1 && !b.removed && !b.paused && (b.worker || b.needsWorker);
 function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
   if (!isActive(b)) return [];
   const res = [];
   if (TYPES[b.type].mine) { const have = FOODS.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*food', 2 - have]); return res; }
   const r = RECIPE_IN[b.type]; if (!r) return res;
+  if (b.type === 'wagner' && !(b.orders > 0)) return res;
   for (const [k, v] of Object.entries(r)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v * 2) res.push([k, v * 2 - have]); }
   return res;
 }
@@ -5882,40 +5893,60 @@ function carrierTarget() { return 3 + Math.floor(buildings.filter(b => b.worker)
 function spawnCarrier() {
   const l = buildings[0]; const w = makeWorker('traeger'); w.g.position.copy(l.door); w.home = null; w.isCarrier = true; workers.push(w); carriers.push(w);
 }
+function cartModel() {
+  const c = new THREE.Group(), OB = M(0x3e2a1c);
+  c.add(mesh(box(0.62, 0.08, 0.48), M(0x8a6038), 0, 0.42, 0));
+  for (const s of [-1, 1]) { c.add(mesh(box(0.62, 0.18, 0.04), M(0x7a5530), 0, 0.53, s * 0.24)); c.add(mesh(box(0.04, 0.18, 0.48), M(0x7a5530), s * 0.31, 0.53, 0)); }
+  for (const s of [-1, 1]) { const wh = new THREE.Group(); wh.position.set(0.12, 0.26, s * 0.3); c.add(wh); wh.add(mesh(new THREE.TorusGeometry(0.22, 0.035, 5, 12), OB)); for (let i = 0; i < 3; i++) { const sp = mesh(box(0.025, 0.42, 0.025), OB); sp.rotation.z = i * Math.PI / 3; wh.add(sp); } c.userData.wheels = (c.userData.wheels || []).concat(wh); }
+  for (const s of [-1, 1]) c.add(mesh(box(0.55, 0.035, 0.035), OB, -0.55, 0.62, s * 0.2));
+  c.add(mesh(box(0.05, 0.38, 0.05), OB, 0.26, 0.2, 0));
+  c.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  return c;
+}
+function giveCart(w) {
+  w.cart = cartModel(); w.cart.rotation.y = -Math.PI / 2; w.cart.position.set(0, 0, 1.0); w.g.add(w.cart); w.cap = 4;
+  w.cartLoad = new THREE.Group(); w.cartLoad.position.set(0, 0.5, 0); w.cart.add(w.cartLoad);
+}
+function setCartLoad(w, item, n) {
+  if (!w.cartLoad) return; while (w.cartLoad.children.length) w.cartLoad.remove(w.cartLoad.children[0]);
+  for (let i = 0; i < n; i++) { const m = makeItem(item); m.scale.setScalar(0.8); m.position.set((i % 2) * 0.26 - 0.13, 0.06 + Math.floor(i / 4) * 0.2, (Math.floor(i / 2) % 2) * 0.22 - 0.11); m.rotation.y = i * 0.6; w.cartLoad.add(m); }
+}
+function carrierTake(w, item, n) { if (w.cart) { setCartLoad(w, item, n); w.carrying = item; w.carryStyle = 'cart'; w.carry.visible = false; } else setCarry(w, item); }
+function carrierDrop(w) { if (w.cart) { setCartLoad(w, null, 0); w.carrying = null; w.carryStyle = null; } else setCarry(w, null); }
 function planCarrier(w) {
   const p = w.g.position; let job = null, jk = 1e9;
-  // 1) Abholen aus Ausgängen
+  if (!w.cart && stock.karren > 0) { stock.karren--; stat('use', 'karren', 1); giveCart(w); refreshPiles(); toast('Ein Träger hat einen Karren bekommen 🛒'); }
+  const cap = w.cap || 1;
   for (const b of buildings) {
     if (b.removed) continue;
     for (const [item, v] of Object.entries(b.out)) {
-      if (v - (b.outRes[item] || 0) <= 0) continue;
+      const avail = v - (b.outRes[item] || 0); if (avail <= 0) continue;
       const c = bestConsumer(item, b.x, b.z, b);
       const dest = c || nearestLager(b.x, b.z);
-      const k = (c ? c.prio : 1.5) * 400 + Math.hypot(b.x - p.x, b.z - p.z) + Math.hypot(dest.x - b.x, dest.z - b.z) * 0.5;
-      if (k < jk) { jk = k; job = { from: b, to: c, item }; }
+      const k = (c ? c.prio : 1.5) * 400 + Math.hypot(b.x - p.x, b.z - p.z) + Math.hypot(dest.x - b.x, dest.z - b.z) * 0.5 - Math.min(avail, cap) * 15;
+      if (k < jk) { jk = k; job = { from: b, to: c, item, n: Math.min(avail, cap) }; }
     }
   }
-  // 2) Aus dem Lager zu Gebäuden, die etwas brauchen
-  for (const b of buildings) for (const [wi] of wantsOf(b)) {
+  for (const b of buildings) for (const [wi, need] of wantsOf(b)) {
     const item = wi === '*food' ? FOODS.filter(f => stock[f] > 0).sort((a, c) => stock[c] - stock[a])[0] : (stock[wi] > 0 ? wi : null);
     if (!item) continue;
     const l = nearestLager(b.x, b.z);
     const k = b.prio * 400 + Math.hypot(l.x - p.x, l.z - p.z) + Math.hypot(b.x - l.x, b.z - l.z) * 0.5 + 30;
-    if (k < jk) { jk = k; job = { fromLager: l, to: b, item }; }
+    if (k < jk) { jk = k; job = { fromLager: l, to: b, item, n: Math.max(1, Math.min(cap, stock[item], need)) }; }
   }
   if (!job) { const l = nearestLager(p.x, p.z); if (Math.hypot(l.door.x - p.x, l.door.z - p.z) > 3) moveTo(w, l.door); work(w, 1.5, null); return; }
-  const { item } = job;
-  if (job.to) job.to.inc[item] = (job.to.inc[item] || 0) + 1;
-  if (job.from) { job.from.outRes[item] = (job.from.outRes[item] || 0) + 1; moveTo(w, job.from.door); doFn(w, () => { const f = job.from; f.outRes[item]--; if (!f.removed && f.out[item] > 0) { f.out[item]--; refreshOut(f); setCarry(w, item); } else { w.lost = true; } }); }
-  else { stock[item]--; refreshPiles(); moveTo(w, job.fromLager.door); doFn(w, () => setCarry(w, item)); }
+  const { item } = job; let n = job.n;
+  if (job.to) job.to.inc[item] = (job.to.inc[item] || 0) + n;
+  if (job.from) { job.from.outRes[item] = (job.from.outRes[item] || 0) + n; moveTo(w, job.from.door); doFn(w, () => { const f = job.from; f.outRes[item] -= n; const got = f.removed ? 0 : Math.min(n, f.out[item] || 0); if (got > 0) { f.out[item] -= got; refreshOut(f); if (job.to) job.to.inc[item] -= n - got; n = got; carrierTake(w, item, n); } else { w.lost = true; } }); }
+  else { stock[item] -= n; refreshPiles(); moveTo(w, job.fromLager.door); doFn(w, () => carrierTake(w, item, n)); }
   doFn(w, () => {
-    if (w.lost) { w.lost = false; if (job.to) job.to.inc[item]--; w.queue.length = 0; return; }
+    if (w.lost) { w.lost = false; if (job.to) job.to.inc[item] -= n; w.queue.length = 0; return; }
     const dest = job.to && !job.to.removed ? job.to : nearestLager(w.g.position.x, w.g.position.z);
     moveTo(w, dest.door);
     doFn(w, () => {
-      if (job.to) job.to.inc[item]--;
-      if (job.to && !job.to.removed && dest === job.to) job.to.in[item] = (job.to.in[item] || 0) + 1; else stock[item]++;
-      setCarry(w, null); refreshPiles();
+      if (job.to) job.to.inc[item] -= n;
+      if (job.to && !job.to.removed && dest === job.to) job.to.in[item] = (job.to.in[item] || 0) + n; else stock[item] += n;
+      carrierDrop(w); refreshPiles();
     });
   });
 }
@@ -6066,13 +6097,15 @@ function planNext(b) {
       waffenschnitzer: [{ bretter: 1 }, 'kampfstock', 1, 5, 'Schnitzt einen Kampfstock'],
       goldmine: [{ brot: 1 }, 'golderz', 2, 6, 'Baut Gold ab'], muenzpraege: [{ golderz: 1, kohle: 1 }, 'muenzen', 1, 6, 'Prägt Münzen'],
       metzger: [{ schwein: 1 }, 'schinken', 2, 5, 'Macht Schinken'],
+      wagner: [{ bretter: 2, eisenbarren: 1 }, 'karren', 1, 9, 'Baut einen Karren'],
       schmied: [{ eisenbarren: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
     let [inp, out, n, t, verb] = rec;
     if (TYPES[T].mine) { const food = FOODS.filter(f => b.in[f] > 0).sort((a, c) => b.in[c] - b.in[a])[0]; if (!food) return idle('Wartet auf Essen (Brot, Fisch oder Schinken)', 2); inp = { [food]: 1 }; }
+    if (T === 'wagner' && !(b.orders > 0)) return idle('Wartet auf Auftrag – Gebäude antippen', 2);
     if (b.paused) return idle('Angehalten', 2);
     if ((b.out[out] || 0) >= 8) return idle('Ausgang voll – Träger holen ab', 2);
     if (!hasIn(b, inp)) { const miss = Object.keys(inp).filter(k => (b.in[k] || 0) < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
-    takeIn(b, inp);
+    takeIn(b, inp); if (T === 'wagner') b.orders--;
     const ws = WORKSPOT[T];
     if (ws) {
       const stand = new V3(ws[0], 0, ws[1]).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z)), look = new V3(ws[2], 0, ws[3]).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z));
@@ -6088,7 +6121,7 @@ function planNext(b) {
 }
 // Arbeitsplätze vor dem Haus: [stehen x, z, schaut zu x, z, Bewegung, Ware in der Hand]
 const WORKSPOT = { schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.95, 1.6, 1.95, 1.0, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
-  saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.85, 1.3, -1.85, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.85, 1.5, 1.85, 0.9, 'carve', 'kampfstock'] };
+  saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.85, 1.3, -1.85, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.85, 1.5, 1.85, 0.9, 'carve', 'kampfstock'], wagner: [1.75, 1.6, 1.75, 0.9, 'hammer', 'bretter'] };
 function holdFront(w, item) { w.holding = !!item; placeCarry(w, item, 'work'); }
 function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - w.g.position.z); }
 
@@ -6139,7 +6172,7 @@ const CATS = [
   { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
   { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'wachturm'] },
-  { name: 'Wege & Lager', icon: '🛤️', types: ['bruecke', 'lager'] },
+  { name: 'Wege & Lager', icon: '🛤️', types: ['bruecke', 'lager', 'wagner'] },
 ];
 let openCat = -1;
 $('menu').innerHTML = CATS.map((c, i) => `<button class="cat" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${c.types.length} Gebäude</small></button>`).join('');
@@ -6198,7 +6231,7 @@ function selectB(b) {
 }
 // ---------- Berufs-Schilder über den Gebäuden ----------
 const labelBox = document.createElement('div'); labelBox.id = 'labels'; document.body.appendChild(labelBox);
-const JOB = { lager: 'Lager', holzfaeller: 'Holzfäller', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Bergmann (Stein)', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
+const JOB = { wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Bergmann (Stein)', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
 const _lv = new V3();
 function updateLabels() {
   if (INMENU || SET.labels === false || dist > 75) { labelBox.style.display = 'none'; return; }
@@ -6221,6 +6254,7 @@ function renderInfo() {
   let extra = '';
   if (b.type === 'lager') extra = Object.entries(ITEMS).map(([k, it]) => `${it.icon} ${it.name}: <b>${stock[k]}</b>`).join('<br>');
   if (b.type === 'bauernhof') extra = `Felder: ${b.plots.length} · reif: ${b.plots.filter(p => p.state === 'reif').length} · wachsend: ${b.plots.filter(p => p.state === 'wächst').length}`;
+  if (b.type === 'wagner') { const busy = b.working && b.worker && b.worker.queue[0] && b.worker.queue[0].wait; const pr = busy ? Math.min(1, (b.worker.queue[0].el || 0) / b.worker.queue[0].wait) : 0; extra = `Offene Aufträge: <b>${b.orders || 0}</b> · Karren im Lager: ${stock.karren} · Karren unterwegs: ${carriers.filter(c => c.cart).length}<div style="height:8px;background:#0005;border-radius:4px;margin-top:4px"><div style="height:8px;width:${pr * 100}%;background:#e0ac48;border-radius:4px"></div></div>`; }
   if (b.type === 'schweinezucht') extra = 'Schweine: ' + b.fx.pigs.map(p => Math.round(p.growth * 100) + ' %').join(' · ');
   if (b.type === 'wachturm' && b.guard) extra = 'Wächter: 1 · Gebiet: Radius 22';
   const inStr = Object.entries(b.in).filter(([, v]) => v > 0).map(([k, v]) => ITEMS[k].icon + v).join(' '), outStr = Object.entries(b.out).filter(([, v]) => v > 0).map(([k, v]) => ITEMS[k].icon + v).join(' ');
@@ -6464,8 +6498,10 @@ function renderInfoBtns() {
   let h = '';
   if (prod) h += `<div class="row"><span>Vorrang:</span>${['Hoch', 'Normal', 'Niedrig'].map((n, i) => `<button data-prio="${i}" class="${b.prio === i ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="row"><button data-act="pause">${b.paused ? '▶ Weiterarbeiten' : '⏸ Anhalten'}</button></div>`;
+  if (b.type === 'wagner') h += `<div class="row"><span>🛒 Aufträge:</span><button data-ord="-1">−</button><b style="min-width:24px;text-align:center">${b.orders || 0}</b><button data-ord="1">+</button><button data-ord="5">+5</button></div>`;
   if (b !== buildings[0]) h += `<div class="row"><button data-act="move">🔀 Umsetzen</button><button data-act="del" class="${confirmDel ? 'warn' : ''}">${confirmDel ? '❗ Wirklich abreißen?' : '🗑 Abreißen'}</button></div>`;
   box.innerHTML = h;
+  box.querySelectorAll('[data-ord]').forEach(x => x.onclick = () => { b.orders = Math.max(0, (b.orders || 0) + +x.dataset.ord); renderInfoBtns(); });
   box.querySelectorAll('[data-prio]').forEach(x => x.onclick = () => { b.prio = +x.dataset.prio; renderInfoBtns(); });
   box.querySelectorAll('[data-act]').forEach(x => x.onclick = () => {
     const a = x.dataset.act;
@@ -6501,11 +6537,11 @@ function serialize() {
   const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
   for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 2, bonus1: true, t: Date.now(), simT, stock: { ...stock }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 2, bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
-    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
+    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, orders: b.orders || 0, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
   };
 }
 function thumb() {
@@ -6534,7 +6570,7 @@ function applySave(d) {
   placeBuilding.noPlots = true;
   for (const s of d.buildings) {
     const b = placeBuilding(s.type, s.x, s.z, s.rot, s.progress >= 1);
-    b.progress = s.progress; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
+    b.progress = s.progress; b.orders = s.orders || 0; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
     for (const [x, z, st, gr] of s.plots || []) { const p = createPlot(b, x, z); p.state = st; p.growth = gr; updatePlot(p); }
     if (s.pigs && b.fx.pigs) s.pigs.forEach((g, i) => { if (b.fx.pigs[i]) b.fx.pigs[i].growth = b.fx.pigs[i].shown = g; });
     if (b.progress < 1) { b.pendingSite = true; continue; }
@@ -6732,7 +6768,8 @@ function step(dt) {
       if (q.el >= q.wait) { w.queue.shift(); q.fn && q.fn(); }
     } else if (q.fn) { w.queue.shift(); q.fn(); }
     if (walking) { w.walkPh += dt * 10; const sw = Math.sin(w.walkPh); w.legs[0].rotation.x = sw * 0.65; w.legs[1].rotation.x = -sw * 0.65; w.body.position.y = Math.abs(sw) * 0.04; w.body.rotation.z = sw * 0.04;
-      const cs = w.carrying && w.carryStyle; if (cs === 'shoulder') { w.arm.rotation.x = -2.9; w.arm.rotation.z = 0.25; if (w.arm2) w.arm2.rotation.x = sw * 0.45; w.body.rotation.z += 0.05; } else if (cs === 'back') { w.arm.rotation.x = w.arm2.rotation.x = -2.6; w.body.rotation.x = 0.12; } else if (cs === 'front') { w.arm.rotation.x = w.arm2.rotation.x = -1.15; w.body.rotation.x = -0.06; } else if (cs === 'hand') { w.arm.rotation.x = -0.15; if (w.arm2) w.arm2.rotation.x = sw * 0.5; w.body.rotation.z += -0.04; } else { w.arm.rotation.x = -sw * 0.5; if (w.arm2) w.arm2.rotation.x = sw * 0.5; } }
+      if (w.cart) { w.arm.rotation.x = w.arm2.rotation.x = -0.9; w.body.rotation.x = 0.15; for (const wh of w.cart.userData.wheels) wh.rotation.z -= dt * 6; }
+      const cs = w.carrying && w.carryStyle; if (w.cart) {} else if (cs === 'shoulder') { w.arm.rotation.x = -2.9; w.arm.rotation.z = 0.25; if (w.arm2) w.arm2.rotation.x = sw * 0.45; w.body.rotation.z += 0.05; } else if (cs === 'back') { w.arm.rotation.x = w.arm2.rotation.x = -2.6; w.body.rotation.x = 0.12; } else if (cs === 'front') { w.arm.rotation.x = w.arm2.rotation.x = -1.15; w.body.rotation.x = -0.06; } else if (cs === 'hand') { w.arm.rotation.x = -0.15; if (w.arm2) w.arm2.rotation.x = sw * 0.5; w.body.rotation.z += -0.04; } else { w.arm.rotation.x = -sw * 0.5; if (w.arm2) w.arm2.rotation.x = sw * 0.5; } }
     else { w.legs[0].rotation.x = w.legs[1].rotation.x = 0; w.body.rotation.z = 0; if (w.head) w.head.rotation.y = Math.sin(simT * 0.7 + w.seed) * 0.35; }
     if (!walking && w.carrying && w.arm2 && !(w.queue[0] && w.queue[0].anim)) { const cs = w.carryStyle; if (cs === 'shoulder') { w.arm.rotation.x = -2.9; w.arm.rotation.z = 0.25; } else if (cs === 'back') { w.arm.rotation.x = w.arm2.rotation.x = -2.6; } else if (cs === 'front') { w.arm.rotation.x = w.arm2.rotation.x = -1.15; } else if (cs === 'hand') w.arm.rotation.x = -0.15; }
   }
