@@ -55282,11 +55282,13 @@ const ITEMS = {
   kohle: { name: 'Kohle', icon: '⚫', m: M(0x222222), geo: new THREE.DodecahedronGeometry(0.22, 0) },
   eisenbarren: { name: 'Eisenbarren', icon: '🧱', m: M(0x6f7480), geo: box(0.45, 0.14, 0.2) },
   fisch: { name: 'Fisch', icon: '🐟', m: fishMat, geo: new THREE.ConeGeometry(0.14, 0.55, 5).rotateZ(Math.PI / 2) },
+  schwein: { name: 'Schweine', icon: '🐖', m: M(0xf0a8a8), geo: box(0.55, 0.35, 0.3) },
+  schinken: { name: 'Schinken', icon: '🍖', m: M(0xc0605a), geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.5, 1, 1) },
   kampfstock: { name: 'Kampfstöcke', icon: '🏏', m: M(0x7a5230), geo: new THREE.CylinderGeometry(0.06, 0.08, 1.1, 6).rotateZ(Math.PI / 2.4) },
   werkzeug: { name: 'Werkzeug', icon: '🔨', m: M(0x9aa0a8), geo: box(0.12, 0.12, 0.7) },
   brot: { name: 'Brot', icon: '🍞', m: mat.bread, geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.4, 0.8, 1) },
 };
-const stock = { stamm: 0, bretter: 45, stein: 30, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, kampfstock: 2, werkzeug: 10 };
+const stock = { stamm: 0, bretter: 45, stein: 30, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, kampfstock: 2, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
 const TYPES = {
@@ -55298,9 +55300,11 @@ const TYPES = {
   muehle: { name: 'Mühle', icon: '🌬️', cost: { bretter: 5, stein: 3 }, r: 2, desc: '1 Getreide → 1 Mehl' },
   brunnen: { name: 'Brunnen', icon: '🪣', cost: { bretter: 1, stein: 3 }, r: 1.3, desc: 'Schöpft Wasser.' },
   baeckerei: { name: 'Bäckerei', icon: '🍞', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Mehl + 1 Wasser → 2 Brot' },
-  steinmine: { name: 'Steinbergwerk', icon: '⛰️', cost: { bretter: 4 }, r: 1.6, mine: 'stein', desc: 'Im Gebirge am grauen Vorkommen. 1 Brot oder Fisch → 2 Steine' },
-  eisenmine: { name: 'Eisenmine', icon: '🟤', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'eisenerz', desc: 'Im Gebirge am roten Vorkommen. 1 Brot oder Fisch → 2 Eisenerz' },
-  kohlemine: { name: 'Kohlemine', icon: '⚫', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'kohle', desc: 'Im Gebirge am schwarzen Vorkommen. 1 Brot oder Fisch → 2 Kohle' },
+  steinmine: { name: 'Steinbergwerk', icon: '⛰️', cost: { bretter: 4 }, r: 1.6, mine: 'stein', desc: 'Im Gebirge am grauen Vorkommen. 1 Brot, Fisch oder Schinken → 2 Steine' },
+  eisenmine: { name: 'Eisenmine', icon: '🟤', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'eisenerz', desc: 'Im Gebirge am roten Vorkommen. 1 Brot, Fisch oder Schinken → 2 Eisenerz' },
+  kohlemine: { name: 'Kohlemine', icon: '⚫', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'kohle', desc: 'Im Gebirge am schwarzen Vorkommen. 1 Brot, Fisch oder Schinken → 2 Kohle' },
+  schweinezucht: { name: 'Schweinezucht', icon: '🐖', cost: { bretter: 5, stein: 1 }, r: 2.9, desc: 'Füttert Ferkel mit Getreide + Wasser, bis sie groß sind → Schwein' },
+  metzger: { name: 'Metzger', icon: '🍖', cost: { bretter: 4, stein: 2 }, r: 2.1, desc: '1 Schwein → 2 Schinken (Essen für die Bergwerke)' },
   fischer: { name: 'Fischer', icon: '🎣', cost: { bretter: 3 }, r: 1.6, desc: 'Am Ufer von Fluss oder See. Fängt Fische – Essen für die Bergwerke.' },
   bruecke: { name: 'Brücke', icon: '🌉', cost: { bretter: 8, stein: 4 }, r: 1, desc: 'Über den Fluss. Siedler können dann ans andere Ufer.' },
   schmelze: { name: 'Eisenschmelze', icon: '🔥', cost: { bretter: 3, stein: 5 }, r: 2.1, desc: '1 Eisenerz + 1 Kohle → 1 Eisenbarren' },
@@ -55316,7 +55320,7 @@ function buildModel(type) {
     g.add(mesh(new THREE.ExtrudeGeometry(sh, { depth: 4.6, bevelEnabled: false }).translate(0, 0, -2.3), mat.roof2, 0, 2.5, 0));
     g.add(mesh(box(5.4, 0.15, 4), mat.wood, 0, 0.08, 0));
     fx.piles = {}; let i = 0;
-    for (const k of Object.keys(ITEMS)) { const pg = new THREE.Group(); pg.position.set(-2.1 + (i % 4) * 1.4, 0.15, -1.3 + Math.floor(i / 4) * 1.25); g.add(pg); fx.piles[k] = pg; i++; }
+    for (const k of Object.keys(ITEMS)) { const pg = new THREE.Group(); pg.position.set(-2.2 + (i % 5) * 1.1, 0.15, -1.4 + Math.floor(i / 5) * 1.0); g.add(pg); fx.piles[k] = pg; i++; }
   } else if (type === 'holzfaeller') {
     const h = gable(2.4, 2, 1.7, mat.roof2); g.add(h);
     g.add(mesh(new THREE.CylinderGeometry(0.4, 0.45, 0.5, 8), mat.trunk, 1.7, 0.25, 0.8));
@@ -55361,6 +55365,34 @@ function buildModel(type) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) cart.add(mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 8).rotateZ(Math.PI / 2), mat.beam, sx * 0.4, 0.15, sz * 0.2));
     g.add(cart);
     for (let i = 0; i < 4; i++) g.add(mesh(new THREE.DodecahedronGeometry(0.22, 0), M(col), -1.3 + (i % 2) * 0.35, 0.2 + Math.floor(i / 2) * 0.25, 1.4));
+  } else if (type === 'schweinezucht') {
+    const S = 2.4;
+    for (let i = -4; i <= 4; i++) for (const [px, pz] of [[i * S / 4, -S], [i * S / 4, S], [-S, i * S / 4], [S, i * S / 4]]) { if (pz === S && Math.abs(px) < 0.7) continue; g.add(mesh(box(0.1, 0.8, 0.1), mat.trunk, px, 0.4, pz)); }
+    for (const y of [0.35, 0.7]) { g.add(mesh(box(2 * S, 0.07, 0.07), mat.wood, 0, y, -S)); g.add(mesh(box(0.07, 0.07, 2 * S), mat.wood, -S, y, 0)); g.add(mesh(box(0.07, 0.07, 2 * S), mat.wood, S, y, 0)); for (const sx of [-1, 1]) g.add(mesh(box(S - 0.7, 0.07, 0.07), mat.wood, sx * (S + 0.7) / 2, y, S)); }
+    g.add(mesh(box(2 * S, 0.04, 2 * S), M(0x7a5a3a), 0, 0.02, 0));
+    const shed = gable(1.6, 1.3, 1.1, mat.roof2); shed.position.set(-1.4, 0, -1.6); g.add(shed);
+    g.add(mesh(box(1.2, 0.25, 0.4), mat.wood, 1.2, 0.13, -1.9)); const feed = mesh(box(1.0, 0.06, 0.25), mat.grain, 1.2, 0.27, -1.9); feed.visible = false; g.add(feed); fx.feed = feed;
+    fx.pigs = [];
+    for (let k = 0; k < 3; k++) {
+      const p = new THREE.Group(), pm = M(0xf0a8a8);
+      p.add(mesh(new THREE.SphereGeometry(0.42, 7, 5).scale(1.35, 0.95, 1), pm, 0, 0.45, 0));
+      p.add(mesh(new THREE.SphereGeometry(0.27, 6, 5), pm, 0.55, 0.55, 0));
+      p.add(mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.1, 8).rotateZ(Math.PI / 2), M(0xe08a8a), 0.82, 0.5, 0));
+      for (const ez of [-0.13, 0.13]) { p.add(mesh(new THREE.ConeGeometry(0.08, 0.16, 4), pm, 0.5, 0.82, ez)); p.add(mesh(box(0.04, 0.05, 0.04), mat.dark, 0.74, 0.62, ez * 0.7)); }
+      for (const lx of [-0.3, 0.3]) for (const lz of [-0.18, 0.18]) p.add(mesh(box(0.1, 0.25, 0.1), pm, lx, 0.12, lz));
+      p.add(mesh(new THREE.TorusGeometry(0.07, 0.025, 4, 8), pm, -0.6, 0.55, 0));
+      const pig = { g: p, growth: 0.2 + k * 0.25, shown: 0.2, x: (hash(k, 7) - 0.5) * 2.5, z: (hash(k, 8) - 0.5) * 2.5, tx: 0, tz: 0, t: 0 };
+      p.position.set(pig.x, 0, pig.z); g.add(p); fx.pigs.push(pig);
+    }
+  } else if (type === 'metzger') {
+    g.add(gable(2.6, 2.1, 1.8));
+    const rack = new THREE.Group(); rack.position.set(1.7, 0, 0.7);
+    for (const sx of [-1, 1]) rack.add(mesh(box(0.08, 1.5, 0.08), mat.beam, sx * 0.5, 0.75, 0));
+    rack.add(mesh(box(1.1, 0.06, 0.06), mat.beam, 0, 1.45, 0));
+    for (let i = 0; i < 3; i++) { rack.add(mesh(box(0.02, 0.2, 0.02), mat.beam, -0.3 + i * 0.3, 1.32, 0)); rack.add(mesh(new THREE.SphereGeometry(0.14, 6, 4).scale(1, 1.5, 1), M(0xc0605a), -0.3 + i * 0.3, 1.05, 0)); }
+    g.add(rack);
+    g.add(mesh(box(1, 0.6, 0.5), mat.wood, -1.7, 0.3, 0.7));
+    g.add(mesh(box(0.6, 0.35, 0.04), M(0xc0605a), 0, 1.65, 1.1));
   } else if (type === 'fischer') {
     g.add(gable(2.2, 1.8, 1.6, mat.roof2));
     const rack = new THREE.Group(); rack.position.set(1.6, 0, 0.6);
@@ -55419,7 +55451,7 @@ function buildModel(type) {
 
 // ---------- Gebäude & Arbeiter ----------
 const buildings = [], workers = [];
-const shirt = { fischer: 0x2f8a8a, waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
+const shirt = { schweinezucht: 0x7a8a3a, metzger: 0xeeeeee, fischer: 0x2f8a8a, waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
 function makeWorker(type) {
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   body.add(mesh(new THREE.CylinderGeometry(0.18, 0.26, 0.6, 6), M(shirt[type]), 0, 0.55, 0));
@@ -55604,6 +55636,23 @@ function planNext(b) {
       work(w, 2.5, 'sow', () => { empty.state = 'wächst'; empty.growth = 0; empty.reserved = false; updatePlot(empty); });
       moveTo(w, b.door);
     } else idle('Wartet, bis das Getreide reif ist', 2);
+  } else if (T === 'schweinezucht') {
+    const pigs = b.fx.pigs, ripe = pigs.find(p => p.growth >= 1);
+    const trough = new V3(1.2, 0, -1.4).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z));
+    if (ripe) {
+      b.working = true; b.status = 'Holt ein großes Schwein';
+      moveTo(w, new V3(ripe.x, 0, ripe.z).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z)));
+      work(w, 2, 'dig', () => { ripe.growth = 0.15; ripe.shown = 0.15; setCarry(w, 'schwein'); b.status = 'Bringt Schwein ins Lager'; });
+      deliver(w, 'schwein', 1); moveTo(w, b.door);
+    } else {
+      const inp = { getreide: 1, wasser: 1 };
+      if (!canAfford(inp)) { const miss = Object.keys(inp).filter(k => stock[k] < 1).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss + ' zum Füttern', 2); }
+      b.working = false; b.status = 'Holt Getreide + Wasser';
+      fetchInputs(w, b, inp);
+      moveTo(w, trough); doFn(w, () => { setCarry(w, null); b.status = 'Füttert die Ferkel'; b.fx.feed.visible = true; });
+      work(w, 3, 'sow', () => { for (const p of pigs) p.growth = Math.min(1, p.growth + 0.2); b.fx.feed.visible = false; b.status = 'Schweine wachsen'; });
+      moveTo(w, b.door);
+    }
   } else if (T === 'fischer') {
     let best = null, bd = 26;
     for (const f of fishSpots) { if (f.amount <= 0 || f.reserved || riverSide(f.x, f.z) !== riverSide(b.x, b.z) && Math.abs(f.x - riverX(f.z)) > 1 && !bridgesDone().length) continue; const d = Math.hypot(f.x - b.x, f.z - b.z); if (d < bd) { bd = d; best = f; } }
@@ -55623,10 +55672,11 @@ function planNext(b) {
       steinmine: [{ brot: 1 }, 'stein', 2, 6, 'Arbeitet im Stollen'], eisenmine: [{ brot: 1 }, 'eisenerz', 2, 6, 'Baut Eisenerz ab'], kohlemine: [{ brot: 1 }, 'kohle', 2, 6, 'Baut Kohle ab'],
       schmelze: [{ eisenerz: 1, kohle: 1 }, 'eisenbarren', 1, 6, 'Schmilzt Eisen'],
       waffenschnitzer: [{ bretter: 1 }, 'kampfstock', 1, 5, 'Schnitzt einen Kampfstock'],
+      metzger: [{ schwein: 1 }, 'schinken', 2, 5, 'Macht Schinken'],
       schmied: [{ eisenbarren: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
     let [inp, out, n, t, verb] = rec;
-    if (TYPES[T].mine) inp = stock.fisch > 0 && (stock.fisch >= stock.brot || stock.brot < 1) ? { fisch: 1 } : { brot: 1 };
-    if (!canAfford(inp)) { if (TYPES[T].mine) return idle('Wartet auf Essen (Brot oder Fisch)', 2); const miss = Object.keys(inp).filter(k => stock[k] < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
+    if (TYPES[T].mine) { const food = ['brot', 'fisch', 'schinken'].sort((a, c) => stock[c] - stock[a])[0]; inp = { [food]: 1 }; }
+    if (!canAfford(inp)) { if (TYPES[T].mine) return idle('Wartet auf Essen (Brot, Fisch oder Schinken)', 2); const miss = Object.keys(inp).filter(k => stock[k] < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
     b.working = false; b.status = 'Holt ' + Object.keys(inp).map(k => ITEMS[k].name).join(' + ');
     fetchInputs(w, b, inp);
     doFn(w, () => { setCarry(w, null); b.working = true; b.status = verb; w.g.visible = false; });
@@ -55640,7 +55690,7 @@ function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - 
 function refreshPiles() {
   const lager = buildings[0]; if (!lager) return;
   for (const [k, pg] of Object.entries(lager.fx.piles)) {
-    const n = Math.min(8, stock[k]);
+    const n = Math.min(6, stock[k]);
     while (pg.children.length < n) { const i = pg.children.length, m = new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m); m.castShadow = true; m.position.set((i % 2) * 0.45 - 0.22, 0.12 + Math.floor(i / 4) * 0.3, (Math.floor(i / 2) % 2) * 0.4 - 0.2); pg.add(m); }
     while (pg.children.length > n) pg.remove(pg.children[pg.children.length - 1]);
   }
@@ -55665,7 +55715,7 @@ function updateHUD() {
 const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).join(' ');
 const CATS = [
   { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'saegewerk', 'steinmetz'] },
-  { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer'] },
+  { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger'] },
   { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied'] },
   { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'wachturm'] },
@@ -55720,6 +55770,7 @@ function renderInfo() {
   let extra = '';
   if (b.type === 'lager') extra = Object.entries(ITEMS).map(([k, it]) => `${it.icon} ${it.name}: <b>${stock[k]}</b>`).join('<br>');
   if (b.type === 'bauernhof') extra = `Felder: ${b.plots.length} · reif: ${b.plots.filter(p => p.state === 'reif').length} · wachsend: ${b.plots.filter(p => p.state === 'wächst').length}`;
+  if (b.type === 'schweinezucht') extra = 'Schweine: ' + b.fx.pigs.map(p => Math.round(p.growth * 100) + ' %').join(' · ');
   if (b.type === 'wachturm' && b.guard) extra = 'Wächter: 1 · Gebiet: Radius 22';
   if (b.progress < 1) extra = `Baufortschritt: ${Math.floor(b.progress * 100)} %`;
   p_info.innerHTML = `<b>${T.icon} ${T.name}</b><br><small>${T.desc}</small><br>${b.type !== 'lager' ? '➜ ' + b.status + '<br>' : ''}${extra}`;
@@ -55940,6 +55991,13 @@ function step(dt) {
   // Effekte
   for (const b of buildings) {
     if (b.fx.spin && b.working) b.fx.spin.rotation.z -= dt * (b.type === 'muehle' ? 1.2 : 9);
+    if (b.fx.pigs) for (const p of b.fx.pigs) {
+      p.shown += (p.growth - p.shown) * Math.min(1, dt * 1.5); p.g.scale.setScalar(0.35 + p.shown * 0.75);
+      p.t -= dt; if (p.t < 0) { p.t = 2 + Math.random() * 4; p.tx = (Math.random() - 0.5) * 3.4; p.tz = (Math.random() - 0.5) * 3.4; }
+      const dx = p.tx - p.x, dz = p.tz - p.z, L = Math.hypot(dx, dz);
+      if (L > 0.1) { const sp = Math.min(L, dt * 0.6); p.x += dx / L * sp; p.z += dz / L * sp; p.g.rotation.y = Math.atan2(-dz, dx); p.g.position.y = Math.abs(Math.sin(simT * 9 + p.x)) * 0.04; }
+      p.g.position.x = p.x; p.g.position.z = p.z;
+    }
     if (b.fx.flag) b.fx.flag.rotation.y = Math.sin(simT * 3 + b.x) * 0.35;
     if (b.fx.glow) b.fx.glow.emissiveIntensity = b.working ? 1.6 + Math.sin(simT * 9) * 0.5 : 0.2;
     if ((b.type === 'schmied' || b.type === 'schmelze') && b.working && Math.random() < dt * (b.type === 'schmelze' ? 6 : 3)) puff(b.fx.smokeAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position));
