@@ -57,6 +57,28 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 .newwrap{display:flex;gap:16px;flex-wrap:wrap}.opts{flex:1;min-width:280px}.prev{display:flex;flex-direction:column;align-items:center;gap:4px}.prev canvas{width:220px;height:220px;border-radius:10px;border:2px solid #c9a06a;image-rendering:pixelated}
 .row button.big{font-size:19px;padding:12px 22px;background:#6fae4a;color:#fff;border:0}
 .saves{display:flex;flex-direction:column;gap:8px;margin-top:8px}.save{display:flex;gap:10px;background:rgba(0,0,0,.2);border-radius:10px;padding:8px}.save img{width:160px;height:90px;object-fit:cover;border-radius:6px;background:#222}.si{flex:1}.si b{display:block}.si small{opacity:.85;line-height:1.4}
+.ic{width:24px;height:24px;vertical-align:middle}
+#sub .card .chip{flex-direction:row}#res .rs{display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,.06);border-radius:8px;padding:1px 6px 1px 2px}#res .rs.zero{opacity:.5}
+#res .ic{width:28px;height:28px}#sub .ic,#menu .ic{width:18px;height:18px}.pop .ic{width:22px;height:22px}#toast .ic{width:20px;height:20px}
+@media (min-width:900px){#res .ic{width:32px;height:32px}}
+/* ---- modernes Baumenü ---- */
+#menu{background:rgba(24,18,12,.78);border:1px solid rgba(255,220,160,.18);border-radius:18px;padding:6px;gap:4px;backdrop-filter:blur(10px);box-shadow:0 8px 30px rgba(0,0,0,.45)}
+#menu .cat{background:transparent;border:0;border-radius:13px;color:#e9dcc2;padding:7px 10px 6px;transition:background .15s,transform .15s;position:relative}
+#menu .cat:hover{background:rgba(255,255,255,.08);transform:translateY(-2px)}
+#menu .cat.on{background:linear-gradient(180deg,#e0ac48,#c98d2c);color:#23170c;box-shadow:0 4px 14px rgba(217,162,58,.45)}
+#menu .cat small{display:none}#menu .cat i{font-size:24px}
+#sub{background:rgba(24,18,12,.82);border:1px solid rgba(255,220,160,.18);border-radius:18px;backdrop-filter:blur(10px);box-shadow:0 10px 34px rgba(0,0,0,.5);padding:10px 12px;max-height:none;overflow:visible}
+#sub .subhead{font-size:15px;opacity:.9;margin:0 2px 8px}
+#sub .cards{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+#sub .card{flex:0 0 132px;display:flex;flex-direction:column;align-items:center;gap:4px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(255,220,160,.16);border-radius:14px;padding:8px 6px 8px;color:#f3e6cc;cursor:pointer;transition:transform .15s,border-color .15s,background .15s;text-align:center}
+#sub .card:hover{transform:translateY(-4px);border-color:#e0ac48;background:linear-gradient(180deg,rgba(224,172,72,.22),rgba(255,255,255,.03))}
+#sub .card .thumb{width:104px;height:88px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:radial-gradient(circle at 50% 70%,rgba(140,170,90,.35),transparent 70%)}
+#sub .card .thumb img{width:104px;height:104px;object-fit:contain;margin-top:-8px}
+#sub .card b{font-size:14px}#sub .card small{font-size:11px;opacity:.75;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#sub .chips{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}.chip{display:inline-flex;align-items:center;gap:2px;background:rgba(0,0,0,.3);border-radius:8px;padding:1px 6px 1px 2px;font-size:13px}.chip .ic{width:20px;height:20px}.chip.miss{color:#ff8a6a;background:rgba(160,40,20,.35)}
+#sub .card.no{opacity:.55}#sub .card.no:hover{transform:none;border-color:rgba(255,120,90,.5)}
+@media (min-width:900px){#sub{width:auto;max-width:min(1000px,94vw);bottom:96px}#menu .cat{min-width:120px}}
+@media (max-width:899px){#sub{bottom:84px}#menu .cat i{font-size:20px}#menu .cat{padding:5px 4px;font-size:11px}}
 </style></head><body>
 <div id="top" class="panel"><div id="res"></div><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
@@ -5141,6 +5163,22 @@ function placeCarry(w, item, style) {
   else if (style === 'hand') { c.position.set(0.25, 0.38, 0.06); if (item === 'fisch') c.rotation.set(0, Math.PI / 2, Math.PI / 2); if (item === 'schinken') c.rotation.set(Math.PI, 0, 0); }
   else { c.position.set(0, 0.62, 0.42); }
 }
+// ---------- Symbole: aus den echten 3D-Warenmodellen gerendert ----------
+{
+  const S = 96, rt = new THREE.WebGLRenderTarget(S, S, { samples: 4, colorSpace: THREE.SRGBColorSpace }), px = new Uint8Array(S * S * 4), cv = document.createElement('canvas'); cv.width = cv.height = S; const cx = cv.getContext('2d'), idata = cx.createImageData(S, S);
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x555555, 1.4)); const dl = new THREE.DirectionalLight(0xffffff, 2.2); dl.position.set(2, 3, 2.5); sc.add(dl);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.01, 50), box3 = new THREE.Box3(), ctr = new V3(), size = new V3();
+  for (const k of Object.keys(ITEMS)) {
+    const m = makeItem(k); m.rotation.set(0.3, -0.6, 0); if (k === 'stamm' || k === 'bretter' || k === 'kampfstock' || k === 'werkzeug' || k === 'eisenbarren') m.rotation.set(0.0, -0.785, 0.6); if (k === 'fisch') m.rotation.set(0.2, -0.3, 0.5); if (k === 'stamm') m.scale.set(1, 1.8, 1.8); if (k === 'kampfstock') m.scale.set(1, 2.4, 2.4); if (k === 'bretter') m.scale.set(1, 1.6, 1.4); if (k === 'getreide') m.scale.set(1.8, 1, 1.8); if (k === 'brot') m.scale.set(1.2, 1.2, 1.2);
+    sc.add(m); box3.setFromObject(m); box3.getCenter(ctr); box3.getSize(size);
+    const r = Math.max(size.x, size.y, size.z) * 0.5; cam.position.set(ctr.x, ctr.y + r * 0.25, ctr.z + r / Math.tan(15 * Math.PI / 180) * 0.95); cam.lookAt(ctr);
+    renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(sc, cam); renderer.readRenderTargetPixels(rt, 0, 0, S, S, px); renderer.setRenderTarget(null);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const si = ((S - 1 - y) * S + x) * 4, di = (y * S + x) * 4; for (let c = 0; c < 4; c++) idata.data[di + c] = px[si + c]; }
+    cx.putImageData(idata, 0, 0); ITEMS[k].img = cv.toDataURL('image/png'); sc.remove(m);
+    ITEMS[k].icon = `<img class="ic" src="${ITEMS[k].img}" alt="${ITEMS[k].name}">`;
+  }
+  rt.dispose(); renderer.setClearColor(sky, 1);
+}
 const stock = { stamm: 8, bretter: 80, stein: 55, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, kampfstock: 2, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
@@ -5393,7 +5431,7 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
   }
   if (type === 'bauernhof' && !placeBuilding.noPlots) makePlots(b);
   b.outPile = new THREE.Group(); const op = new V3(T.r * 0.7, 0, T.r + 0.3).applyAxisAngle(new V3(0, 1, 0), rot); b.outPile.position.set(x + op.x, height(x + op.x, z + op.z), z + op.z); scene.add(b.outPile);
-  buildings.push(b); grassDirty = true; return b;
+  buildings.push(b); grassDirty = true; if (typeof walk !== 'undefined' && walk.length) blockBuilding(b); return b;
 }
 function finishBuilding(b) {
   b.g.scale.set(1, 1, 1); if (b.scaffold) scene.remove(b.scaffold);
@@ -5697,10 +5735,27 @@ function puff(p) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.25, 
 // ---------- UI ----------
 
 function updateHUD() {
-  $('res').innerHTML = Object.entries(ITEMS).map(([k, it]) => `<span title="${it.name}">${it.icon}<b>${stock[k]}</b></span>`).join('');
+  $('res').innerHTML = Object.entries(ITEMS).map(([k, it]) => `<span class="rs${stock[k] ? '' : ' zero'}" title="${it.name}: ${stock[k]}">${it.icon}<b>${stock[k]}</b></span>`).join('');
   document.querySelectorAll('#sub button[data-t]').forEach(btn => btn.classList.toggle('no', !canAfford(TYPES[btn.dataset.t].cost)));
 }
 const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).join(' ');
+// Gebäude-Vorschaubilder für das Baumenü (aus den echten 3D-Modellen)
+const BIMG = {};
+function genBuildIcons() {
+  const S = 128, rt = new THREE.WebGLRenderTarget(S, S, { samples: 4, colorSpace: THREE.SRGBColorSpace }), px = new Uint8Array(S * S * 4), cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const cx = cv.getContext('2d'), idata = cx.createImageData(S, S), sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xfff4e0, 0x5a5040, 1.3)); const dl = new THREE.DirectionalLight(0xffeedd, 2.4); dl.position.set(-3, 5, 4); sc.add(dl);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 100), bx = new THREE.Box3(), c = new V3(), sz = new V3();
+  for (const k of Object.keys(TYPES)) {
+    if (k === 'strasse') continue;
+    const g = buildModel(k).g; g.rotation.y = -0.6; sc.add(g); bx.setFromObject(g); bx.getCenter(c); bx.getSize(sz);
+    const r = Math.max(sz.x, sz.y, sz.z) * 0.62; cam.position.set(c.x + r * 1.1, c.y + r * 1.3, c.z + r * 2.3); cam.lookAt(c);
+    renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(sc, cam); renderer.readRenderTargetPixels(rt, 0, 0, S, S, px); renderer.setRenderTarget(null);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const si = ((S - 1 - y) * S + x) * 4, di = (y * S + x) * 4; for (let q = 0; q < 4; q++) idata.data[di + q] = px[si + q]; }
+    cx.putImageData(idata, 0, 0); BIMG[k] = cv.toDataURL('image/png'); sc.remove(g);
+  }
+  rt.dispose(); renderer.setClearColor(sky, 1);
+}
+genBuildIcons();
 const CATS = [
   { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'saegewerk', 'steinmetz'] },
   { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger'] },
@@ -5715,8 +5770,9 @@ function renderSub() {
   const sub = $('sub');
   document.querySelectorAll('#menu .cat').forEach(b => b.classList.toggle('on', +b.dataset.c === openCat));
   if (openCat < 0) { sub.style.display = 'none'; return; }
-  sub.innerHTML = `<div class="subhead">${CATS[openCat].icon} ${CATS[openCat].name}</div>` + CATS[openCat].types.map(k => { const T = TYPES[k]; return `<button data-t="${k}"><i>${T.icon}</i><span><b>${T.name}</b><small>${costStr(T.cost)} · ${T.desc}</small></span></button>`; }).join('');
-  sub.style.display = 'flex';
+  const chips = c => Object.entries(c).map(([k, v]) => `<span class="chip${stock[k] < v ? ' miss' : ''}">${ITEMS[k].icon}${v}</span>`).join('');
+  sub.innerHTML = `<div class="subhead">${CATS[openCat].icon} ${CATS[openCat].name}</div><div class="cards">` + CATS[openCat].types.map(k => { const T = TYPES[k]; return `<button data-t="${k}" class="card" title="${T.desc}"><div class="thumb">${BIMG[k] ? `<img src="${BIMG[k]}">` : `<i>${T.icon}</i>`}</div><b>${T.name}</b><div class="chips">${chips(T.cost) || '<span class="chip">kostenlos</span>'}</div><small>${T.desc}</small></button>`; }).join('') + '</div>';
+  sub.style.display = 'block';
   sub.querySelectorAll('button[data-t]').forEach(btn => btn.onclick = () => {
     const t = btn.dataset.t;
     if (!canAfford(TYPES[t].cost)) return toast('Nicht genug Material: ' + costStr(TYPES[t].cost));
@@ -5778,7 +5834,7 @@ function renderInfo() {
 }
 const p_info = $('infotext'); $('closeinfo').onclick = () => selectB(null);
 let speed = 1; $('speed').onclick = e => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; e.target.textContent = speed + '×'; };
-let toastT = 0; function toast(m) { const t = $('toast'); t.textContent = m; t.style.opacity = 1; toastT = 2.5; }
+let toastT = 0; function toast(m) { const t = $('toast'); t.innerHTML = m; t.style.opacity = 1; toastT = 2.5; }
 
 // ---------- Kamera & Eingabe ----------
 let yaw = 0.6, pitch = 0.85, dist = innerWidth < innerHeight ? 55 : 40;
@@ -5851,6 +5907,13 @@ function buildWalk() {
     walk[j * PN + i] = height(x, z) > -0.2 ? 1 : 0;
   }
   for (const b of buildings) if (b.type === 'bruecke' && b.progress >= 1) markBridge(b);
+  for (const b of buildings) blockBuilding(b);
+}
+function blockBuilding(b) {
+  if (b.removed || b.type === 'bruecke' || b.type === 'strasse') return;
+  const r = TYPES[b.type].r * 0.9;
+  for (let x = b.x - r; x <= b.x + r; x += PC * 0.5) for (let z = b.z - r; z <= b.z + r; z += PC * 0.5) { if (Math.hypot(x - b.x, z - b.z) > r) continue; const c = pIdx(x, z); if (c >= 0) walk[c] = 0; }
+  const dc = pIdx(b.door.x, b.door.z); if (dc >= 0 && height(b.door.x, b.door.z) > -0.2) walk[dc] = 1;
 }
 function markBridge(b) {
   for (let s = -7.5; s <= 7.5; s += 0.5) for (let t = -1; t <= 1; t += 0.5) {
@@ -6058,7 +6121,7 @@ function saveGame(name, auto) {
     else { e = { id: 's' + Date.now() }; IDX.push(e); e.name = name; GAME_ID = e.id; }
     Object.assign(e, { t: Date.now(), simT, nb: buildings.length, pop: workers.length + carriers.length, cfg: CFG, thumb: thumb() });
     localStorage.setItem('odws_save_' + e.id, JSON.stringify(serialize())); saveIndex();
-    if (!auto) toast('Gespeichert: ' + name);
+    if (!auto) toast('Gespeichert: ' + String(name).replace(/[<>&]/g, ''));
     return e;
   } catch (err) { toast('Speichern fehlgeschlagen – der Speicher ist voll. Bitte alte Spielstände löschen.'); }
 }
@@ -6346,5 +6409,5 @@ function animate() {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); if (composer) composer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
 toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
-window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, carriers, demolish, saveGame, rev: reveal, mk: makeWorker, setCarry, refreshPiles, h: height, serialize, road, rebuildRoads, roadCellsBetween };
+window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, walk, carriers, demolish, saveGame, rev: reveal, mk: makeWorker, setCarry, refreshPiles, h: height, serialize, road, rebuildRoads, roadCellsBetween };
 </script></body></html>
