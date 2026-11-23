@@ -5100,6 +5100,47 @@ const ITEMS = {
   werkzeug: { name: 'Werkzeug', icon: '🔨', m: M(0x9aa0a8), geo: box(0.12, 0.12, 0.7) },
   brot: { name: 'Brot', icon: '🍞', m: mat.bread, geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.4, 0.8, 1) },
 };
+// ---------- Realistische Warenmodelle ----------
+const IM = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, flatShading: true }, o));
+const IMAT = { bark: IM(0x5e4128), endw: IM(0xd9b27a), ring: IM(0xb8895a), plank: IM(0xd7ae78), plank2: IM(0xc69a62), stone: IM(0x9a958e), stone2: IM(0x7d7973), straw: IM(0xe0bf55), straw2: IM(0xc9a43c), twine: IM(0x8a6a3a), sack: IM(0xd8c8a2), flour: IM(0xf6f2e6),
+  wood: IM(0x8a6038), iron: IM(0x6f747c, { metalness: 0.6, roughness: 0.4 }), water: IM(0x3f8fb8, { roughness: 0.1 }), crust: IM(0xb5702e), crust2: IM(0x8a4f1e), rust: IM(0x9a4a2a), rust2: IM(0x6b3a26), coal: IM(0x1c1c20, { roughness: 0.35, metalness: 0.2 }),
+  ingot: IM(0x8a9098, { metalness: 0.8, roughness: 0.35 }), fish: IM(0xb8c8d0, { metalness: 0.3, roughness: 0.4 }), fishB: IM(0x4a6478), pig: IM(0xf0a8a8), ham: IM(0xb85848), fat: IM(0xf0d8c8), bone: IM(0xf2ecdf), gold: IM(0xe8c040, { metalness: 0.8, roughness: 0.3 }), goldr: IM(0x8a7a5a),
+  coin: IM(0xf0c850, { metalness: 0.85, roughness: 0.3 }), pouch: IM(0x7a5230), staff: IM(0x7a5230), head: IM(0x5e6268, { metalness: 0.6, roughness: 0.4 }) };
+const im = (geo, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = true; return o; };
+const rockGeo = (s, seed) => { const g = new THREE.DodecahedronGeometry(s, 0), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const f = 0.8 + hash(i, seed) * 0.4; p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.8, p.getZ(i) * f); } g.computeVertexNormals(); return g; };
+const ITEM_MAKE = {
+  stamm: () => { const g = new THREE.Group(); const log = im(new THREE.CylinderGeometry(0.12, 0.14, 0.95, 9), [IMAT.bark, IMAT.endw, IMAT.endw], 0, 0, 0, 0, 0, Math.PI / 2); g.add(log); for (const s of [-1, 1]) g.add(im(new THREE.RingGeometry(0.05, 0.07, 10), IMAT.ring, s * 0.476 * (s > 0 ? 1 : 1.02), 0, 0, 0, s * Math.PI / 2, 0)); return g; },
+  bretter: () => { const g = new THREE.Group(); for (let k = 0; k < 3; k++) g.add(im(new THREE.BoxGeometry(1.0, 0.045, 0.16), k % 2 ? IMAT.plank2 : IMAT.plank, (k - 1) * 0.02, k * 0.05, (k - 1) * 0.02)); return g; },
+  stein: () => { const g = new THREE.Group(); g.add(im(rockGeo(0.17, 1), IMAT.stone, -0.06, 0, 0)); g.add(im(rockGeo(0.13, 2), IMAT.stone2, 0.12, 0.02, 0.05)); g.add(im(rockGeo(0.1, 3), IMAT.stone, 0.02, 0.13, -0.04)); return g; },
+  getreide: () => { const g = new THREE.Group(); for (let k = 0; k < 14; k++) { const a = k * 2.4, r = (k % 3) * 0.035; g.add(im(new THREE.CylinderGeometry(0.012, 0.012, 0.7, 4), IMAT.straw, Math.cos(a) * r, 0, Math.sin(a) * r, Math.cos(a) * 0.12, 0, Math.sin(a) * 0.12)); g.add(im(new THREE.CapsuleGeometry(0.022, 0.08, 2, 4), IMAT.straw2, Math.cos(a) * r * 1.6, 0.38, Math.sin(a) * r * 1.6)); } g.add(im(new THREE.TorusGeometry(0.07, 0.015, 4, 10), IMAT.twine, 0, 0.02, 0, Math.PI / 2)); return g; },
+  mehl: () => { const g = new THREE.Group(); const s = im(new THREE.SphereGeometry(0.2, 9, 7), IMAT.sack); s.scale.set(1, 1.25, 0.8); g.add(s); g.add(im(new THREE.ConeGeometry(0.07, 0.12, 7), IMAT.sack, 0, 0.27, 0)); g.add(im(new THREE.TorusGeometry(0.055, 0.015, 4, 8), IMAT.twine, 0, 0.23, 0, Math.PI / 2)); g.add(im(new THREE.CircleGeometry(0.08, 8), IMAT.flour, 0, 0.02, 0.165)); return g; },
+  wasser: () => { const g = new THREE.Group(); const b = im(new THREE.CylinderGeometry(0.15, 0.12, 0.26, 10, 1, true), IMAT.wood); b.material = b.material.clone(); b.material.side = THREE.DoubleSide; g.add(b); for (const y of [-0.08, 0.08]) g.add(im(new THREE.TorusGeometry(0.14 - y * 0.12, 0.012, 4, 14), IMAT.iron, 0, y, 0, Math.PI / 2)); g.add(im(new THREE.CircleGeometry(0.135, 12), IMAT.water, 0, 0.09, 0, -Math.PI / 2)); g.add(im(new THREE.CylinderGeometry(0.12, 0.12, 0.02, 10), IMAT.wood, 0, -0.12, 0)); g.add(im(new THREE.TorusGeometry(0.15, 0.01, 4, 12, Math.PI), IMAT.iron, 0, 0.13, 0)); return g; },
+  brot: () => { const g = new THREE.Group(); for (const [x, s] of [[-0.09, 1], [0.12, 0.85]]) { const l = im(new THREE.SphereGeometry(0.13, 9, 6), IMAT.crust, x, 0, 0); l.scale.set(1.5 * s, 0.75 * s, 1 * s); g.add(l); for (let k = 0; k < 3; k++) g.add(im(new THREE.BoxGeometry(0.02, 0.012, 0.12 * s), IMAT.crust2, x + (k - 1) * 0.06 * s, 0.095 * s, 0, 0, 0.5)); } return g; },
+  eisenerz: () => { const g = new THREE.Group(); g.add(im(rockGeo(0.17, 4), IMAT.rust, -0.05, 0, 0)); g.add(im(rockGeo(0.13, 5), IMAT.rust2, 0.12, 0.02, 0.04)); g.add(im(rockGeo(0.09, 6), IMAT.stone2, 0.03, 0.12, -0.05)); return g; },
+  kohle: () => { const g = new THREE.Group(); for (let k = 0; k < 5; k++) g.add(im(rockGeo(0.09 + hash(k, 7) * 0.05, 8 + k), IMAT.coal, (hash(k, 1) - 0.5) * 0.25, Math.floor(k / 3) * 0.1, (hash(k, 2) - 0.5) * 0.2)); return g; },
+  eisenbarren: () => { const g = new THREE.Group(); const bar = () => im(new THREE.CylinderGeometry(0.08, 0.12, 0.07, 4, 1).rotateY(Math.PI / 4).scale(2.6, 1, 1), IMAT.ingot); const a = bar(); g.add(a); const b2 = bar(); b2.position.set(0, 0.07, 0.02); b2.rotation.y = 0.15; g.add(b2); return g; },
+  fisch: () => { const g = new THREE.Group(); const b = im(new THREE.SphereGeometry(0.1, 9, 6), IMAT.fish); b.scale.set(2.4, 0.9, 0.55); g.add(b); const back = im(new THREE.SphereGeometry(0.1, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2.2), IMAT.fishB); back.scale.set(2.3, 0.95, 0.5); g.add(back); g.add(im(new THREE.ConeGeometry(0.09, 0.14, 4).scale(1, 1, 0.25), IMAT.fishB, -0.29, 0, 0, 0, 0, Math.PI / 2)); g.add(im(new THREE.ConeGeometry(0.04, 0.08, 3).scale(1, 1, 0.2), IMAT.fishB, 0, 0.1, 0)); g.add(im(new THREE.SphereGeometry(0.015, 5, 4), IMAT.coal, 0.19, 0.02, 0.045)); return g; },
+  schwein: () => { const g = new THREE.Group(), s = 0.55; const b = im(new THREE.SphereGeometry(0.42 * s, 8, 6), IMAT.pig); b.scale.set(1.35, 0.95, 1); g.add(b); g.add(im(new THREE.SphereGeometry(0.27 * s, 7, 5), IMAT.pig, 0.55 * s, 0.08 * s, 0)); g.add(im(new THREE.CylinderGeometry(0.11 * s, 0.11 * s, 0.1 * s, 8), IMAT.pig, 0.82 * s, 0.04 * s, 0, 0, 0, Math.PI / 2)); for (const lx of [-0.3, 0.3]) for (const lz of [-0.18, 0.18]) g.add(im(new THREE.BoxGeometry(0.1 * s, 0.25 * s, 0.1 * s), IMAT.pig, lx * s, -0.3 * s, lz * s)); return g; },
+  schinken: () => { const g = new THREE.Group(); const h = im(new THREE.SphereGeometry(0.15, 9, 7), IMAT.ham); h.scale.set(1, 1.35, 0.85); g.add(h); g.add(im(new THREE.CircleGeometry(0.1, 9), IMAT.fat, 0, -0.03, 0.13)); g.add(im(new THREE.CylinderGeometry(0.025, 0.03, 0.16, 6), IMAT.bone, 0, 0.24, 0)); g.add(im(new THREE.SphereGeometry(0.035, 6, 5), IMAT.bone, 0, 0.32, 0)); return g; },
+  golderz: () => { const g = new THREE.Group(); g.add(im(rockGeo(0.16, 11), IMAT.goldr, 0, 0, 0)); for (let k = 0; k < 4; k++) g.add(im(new THREE.OctahedronGeometry(0.045, 0), IMAT.gold, (hash(k, 3) - 0.5) * 0.22, 0.08 + hash(k, 4) * 0.06, (hash(k, 5) - 0.5) * 0.18)); g.add(im(rockGeo(0.1, 12), IMAT.goldr, 0.15, 0, 0.03)); return g; },
+  muenzen: () => { const g = new THREE.Group(); g.add(im(new THREE.SphereGeometry(0.13, 8, 6).scale(1, 0.9, 1), IMAT.pouch)); g.add(im(new THREE.TorusGeometry(0.045, 0.012, 4, 8), IMAT.twine, 0, 0.11, 0, Math.PI / 2)); for (let k = 0; k < 4; k++) g.add(im(new THREE.CylinderGeometry(0.05, 0.05, 0.015, 12), IMAT.coin, 0.16, -0.08 + k * 0.016, 0.05)); return g; },
+  kampfstock: () => { const g = new THREE.Group(); g.add(im(new THREE.CylinderGeometry(0.03, 0.04, 1.2, 6), IMAT.staff, 0, 0, 0, 0, 0, Math.PI / 2)); g.add(im(new THREE.CylinderGeometry(0.045, 0.045, 0.12, 6), IMAT.twine, -0.35, 0, 0, 0, 0, Math.PI / 2)); return g; },
+  werkzeug: () => { const g = new THREE.Group(); g.add(im(new THREE.CylinderGeometry(0.022, 0.026, 0.42, 6), IMAT.staff, 0, 0, 0, 0, 0, Math.PI / 2)); g.add(im(new THREE.BoxGeometry(0.07, 0.07, 0.15), IMAT.head, 0.2, 0, 0)); g.add(im(new THREE.CylinderGeometry(0.02, 0.026, 0.36, 6), IMAT.staff, 0, 0.06, 0.12, 0, 0.4, Math.PI / 2)); g.add(im(new THREE.BoxGeometry(0.02, 0.12, 0.09), IMAT.head, 0.17, 0.06, 0.2, 0, 0.4, 0)); return g; },
+};
+const ITEM_PROTO = {};
+function makeItem(k) { if (!ITEM_PROTO[k]) ITEM_PROTO[k] = (ITEM_MAKE[k] || (() => new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m)))(); return ITEM_PROTO[k].clone(); }
+// Trageweise: Schulter (lang & schwer), Rücken (Säcke/Garben), vorne (Tier, Kisten), Hand (klein)
+const CARRY = { stamm: 'shoulder', bretter: 'shoulder', kampfstock: 'shoulder', getreide: 'back', mehl: 'back', schwein: 'front', stein: 'front', eisenerz: 'front', kohle: 'front', golderz: 'front', wasser: 'hand', fisch: 'hand', schinken: 'hand', brot: 'hand', eisenbarren: 'front', muenzen: 'hand', werkzeug: 'hand' };
+function placeCarry(w, item, style) {
+  const c = w.carry; while (c.children.length) c.remove(c.children[0]);
+  if (!item) { c.visible = false; return; }
+  c.add(makeItem(item)); c.visible = true; c.rotation.set(0, 0, 0);
+  if (style === 'shoulder') { c.position.set(0.22, 1.04, 0.05); c.rotation.set(0, Math.PI / 2, -0.35); }
+  else if (style === 'back') { c.position.set(0, 0.82, -0.26); c.rotation.set(0.25, 0, 0); }
+  else if (style === 'front') { c.position.set(0, 0.62, 0.3); }
+  else if (style === 'hand') { c.position.set(0.25, 0.38, 0.06); if (item === 'fisch') c.rotation.set(0, Math.PI / 2, Math.PI / 2); if (item === 'schinken') c.rotation.set(Math.PI, 0, 0); }
+  else { c.position.set(0, 0.62, 0.42); }
+}
 const stock = { stamm: 8, bretter: 80, stein: 55, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, kampfstock: 2, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
@@ -5326,11 +5367,11 @@ function makeWorker(type) {
   if (type === 'fischer') { const rod = mesh(new THREE.CylinderGeometry(0.012, 0.025, 1.8, 4), mat.trunk, 0, 0, 0.8); rod.rotation.x = Math.PI / 2; tool.add(rod); }
   if (type === 'bauernhof' || type === 'schweinezucht') { tool.add(mesh(box(0.035, 0.035, 0.8), mat.trunk, 0, 0, 0.3)); tool.add(mesh(box(0.2, 0.03, 0.1), M(0x9aa0a8), 0, 0, 0.7)); }
   if (type === 'waechter') { tool.add(mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.1, 6), M(0x7a5230), 0, 0.3, 0)); const sh = new THREE.Group(); sh.position.set(0, -0.3, 0.06); sh.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 12).rotateX(Math.PI / 2), M(0x2f6fd0), 0, 0, 0)); sh.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 8).rotateX(Math.PI / 2), M(0xd8c070), 0, 0, 0.02)); arm2.add(sh); }
-  const carry = new THREE.Mesh(ITEMS.stamm.geo, ITEMS.stamm.m); carry.position.set(0, 1.42, 0.05); carry.visible = false; carry.castShadow = true; g.add(carry);
+  const carry = new THREE.Group(); carry.visible = false; g.add(carry);
   scene.add(g);
   return { g, body, legs, arm, arm2, head, carry, queue: [], anim: null, walkPh: Math.random() * 6, seed };
 }
-function setCarry(w, item) { if (!item) { w.carry.visible = false; w.carrying = null; return; } w.carry.geometry = ITEMS[item].geo; w.carry.material = ITEMS[item].m; w.carry.visible = true; w.carrying = item; }
+function setCarry(w, item) { w.carrying = item || null; w.carryStyle = item ? (CARRY[item] || 'front') : null; placeCarry(w, item, w.carryStyle); }
 const lagers = () => buildings.filter(b => b.type === 'lager' && b.progress >= 1 && !b.removed);
 function nearestLager(x, z) { let best = buildings[0], bd = 1e9; for (const l of lagers()) { const d = Math.hypot(l.x - x, l.z - z); if (d < bd) { bd = d; best = l; } } return best; }
 const lagerDoor = (x = 0, z = 0) => nearestLager(x, z).door.clone();
@@ -5527,7 +5568,7 @@ function deliver(w, item, n) {
 function refreshOut(b) {
   const items = Object.entries(b.out).flatMap(([k, v]) => Array(Math.min(v, 6)).fill(k)).slice(0, 6);
   while (b.outPile.children.length) b.outPile.remove(b.outPile.children[0]);
-  items.forEach((k, i) => { const m = new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m); m.castShadow = true; m.position.set((i % 3) * 0.4 - 0.4, 0.15 + Math.floor(i / 3) * 0.3, 0); b.outPile.add(m); });
+  items.forEach((k, i) => { const m = makeItem(k); m.position.set((i % 3) * 0.45 - 0.45, 0.12 + Math.floor(i / 3) * 0.25, 0); m.rotation.y = i * 0.7; b.outPile.add(m); });
 }
 const hasIn = (b, inp) => Object.entries(inp).every(([k, v]) => (b.in[k] || 0) >= v);
 function takeIn(b, inp) { for (const [k, v] of Object.entries(inp)) { b.in[k] -= v; stat('use', k, v); } }
@@ -5633,7 +5674,7 @@ function planNext(b) {
 // Arbeitsplätze vor dem Haus: [stehen x, z, schaut zu x, z, Bewegung, Ware in der Hand]
 const WORKSPOT = { schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.8, 1.25, 1.8, 0.6, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
   saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.7, 1.3, -1.7, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.6, 1.5, 1.6, 0.9, 'carve', 'kampfstock'] };
-function holdFront(w, item) { if (!item) { w.carry.position.set(0, 1.42, 0.05); w.carry.visible = false; w.holding = false; return; } w.carry.geometry = ITEMS[item].geo; w.carry.material = ITEMS[item].m; w.carry.position.set(0, 0.62, 0.42); w.carry.visible = true; w.holding = true; }
+function holdFront(w, item) { w.holding = !!item; placeCarry(w, item, 'work'); }
 function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - w.g.position.z); }
 
 // ---------- Lager-Anzeige ----------
@@ -5641,7 +5682,7 @@ function refreshPiles() {
   for (const lager of buildings.filter(b => b.type === 'lager' && b.fx.piles))
   for (const [k, pg] of Object.entries(lager.fx.piles)) {
     const n = Math.min(6, stock[k]);
-    while (pg.children.length < n) { const i = pg.children.length, m = new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m); m.castShadow = true; m.position.set((i % 2) * 0.45 - 0.22, 0.12 + Math.floor(i / 4) * 0.3, (Math.floor(i / 2) % 2) * 0.4 - 0.2); pg.add(m); }
+    while (pg.children.length < n) { const i = pg.children.length, m = makeItem(k); m.position.set((i % 2) * 0.42 - 0.21, 0.12 + Math.floor(i / 4) * 0.24, (Math.floor(i / 2) % 2) * 0.36 - 0.18); m.rotation.y = (i % 2) * 0.3; pg.add(m); }
     while (pg.children.length > n) pg.remove(pg.children[pg.children.length - 1]);
   }
   updateHUD();
@@ -6199,7 +6240,7 @@ function step(dt) {
     if (!w.queue.length && w.isCarrier) planCarrier(w);
     const q = w.queue[0]; if (!q) continue;
     let walking = false;
-    w.arm.rotation.x = 0; w.body.rotation.x = 0; if (w.arm2) w.arm2.rotation.x = 0;
+    w.arm.rotation.x = 0; w.arm.rotation.z = 0; w.body.rotation.x = 0; if (w.arm2) w.arm2.rotation.x = 0;
     if (q.to && !q.routed) {
       q.routed = true; const p0 = w.g.position;
       const path = findPath(p0.x, p0.z, q.to.x, q.to.z);
@@ -6229,8 +6270,9 @@ function step(dt) {
       if (q.el >= q.wait) { w.queue.shift(); q.fn && q.fn(); }
     } else if (q.fn) { w.queue.shift(); q.fn(); }
     if (walking) { w.walkPh += dt * 10; const sw = Math.sin(w.walkPh); w.legs[0].rotation.x = sw * 0.65; w.legs[1].rotation.x = -sw * 0.65; w.body.position.y = Math.abs(sw) * 0.04; w.body.rotation.z = sw * 0.04;
-      if (w.carrying) { w.arm.rotation.x = -2.7; if (w.arm2) w.arm2.rotation.x = -2.7; } else { w.arm.rotation.x = -sw * 0.5; if (w.arm2) w.arm2.rotation.x = sw * 0.5; } }
+      const cs = w.carrying && w.carryStyle; if (cs === 'shoulder') { w.arm.rotation.x = -2.9; w.arm.rotation.z = 0.25; if (w.arm2) w.arm2.rotation.x = sw * 0.45; w.body.rotation.z += 0.05; } else if (cs === 'back') { w.arm.rotation.x = w.arm2.rotation.x = -2.6; w.body.rotation.x = 0.12; } else if (cs === 'front') { w.arm.rotation.x = w.arm2.rotation.x = -1.15; w.body.rotation.x = -0.06; } else if (cs === 'hand') { w.arm.rotation.x = -0.15; if (w.arm2) w.arm2.rotation.x = sw * 0.5; w.body.rotation.z += -0.04; } else { w.arm.rotation.x = -sw * 0.5; if (w.arm2) w.arm2.rotation.x = sw * 0.5; } }
     else { w.legs[0].rotation.x = w.legs[1].rotation.x = 0; w.body.rotation.z = 0; if (w.head) w.head.rotation.y = Math.sin(simT * 0.7 + w.seed) * 0.35; }
+    if (!walking && w.carrying && w.arm2 && !(w.queue[0] && w.queue[0].anim)) { const cs = w.carryStyle; if (cs === 'shoulder') { w.arm.rotation.x = -2.9; w.arm.rotation.z = 0.25; } else if (cs === 'back') { w.arm.rotation.x = w.arm2.rotation.x = -2.6; } else if (cs === 'front') { w.arm.rotation.x = w.arm2.rotation.x = -1.15; } else if (cs === 'hand') w.arm.rotation.x = -0.15; }
   }
   // Felder wachsen (~35 s)
   for (const b of buildings) for (const p of b.plots) if (p.state === 'wächst') { p.growth = Math.min(1, p.growth + dt / 35); if (p.growth >= 1) p.state = 'reif'; updatePlot(p); }
@@ -6304,5 +6346,5 @@ function animate() {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); if (composer) composer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
 toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
-window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, carriers, demolish, saveGame, rev: reveal, mk: makeWorker, h: height, serialize, road, rebuildRoads, roadCellsBetween };
+window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, carriers, demolish, saveGame, rev: reveal, mk: makeWorker, setCarry, refreshPiles, h: height, serialize, road, rebuildRoads, roadCellsBetween };
 </script></body></html>
