@@ -5548,7 +5548,6 @@ function buildModel(type) {
     signBoard(g, 0.9, 1.0, 0.95, () => { const s = new THREE.Group(); s.add(mesh(box(0.3, 0.22, 0.03), OW.wood)); const t = makeItem('stamm'); t.scale.setScalar(0.3); t.position.z = 0.03; s.add(t); return s; });
   } else if (type === 'saegewerk') {
     g = H({ w: 2.3, d: 1.9, h1: 1.05, h2: 0.95, frontWin: [2], chimney: false });
-    shedRoof(g, 2.4, 1.2, 1.35, 0.3, 1.85, OW.tile);
     g.add(mesh(box(2.2, 0.8, 1), M(0x8a6038), 0.3, 0.4, 1.8));
     const saw = new THREE.Group(); saw.position.set(0.3, 0.9, 1.8);
     saw.add(mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.04, 20).rotateX(Math.PI / 2), M(0xc0c4cc, { metalness: 0.7, roughness: 0.3 })));
