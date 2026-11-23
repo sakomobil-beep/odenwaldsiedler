@@ -79,6 +79,11 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 #sub .card.no{opacity:.55}#sub .card.no:hover{transform:none;border-color:rgba(255,120,90,.5)}
 @media (min-width:900px){#sub{width:auto;max-width:min(1000px,94vw);bottom:96px}#menu .cat{min-width:120px}}
 @media (max-width:899px){#sub{bottom:84px}#menu .cat i{font-size:20px}#menu .cat{padding:5px 4px;font-size:11px}}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.blabel{position:absolute;left:0;top:0;display:flex;align-items:center;gap:5px;white-space:nowrap;background:rgba(36,24,14,.82);color:#f6e8c8;border:1px solid rgba(224,172,72,.7);border-radius:12px;padding:3px 9px 3px 5px;font:bold 13px Georgia;box-shadow:0 3px 8px rgba(0,0,0,.4);transform-origin:50% 100%}
+.blabel:after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-5px;border:5px solid transparent;border-top-color:rgba(224,172,72,.8);border-bottom:0}
+.blabel .bi{font-size:16px}.blabel .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:2px}
+.dot.work{background:#6fd04a;box-shadow:0 0 6px #6fd04a}.dot.idle{background:#c8c0a8}.dot.wait{background:#f0a030}.dot.pause{background:#e05030}.dot.bau{background:#5aa0e0}
 </style></head><body>
 <div id="top" class="panel"><div id="res"></div><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
@@ -4473,7 +4478,7 @@ three/build/three.module.js:
 const $ = id => document.getElementById(id);
 const V3 = THREE.Vector3;
 // ---------- Einstellungen & Start-Konfiguration ----------
-const DEF_SET = { quality: 'hoch', grass: true, shadows: true, ao: true, bloom: true, view: 330, vol: 80, volFx: 100, volAmb: 70, speed: 1, autosave: 60, camSpeed: 1, edge: true, ui: 1, minimap: true };
+const DEF_SET = { quality: 'hoch', grass: true, shadows: true, ao: true, bloom: true, view: 330, vol: 80, volFx: 100, volAmb: 70, speed: 1, autosave: 60, camSpeed: 1, edge: true, ui: 1, minimap: true, labels: true };
 const SET = Object.assign({}, DEF_SET, (() => { try { return JSON.parse(localStorage.getItem('odws_set') || '{}'); } catch (e) { return {}; } })());
 if (!localStorage.getItem('odws_set') && localStorage.getItem('odws_q') === 'normal') Object.assign(SET, { quality: 'niedrig', ao: false, bloom: false });
 function saveSet() { localStorage.setItem('odws_set', JSON.stringify(SET)); }
@@ -6107,6 +6112,26 @@ function selectB(b) {
   if (!b) { p.style.display = 'none'; ring.visible = !!placing && ring.visible; return; }
   p.style.display = 'block'; confirmDel = false; renderInfo(); renderInfoBtns();
 }
+// ---------- Berufs-Schilder über den Gebäuden ----------
+const labelBox = document.createElement('div'); labelBox.id = 'labels'; document.body.appendChild(labelBox);
+const JOB = { lager: 'Lager', holzfaeller: 'Holzfäller', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Bergmann (Stein)', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
+const _lv = new V3();
+function updateLabels() {
+  if (INMENU || SET.labels === false || dist > 75) { labelBox.style.display = 'none'; return; }
+  labelBox.style.display = 'block';
+  const op = THREE.MathUtils.clamp((75 - dist) / 20, 0, 1);
+  for (const b of buildings) {
+    if (b.removed) { if (b.label) { b.label.remove(); b.label = null; } continue; }
+    if (!b.label) { b.label = document.createElement('div'); b.label.className = 'blabel'; labelBox.appendChild(b.label); }
+    const st = b.progress < 1 ? 'bau' : b.paused ? 'pause' : b.working ? 'work' : /Wartet|Kein |voll/.test(b.status || '') ? 'wait' : 'idle';
+    const html = `<span class="bi">${TYPES[b.type].icon}</span>${JOB[b.type] || TYPES[b.type].name}<i class="dot ${st}"></i>`;
+    if (b.label._h !== html) { b.label.innerHTML = html; b.label._h = html; }
+    _lv.set(b.x, (b.g.userData.top || 3) + 0.9 + b.g.position.y, b.z).project(camera);
+    if (_lv.z > 1 || Math.abs(_lv.x) > 1.1 || Math.abs(_lv.y) > 1.1) { b.label.style.display = 'none'; continue; }
+    b.label.style.display = 'flex'; b.label.style.opacity = op;
+    b.label.style.transform = `translate(${(_lv.x + 1) / 2 * innerWidth}px,${(1 - _lv.y) / 2 * innerHeight}px) translate(-50%,-100%) scale(${THREE.MathUtils.clamp(40 / dist, 0.75, 1.15)})`;
+  }
+}
 function renderInfo() {
   const b = selected; if (!b) return; const T = TYPES[b.type];
   let extra = '';
@@ -6529,7 +6554,8 @@ function showSettings() {
     <div class="opt"><span>Kantenscrollen (Maus am Rand)</span>${onoff('edge')}</div>
     <h4>🖥️ Anzeige</h4>
     <div class="opt"><span>Größe der Bedienung</span>${seg('ui', [[0.85, 'Klein'], [1, 'Normal'], [1.2, 'Groß'], [1.4, 'Sehr groß']])}</div>
-    <div class="opt"><span>Minikarte</span>${onoff('minimap')}</div>`, () => { closeScreen(); if (INMENU) showMain(); });
+    <div class="opt"><span>Minikarte</span>${onoff('minimap')}</div>
+    <div class="opt"><span>Berufs-Schilder über Gebäuden</span>${onoff('labels')}</div>`, () => { closeScreen(); if (INMENU) showMain(); });
   s.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { const k = b.dataset.set; let v = b.dataset.v; v = v === 'true' ? true : v === 'false' ? false : isNaN(+v) ? v : +v; SET[k] = v; saveSet(); s.querySelectorAll(`[data-set="${k}"]`).forEach(x => x.classList.toggle('on', x === b)); applyLiveSettings(); });
   s.querySelectorAll('[data-sl]').forEach(r => r.oninput = () => { const k = r.dataset.sl; SET[k] = +r.value; s.querySelector(`[data-slv="${k}"]`).textContent = r.value; saveSet(); applyLiveSettings(); });
   $('applygfx').onclick = () => { saveSet(); if (INMENU) bootTo(null); else { const e = saveGame(null, true); bootTo(e ? { mode: 'load', id: e.id } : null); } };
@@ -6692,7 +6718,7 @@ function animate() {
   if (grassDirty || !grassC || Math.hypot(target.x - grassC.x, target.z - grassC.z) > GRASS_R * 0.35) scatterGrass();
   const ext = THREE.MathUtils.clamp(dist * 1.05, 28, 80);
   if (Math.abs(ext - (sun.shadow.camera.right)) > 2) { Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext }); sun.shadow.camera.updateProjectionMatrix(); }
-  flushDirty();
+  flushDirty(); updateLabels();
   if (composer) composer.render(); else renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
