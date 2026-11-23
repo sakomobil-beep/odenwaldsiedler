@@ -28,9 +28,20 @@ canvas{display:block;touch-action:none}
 @media (min-width:900px){#sub{left:50%;right:auto;transform:translateX(-50%);width:560px;bottom:118px}#sub button{font-size:17px}#sub button small{font-size:14px}#menu .cat{min-width:150px}.subhead{font-size:18px}}
 #mini{position:fixed;right:8px;top:58px;width:140px;height:140px;border-radius:10px;border:2px solid rgba(243,230,204,.85);box-shadow:0 3px 12px rgba(0,0,0,.4);touch-action:none;cursor:crosshair}
 @media (min-width:900px){#mini{width:220px;height:220px;top:70px}}
+#top .tb{background:#5a4029;border:1px solid #8a6a45;border-radius:8px;padding:5px 8px;font-size:16px;margin-left:4px}
+.pop{display:none;top:58px;left:50%;transform:translateX(-50%);width:min(440px,92vw);max-height:70vh;overflow-y:auto;padding:10px 14px;font-size:14px;z-index:5}
+.pop .x{position:absolute;right:8px;top:6px;background:none;border:0;color:#f3e6cc;font-size:18px}
+.pop table{width:100%;border-collapse:collapse;margin:4px 0 8px}.pop td,.pop th{padding:2px 4px;text-align:right}.pop td:first-child{text-align:left}.pop tr.bad td{color:#ff9a7a;font-weight:bold}
+.pop .w{padding:2px 0}.pop small{opacity:.8}
+.row{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}.row button,.slot button{background:#5a4029;color:#f3e6cc;border:1px solid #8a6a45;border-radius:8px;padding:6px 10px;font:13px Georgia}
+.row button.on{background:#d9a23a;color:#2b1e13}.row button.warn{background:#a8432c;color:#fff}.row button:disabled{opacity:.4}
+.slot span{flex:1;display:flex;flex-direction:column}
+#info{z-index:4}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><button id="speed">1×</button></div>
-<div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div></div>
+<div id="top" class="panel"><div id="res"></div><button id="statbtn" class="tb">📊</button><button id="savebtn" class="tb">💾</button><button id="speed">1×</button></div>
+<div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
+<div id="savemenu" class="panel pop"><button id="closesave" class="x">✕</button><div id="savebody"></div></div>
+<div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div><div id="infobtns"></div></div>
 <div id="toast"></div>
 <canvas id="mini" width="200" height="200"></canvas>
 <div id="sub" class="panel"></div>
@@ -55054,10 +55065,10 @@ const riverX = z => Math.sin(z * 0.07) * 6 + Math.sin(z * 0.013) * 22 + 34;
 const MAP = 200; // Karte reicht von -200 bis +200
 const MOUNTAINS = [
   { x: -30, z: -25, R: 19, H: 16, kinds: ['stein', 'eisenerz', 'kohle'], face: true },
-  { x: 95, z: 45, R: 26, H: 22, kinds: ['eisenerz', 'kohle', 'stein'] },
-  { x: -110, z: 85, R: 30, H: 24, kinds: ['kohle', 'eisenerz', 'stein'] },
+  { x: 95, z: 45, R: 26, H: 22, kinds: ['eisenerz', 'kohle', 'gold'] },
+  { x: -110, z: 85, R: 30, H: 24, kinds: ['kohle', 'eisenerz', 'gold', 'stein'] },
   { x: 60, z: -125, R: 28, H: 22, kinds: ['stein', 'eisenerz', 'kohle'] },
-  { x: -140, z: -110, R: 34, H: 28, kinds: ['eisenerz', 'kohle', 'stein'] },
+  { x: -140, z: -110, R: 34, H: 28, kinds: ['eisenerz', 'gold', 'kohle', 'stein'] },
   { x: 145, z: 145, R: 30, H: 24, kinds: ['kohle', 'stein', 'eisenerz'] },
   { x: 150, z: -60, R: 22, H: 18, kinds: ['eisenerz', 'stein'] },
 ];
@@ -55220,7 +55231,7 @@ for (let i = 0; i < 400 && rockSpots.length < 45; i++) { const x = (hash(i, 11) 
 rockSpots.forEach(([x, z]) => { clearTrees(x, z, 3); addRock(x, z); });
 
 // ---------- Erzvorkommen in den Gebirgen ----------
-const depCol = { stein: 0x8f8a84, eisenerz: 0xb5562e, kohle: 0x1e1e22 };
+const depCol = { stein: 0x8f8a84, eisenerz: 0xb5562e, kohle: 0x1e1e22, gold: 0xe8c040 };
 const deposits = [];
 MOUNTAINS.forEach((m, mi) => {
   const base = m.face ? Math.atan2(-m.z, -m.x) : hash(mi, 9) * 6.28;
@@ -55284,15 +55295,18 @@ const ITEMS = {
   fisch: { name: 'Fisch', icon: '🐟', m: fishMat, geo: new THREE.ConeGeometry(0.14, 0.55, 5).rotateZ(Math.PI / 2) },
   schwein: { name: 'Schweine', icon: '🐖', m: M(0xf0a8a8), geo: box(0.55, 0.35, 0.3) },
   schinken: { name: 'Schinken', icon: '🍖', m: M(0xc0605a), geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.5, 1, 1) },
+  golderz: { name: 'Golderz', icon: '🟡', m: M(0xe8c040), geo: new THREE.DodecahedronGeometry(0.22, 0) },
+  muenzen: { name: 'Münzen', icon: '🪙', m: new THREE.MeshStandardMaterial({ color: 0xf0c850, metalness: 0.7, roughness: 0.3 }), geo: new THREE.CylinderGeometry(0.18, 0.18, 0.08, 10) },
   kampfstock: { name: 'Kampfstöcke', icon: '🏏', m: M(0x7a5230), geo: new THREE.CylinderGeometry(0.06, 0.08, 1.1, 6).rotateZ(Math.PI / 2.4) },
   werkzeug: { name: 'Werkzeug', icon: '🔨', m: M(0x9aa0a8), geo: box(0.12, 0.12, 0.7) },
   brot: { name: 'Brot', icon: '🍞', m: mat.bread, geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.4, 0.8, 1) },
 };
-const stock = { stamm: 0, bretter: 45, stein: 30, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, kampfstock: 2, werkzeug: 10 };
+const stock = { stamm: 0, bretter: 45, stein: 30, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, kampfstock: 2, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
 const TYPES = {
-  lager: { name: 'Lager', icon: '🏠', cost: {}, r: 3.2, desc: 'Hier landen alle Waren. Jeder neue Arbeiter holt sich hier 1 Werkzeug.' },
+  lager: { name: 'Lager', icon: '🏠', cost: { bretter: 6, stein: 4 }, r: 3.2, desc: 'Hier landen alle Waren. Ein zweites Lager verkürzt die Wege der Träger in fernen Gebieten.' },
+  strasse: { name: 'Straße', icon: '🛤️', cost: {}, r: 0.5, desc: 'Startpunkt und Endpunkt anklicken. Auf Straßen laufen Siedler fast doppelt so schnell. 1 Stein je 10 m.' },
   holzfaeller: { name: 'Holzfäller', icon: '🪓', cost: { bretter: 3 }, r: 2, desc: 'Fällt Bäume → Baumstämme. Pflanzt neue Bäume nach.' },
   saegewerk: { name: 'Sägewerk', icon: '🪚', cost: { bretter: 4, stein: 2 }, r: 2.3, desc: '1 Baumstamm → 2 Bretter' },
   steinmetz: { name: 'Steinmetz', icon: '⛏️', cost: { bretter: 3 }, r: 2, desc: 'Schlägt Steine aus Felsen.' },
@@ -55310,6 +55324,8 @@ const TYPES = {
   schmelze: { name: 'Eisenschmelze', icon: '🔥', cost: { bretter: 3, stein: 5 }, r: 2.1, desc: '1 Eisenerz + 1 Kohle → 1 Eisenbarren' },
   waffenschnitzer: { name: 'Waffenschnitzer', icon: '🏏', cost: { bretter: 3, stein: 1 }, r: 2.1, desc: '1 Brett → 1 Kampfstock' },
   wachturm: { name: 'Wachturm', icon: '🗼', cost: { bretter: 5, stein: 4 }, r: 1.6, desc: 'Ein Wächter mit Kampfstock zieht ein und erweitert dein Gebiet.' },
+  goldmine: { name: 'Goldmine', icon: '🟡', cost: { bretter: 5, stein: 2 }, r: 1.6, mine: 'gold', desc: 'Im Gebirge am gelben Vorkommen. 1 Brot, Fisch oder Schinken → 2 Golderz' },
+  muenzpraege: { name: 'Münzprägerei', icon: '🪙', cost: { bretter: 4, stein: 5 }, r: 2.2, desc: '1 Golderz + 1 Kohle → 1 Münze (für Handel und bessere Wächter)' },
   schmied: { name: 'Werkzeugschmied', icon: '🔨', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Eisenbarren → 1 Werkzeug' },
 };
 function buildModel(type) {
@@ -55355,7 +55371,7 @@ function buildModel(type) {
     g.add(mesh(new THREE.ExtrudeGeometry(sh, { depth: 2.2, bevelEnabled: false }).translate(0, 0, -1.1).rotateY(Math.PI / 2), mat.roof, 0, 1.95, 0));
     const bucket = mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.28, 8), mat.wood, 0, 1.4, 0); g.add(bucket); fx.bucket = bucket;
   } else if (TYPES[type].mine) {
-    const col = { stein: 0x8f8a84, eisenerz: 0xb5562e, kohle: 0x1e1e22 }[TYPES[type].mine];
+    const col = depCol[TYPES[type].mine];
     g.add(mesh(new THREE.DodecahedronGeometry(2.1, 0), mat.stone, 0, 0.6, -1.2));
     g.add(mesh(box(1.5, 1.6, 0.6), M(0x111111), 0, 0.8, 0.55));
     for (const sx of [-1, 1]) g.add(mesh(box(0.22, 1.9, 0.22), mat.trunk, sx * 0.85, 0.95, 0.9));
@@ -55433,6 +55449,13 @@ function buildModel(type) {
     shed.add(mesh(box(1.7, 0.12, 1.7), mat.roof2, 0, 1.65, 0)); g.add(shed);
     for (let i = 0; i < 4; i++) g.add(mesh(box(0.45, 0.14, 0.2), M(0x6f7480), 1.6, 0.08 + Math.floor(i / 2) * 0.15, 0.1 + (i % 2) * 0.3));
     fx.smokeAt = new V3(0, 5, -0.4); fx.sparkAt = new V3(0, 0.8, 1.0);
+  } else if (type === 'muenzpraege') {
+    const h = gable(2.6, 2.2, 2); h.children[0].material = mat.stone; g.add(h);
+    g.add(mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.12, 12), ITEMS.muenzen.m, 0, 2.95, 1.25).rotateX(Math.PI / 2));
+    g.add(mesh(box(0.4, 1.4, 0.4), mat.stone, -0.7, 3.2, -0.3)); fx.smokeAt = new V3(-0.7, 4, -0.3);
+    const glowM = new THREE.MeshStandardMaterial({ color: 0x331100, emissive: 0xffb020, emissiveIntensity: 0.2 }); g.add(mesh(box(0.6, 0.12, 0.5), glowM, 1.8, 0.85, 0.6)); fx.glow = glowM; g.add(mesh(box(0.9, 0.75, 0.8), mat.stone, 1.8, 0.38, 0.6)); fx.sparkAt = new V3(1.8, 1, 0.6);
+  } else if (type === 'strasse') {
+    g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.2, 6), M(0xd9b27a), 0, 0.6, 0));
   } else if (type === 'schmied') {
     const h = gable(2.8, 2.2, 1.9); g.add(h);
     g.add(mesh(box(0.7, 0.35, 0.35), M(0x3a3a40), 1.9, 0.75, 0.9)); g.add(mesh(box(0.35, 0.55, 0.3), mat.trunk, 1.9, 0.28, 0.9));
@@ -55451,7 +55474,7 @@ function buildModel(type) {
 
 // ---------- Gebäude & Arbeiter ----------
 const buildings = [], workers = [];
-const shirt = { schweinezucht: 0x7a8a3a, metzger: 0xeeeeee, fischer: 0x2f8a8a, waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
+const shirt = { traeger: 0x8a5a2a, schweinezucht: 0x7a8a3a, metzger: 0xeeeeee, fischer: 0x2f8a8a, waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
 function makeWorker(type) {
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   body.add(mesh(new THREE.CylinderGeometry(0.18, 0.26, 0.6, 6), M(shirt[type]), 0, 0.55, 0));
@@ -55462,6 +55485,7 @@ function makeWorker(type) {
   arm.add(mesh(box(0.08, 0.4, 0.08), mat.skin, 0, -0.2, 0));
   const tool = new THREE.Group(); tool.position.y = -0.38; arm.add(tool);
   if (type === 'holzfaeller' || type === 'steinmetz') { tool.add(mesh(box(0.05, 0.6, 0.05), mat.trunk, 0, 0, 0.25).rotateX(Math.PI / 2)); tool.add(mesh(box(0.08, 0.2, 0.12), M(0x9aa0a8), 0, 0, 0.5)); }
+  if (type === 'traeger') body.add(mesh(box(0.38, 0.45, 0.22), mat.wood, 0, 0.7, -0.25));
   if (type === 'fischer') { const rod = mesh(new THREE.CylinderGeometry(0.02, 0.03, 1.8, 4), mat.trunk, 0, 0, 0.8); rod.rotation.x = Math.PI / 2; tool.add(rod); }
   if (type === 'bauernhof') tool.add(mesh(box(0.05, 0.05, 0.7), mat.trunk, 0, 0, 0.3));
   if (type === 'waechter') { tool.add(mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.1, 5), M(0x7a5230), 0, 0.3, 0)); body.add(mesh(new THREE.SphereGeometry(0.2, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2), M(0x8a8f98), 0, 1.06, 0)); body.add(mesh(box(0.45, 0.5, 0.06), M(0x2f6fd0), 0, 0.6, -0.2)); }
@@ -55470,7 +55494,9 @@ function makeWorker(type) {
   return { g, body, legs, arm, carry, queue: [], anim: null, walkPh: 0 };
 }
 function setCarry(w, item) { if (!item) { w.carry.visible = false; w.carrying = null; return; } w.carry.geometry = ITEMS[item].geo; w.carry.material = ITEMS[item].m; w.carry.visible = true; w.carrying = item; }
-const lagerDoor = () => new V3(0, 0, 3);
+const lagers = () => buildings.filter(b => b.type === 'lager' && b.progress >= 1 && !b.removed);
+function nearestLager(x, z) { let best = buildings[0], bd = 1e9; for (const l of lagers()) { const d = Math.hypot(l.x - x, l.z - z); if (d < bd) { bd = d; best = l; } } return best; }
+const lagerDoor = (x = 0, z = 0) => nearestLager(x, z).door.clone();
 
 function canAfford(c) { return Object.entries(c).every(([k, v]) => stock[k] >= v); }
 function placeBuilding(type, x, z, rot = 0, instant = false) {
@@ -55479,7 +55505,7 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
   clearTrees(x, z, T.r + 1.2);
   const { g, fx } = buildModel(type);
   g.position.set(x, type === 'bruecke' ? 0 : height(x, z), z); g.rotation.y = rot; scene.add(g);
-  const b = { type, g, fx, x, z, rot, progress: instant ? 1 : 0, working: false, status: 'Wird gebaut …', worker: null, plots: [] };
+  const b = { type, g, fx, x, z, rot, progress: instant ? 1 : 0, working: false, status: 'Wird gebaut …', worker: null, plots: [], in: {}, out: {}, inc: {}, outRes: {}, prio: 1, paused: false };
   const door = new V3(0, 0, (T.r + 0.6)).applyAxisAngle(new V3(0, 1, 0), rot); b.door = new V3(x + door.x, 0, z + door.z);
   if (!instant) {
     g.scale.set(1, 0.02, 1);
@@ -55487,7 +55513,8 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.scaffold.add(mesh(box(0.12, 3, 0.12), mat.wood, sx * T.r * 0.8, 1.5, sz * T.r * 0.8));
     b.scaffold.position.copy(g.position); b.scaffold.rotation.y = rot; scene.add(b.scaffold);
   }
-  if (type === 'bauernhof') makePlots(b);
+  if (type === 'bauernhof' && !placeBuilding.noPlots) makePlots(b);
+  b.outPile = new THREE.Group(); const op = new V3(T.r * 0.7, 0, T.r + 0.3).applyAxisAngle(new V3(0, 1, 0), rot); b.outPile.position.set(x + op.x, height(x + op.x, z + op.z), z + op.z); scene.add(b.outPile);
   buildings.push(b); return b;
 }
 function finishBuilding(b) {
@@ -55501,7 +55528,7 @@ function finishBuilding(b) {
 function trySpawnGuard(b) {
   if (stock.kampfstock < 1) { b.status = 'Kein Kampfstock im Lager – Waffenschnitzer bauen!'; return; }
   stock.kampfstock--; refreshPiles(); b.needsGuard = false;
-  const w = makeWorker('waechter'); w.g.position.copy(lagerDoor()); w.home = null; workers.push(w);
+  const w = makeWorker('waechter'); w.g.position.copy(lagerDoor(b.x, b.z)); w.home = null; workers.push(w);
   setCarry(w, 'kampfstock');
   b.status = 'Ein Siedler wird zum Wächter und marschiert los …';
   moveTo(w, b.door);
@@ -55510,7 +55537,7 @@ function trySpawnGuard(b) {
 function trySpawnWorker(b) {
   if (stock.werkzeug < 1) { b.status = (b.type === 'schmied' || b.type === 'schmelze') ? 'Kein Werkzeug mehr im Lager – hier kann niemand anfangen!' : 'Kein Werkzeug im Lager – Werkzeugschmied liefert nach'; return; }
   stock.werkzeug--; refreshPiles(); b.needsWorker = false;
-  const w = makeWorker(b.type); w.g.position.copy(lagerDoor()); b.worker = w; w.home = b; workers.push(w);
+  const w = makeWorker(b.type); w.g.position.copy(lagerDoor(b.x, b.z)); b.worker = w; w.home = b; workers.push(w);
   setCarry(w, 'werkzeug');
   b.status = 'Arbeiter holt Werkzeug und kommt …'; moveTo(w, b.door); w.queue.push({ fn: () => { setCarry(w, null); b.status = 'Bereit'; } });
 }
@@ -55525,14 +55552,17 @@ function makePlots(b) {
     if (!freeSpot(x, z, 1.4, b) || !inTerritory(x, z, 1)) continue;
     if (Math.abs(height(x, z) - height(b.x, b.z)) > 1.6) continue;
     if (b.plots.some(p => Math.hypot(p.x - x, p.z - z) < 2.3)) continue;
+    createPlot(b, x, z);
+  }
+}
+function createPlot(b, x, z) {
     clearTrees(x, z, 1.8);
     const g = new THREE.Group(); g.position.set(x, height(x, z), z);
     const soil = mesh(box(2, 0.12, 2, 4, 1, 4), mat.field); soil.position.y = 0.04; g.add(soil);
     const crops = [];
     for (let i = 0; i < 16; i++) { const c = mesh(new THREE.ConeGeometry(0.1, 0.7, 4), M(0x6fa83a), -0.75 + (i % 4) * 0.5, 0.1, -0.75 + Math.floor(i / 4) * 0.5); c.geometry.translate(0, 0.35, 0); c.visible = false; g.add(c); crops.push(c); }
     scene.add(g);
-    b.plots.push({ x, z, g, crops, state: 'leer', growth: 0, reserved: false });
-  }
+    const p = { x, z, g, crops, state: 'leer', growth: 0, reserved: false }; b.plots.push(p); return p;
 }
 const cYoung = new THREE.Color(0x6fa83a), cRipe = new THREE.Color(0xe0b84a);
 function updatePlot(p) {
@@ -55544,7 +55574,7 @@ function updatePlot(p) {
 function freeSpot(x, z, r, ignore) {
   if (Math.abs(x) > MAP - 15 || Math.abs(z) > MAP - 15) return false;
   if (Math.abs(x - riverX(z)) < 3.2 + r) return false;
-  for (const b of buildings) { if (b === ignore) continue; if (Math.hypot(b.x - x, b.z - z) < TYPES[b.type].r + r + 1) return false; for (const p of b.plots) if (Math.hypot(p.x - x, p.z - z) < r + 1.6) return false; }
+  for (const b of buildings) { if (b === ignore || b.removed) continue; if (Math.hypot(b.x - x, b.z - z) < TYPES[b.type].r + r + 1) return false; for (const p of b.plots) if (Math.hypot(p.x - x, p.z - z) < r + 1.6) return false; }
   for (const k of rocks) if (k.amount > 0 && Math.hypot(k.x - x, k.z - z) < r + 1.6) return false;
   return true;
 }
@@ -55553,6 +55583,7 @@ const bridgesDone = () => buildings.filter(b => b.type === 'bruecke' && b.progre
 const reachable = (x, z) => riverSide(x, z) === riverSide(0, 0) || bridgesDone().length > 0;
 function placeReason(type, x, z) {
   const r = TYPES[type].r, mk = TYPES[type].mine;
+  if (type === 'strasse') { if (!inTerritory(x, z, 0)) return 'Außerhalb deines Gebiets'; const c = pIdx(x, z); if (c < 0 || !walk[c]) return 'Im Wasser'; return null; }
   if (type === 'bruecke') {
     if (Math.abs(x - riverX(z)) > 3) return 'Eine Brücke muss über den Fluss gebaut werden';
     if (!isExplored(x, z)) return 'Unerforschtes Land';
@@ -55564,7 +55595,7 @@ function placeReason(type, x, z) {
   if (mk) {
     if (!inTerritory(x, z, 0.5)) return 'Außerhalb deines Gebiets – baue einen Wachturm am Rand';
     const dep = deposits.find(d => d.kind === mk && Math.hypot(d.x - x, d.z - z) < 4.5);
-    if (!dep) return 'Muss direkt am ' + { stein: 'grauen Stein', eisenerz: 'roten Eisenerz', kohle: 'schwarzen Kohle' }[mk] + '-Vorkommen im Gebirge stehen';
+    if (!dep) return 'Muss direkt am ' + { stein: 'grauen Stein', eisenerz: 'roten Eisenerz', kohle: 'schwarzen Kohle', gold: 'gelben Gold' }[mk] + '-Vorkommen im Gebirge stehen';
     if (!freeSpot(x, z, r)) return 'Zu nah an einem Gebäude';
     return null;
   }
@@ -55582,6 +55613,70 @@ function placeReason(type, x, z) {
 }
 function canPlace(type, x, z) { return !placeReason(type, x, z); }
 
+// ---------- Statistik ----------
+const statLog = [];
+function stat(kind, item, n) { statLog.push([simT, kind, item, n]); if (statLog.length > 5000) statLog.splice(0, 1000); }
+
+// ---------- Träger ----------
+const carriers = [];
+const RECIPE_IN = { saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 } };
+const isActive = b => b.progress >= 1 && !b.removed && !b.paused && (b.worker || b.needsWorker);
+function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
+  if (!isActive(b)) return [];
+  const res = [];
+  if (TYPES[b.type].mine) { const have = FOODS.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*food', 2 - have]); return res; }
+  const r = RECIPE_IN[b.type]; if (!r) return res;
+  for (const [k, v] of Object.entries(r)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v * 2) res.push([k, v * 2 - have]); }
+  return res;
+}
+const matchesWant = (want, item) => want === item || (want === '*food' && FOODS.includes(item));
+function bestConsumer(item, x, z, except) {
+  let best = null, bk = 1e9;
+  for (const b of buildings) { if (b === except) continue; for (const [wi] of wantsOf(b)) if (matchesWant(wi, item)) { const k = b.prio * 400 + Math.hypot(b.x - x, b.z - z); if (k < bk) { bk = k; best = b; } } }
+  return best;
+}
+function carrierTarget() { return 3 + Math.floor(buildings.filter(b => b.worker).length / 2); }
+function spawnCarrier() {
+  const l = buildings[0]; const w = makeWorker('traeger'); w.g.position.copy(l.door); w.home = null; w.isCarrier = true; workers.push(w); carriers.push(w);
+}
+function planCarrier(w) {
+  const p = w.g.position; let job = null, jk = 1e9;
+  // 1) Abholen aus Ausgängen
+  for (const b of buildings) {
+    if (b.removed) continue;
+    for (const [item, v] of Object.entries(b.out)) {
+      if (v - (b.outRes[item] || 0) <= 0) continue;
+      const c = bestConsumer(item, b.x, b.z, b);
+      const dest = c || nearestLager(b.x, b.z);
+      const k = (c ? c.prio : 1.5) * 400 + Math.hypot(b.x - p.x, b.z - p.z) + Math.hypot(dest.x - b.x, dest.z - b.z) * 0.5;
+      if (k < jk) { jk = k; job = { from: b, to: c, item }; }
+    }
+  }
+  // 2) Aus dem Lager zu Gebäuden, die etwas brauchen
+  for (const b of buildings) for (const [wi] of wantsOf(b)) {
+    const item = wi === '*food' ? FOODS.filter(f => stock[f] > 0).sort((a, c) => stock[c] - stock[a])[0] : (stock[wi] > 0 ? wi : null);
+    if (!item) continue;
+    const l = nearestLager(b.x, b.z);
+    const k = b.prio * 400 + Math.hypot(l.x - p.x, l.z - p.z) + Math.hypot(b.x - l.x, b.z - l.z) * 0.5 + 30;
+    if (k < jk) { jk = k; job = { fromLager: l, to: b, item }; }
+  }
+  if (!job) { const l = nearestLager(p.x, p.z); if (Math.hypot(l.door.x - p.x, l.door.z - p.z) > 3) moveTo(w, l.door); work(w, 1.5, null); return; }
+  const { item } = job;
+  if (job.to) job.to.inc[item] = (job.to.inc[item] || 0) + 1;
+  if (job.from) { job.from.outRes[item] = (job.from.outRes[item] || 0) + 1; moveTo(w, job.from.door); doFn(w, () => { const f = job.from; f.outRes[item]--; if (!f.removed && f.out[item] > 0) { f.out[item]--; refreshOut(f); setCarry(w, item); } else { w.lost = true; } }); }
+  else { stock[item]--; refreshPiles(); moveTo(w, job.fromLager.door); doFn(w, () => setCarry(w, item)); }
+  doFn(w, () => {
+    if (w.lost) { w.lost = false; if (job.to) job.to.inc[item]--; w.queue.length = 0; return; }
+    const dest = job.to && !job.to.removed ? job.to : nearestLager(w.g.position.x, w.g.position.z);
+    moveTo(w, dest.door);
+    doFn(w, () => {
+      if (job.to) job.to.inc[item]--;
+      if (job.to && !job.to.removed && dest === job.to) job.to.in[item] = (job.to.in[item] || 0) + 1; else stock[item]++;
+      setCarry(w, null); refreshPiles();
+    });
+  });
+}
+
 // ---------- Arbeits-Abläufe ----------
 function moveTo(w, p) { w.queue.push({ to: new V3(p.x, 0, p.z) }); }
 function work(w, t, anim, onDone) { w.queue.push({ wait: t, anim, fn: onDone }); }
@@ -55589,17 +55684,22 @@ function doFn(w, f) { w.queue.push({ fn: f }); }
 const near = (p, r = 1.4) => { const d = new V3(p.x - lagerDoor().x, 0, p.z - lagerDoor().z); return p; };
 function approach(target, from, dist) { const d = new V3(from.x - target.x, 0, from.z - target.z); if (d.length() < 0.01) d.set(1, 0, 0); d.setLength(dist); return new V3(target.x + d.x, 0, target.z + d.z); }
 function deliver(w, item, n) {
-  moveTo(w, lagerDoor());
-  doFn(w, () => { stock[item] += n; setCarry(w, null); refreshPiles(); });
+  const b = w.home; moveTo(w, b.door);
+  doFn(w, () => { b.out[item] = (b.out[item] || 0) + n; stat('prod', item, n); setCarry(w, null); refreshOut(b); b.status = ITEMS[item].name + ' liegt zum Abholen bereit'; });
 }
-function fetchInputs(w, b, inputs) { // geht zum Lager, nimmt Waren
-  moveTo(w, lagerDoor());
-  doFn(w, () => { for (const [k, v] of Object.entries(inputs)) { stock[k] -= v; } setCarry(w, Object.keys(inputs)[0]); refreshPiles(); });
-  moveTo(w, b.door);
+function refreshOut(b) {
+  const items = Object.entries(b.out).flatMap(([k, v]) => Array(Math.min(v, 6)).fill(k)).slice(0, 6);
+  while (b.outPile.children.length) b.outPile.remove(b.outPile.children[0]);
+  items.forEach((k, i) => { const m = new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m); m.castShadow = true; m.position.set((i % 3) * 0.4 - 0.4, 0.15 + Math.floor(i / 3) * 0.3, 0); b.outPile.add(m); });
 }
+const hasIn = (b, inp) => Object.entries(inp).every(([k, v]) => (b.in[k] || 0) >= v);
+function takeIn(b, inp) { for (const [k, v] of Object.entries(inp)) { b.in[k] -= v; stat('use', k, v); } }
+const FOODS = ['brot', 'fisch', 'schinken'];
 function planNext(b) {
   const w = b.worker, T = b.type;
   const idle = (msg, t = 2) => { b.status = msg; b.working = false; work(w, t, null); };
+  if (b.paused) return idle('Angehalten', 2);
+  if (Object.values(b.out).reduce((a, c) => a + c, 0) >= 8) return idle('Ausgang voll – Träger holen ab', 2);
   if (T === 'holzfaeller') {
     let best = null, bd = 30;
     for (const t of trees) { if (!t.alive || t.reserved || t.growth < 1 || !reachable(t.x, t.z) && riverSide(t.x, t.z) !== riverSide(b.x, b.z)) continue; const d = Math.hypot(t.x - b.x, t.z - b.z); if (d < bd) { bd = d; best = t; } }
@@ -55607,7 +55707,7 @@ function planNext(b) {
     best.reserved = true; b.status = 'Geht zum Baum'; b.working = true;
     moveTo(w, approach(best, b.door, 1.1));
     doFn(w, () => { b.status = 'Fällt Baum'; faceTo(w, best); });
-    work(w, 3.5, 'chop', () => { best.alive = false; best.falling = 0.001; best.fallDir = Math.atan2(w.g.position.x - best.x, w.g.position.z - best.z) + Math.PI; setCarry(w, 'stamm'); b.status = 'Bringt Stamm ins Lager'; });
+    work(w, 3.5, 'chop', () => { best.alive = false; best.falling = 0.001; best.fallDir = Math.atan2(w.g.position.x - best.x, w.g.position.z - best.z) + Math.PI; setCarry(w, 'stamm'); b.status = 'Bringt Stamm nach Hause'; });
     deliver(w, 'stamm', 1);
     doFn(w, () => { b.status = 'Pflanzt neuen Baum'; });
     const sp = new V3(best.x + (hash(best.x, 5) - 0.5) * 3, 0, best.z + (hash(best.z, 6) - 0.5) * 3);
@@ -55621,14 +55721,14 @@ function planNext(b) {
     if (!best) return idle('Keine Felsen in Reichweite', 3);
     best.reserved = true; b.status = 'Geht zum Felsen'; b.working = true;
     moveTo(w, approach(best, b.door, 1.6)); doFn(w, () => { b.status = 'Schlägt Stein'; faceTo(w, best); });
-    work(w, 4, 'chop', () => { best.amount--; best.reserved = false; best.g.scale.setScalar(0.35 + 0.65 * best.amount / best.max); if (best.amount <= 0) { scene.remove(best.g); } setCarry(w, 'stein'); b.status = 'Bringt Stein ins Lager'; });
+    work(w, 4, 'chop', () => { best.amount--; best.reserved = false; best.g.scale.setScalar(0.35 + 0.65 * best.amount / best.max); if (best.amount <= 0) { scene.remove(best.g); } setCarry(w, 'stein'); b.status = 'Bringt Stein nach Hause'; });
     deliver(w, 'stein', 1); moveTo(w, b.door);
   } else if (T === 'bauernhof') {
     const ripe = b.plots.find(p => p.state === 'reif' && !p.reserved), empty = b.plots.find(p => p.state === 'leer' && !p.reserved);
     if (ripe) {
       ripe.reserved = true; b.working = true; b.status = 'Geht ernten';
       moveTo(w, approach(ripe, b.door, 1.3)); doFn(w, () => { b.status = 'Erntet'; faceTo(w, ripe); });
-      work(w, 3, 'dig', () => { ripe.state = 'leer'; ripe.growth = 0; ripe.reserved = false; updatePlot(ripe); setCarry(w, 'getreide'); b.status = 'Bringt Getreide ins Lager'; });
+      work(w, 3, 'dig', () => { ripe.state = 'leer'; ripe.growth = 0; ripe.reserved = false; updatePlot(ripe); setCarry(w, 'getreide'); b.status = 'Bringt Getreide nach Hause'; });
       deliver(w, 'getreide', 1); moveTo(w, b.door);
     } else if (empty) {
       empty.reserved = true; b.working = true; b.status = 'Geht säen';
@@ -55642,13 +55742,12 @@ function planNext(b) {
     if (ripe) {
       b.working = true; b.status = 'Holt ein großes Schwein';
       moveTo(w, new V3(ripe.x, 0, ripe.z).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z)));
-      work(w, 2, 'dig', () => { ripe.growth = 0.15; ripe.shown = 0.15; setCarry(w, 'schwein'); b.status = 'Bringt Schwein ins Lager'; });
-      deliver(w, 'schwein', 1); moveTo(w, b.door);
+      work(w, 2, 'dig', () => { ripe.growth = 0.15; ripe.shown = 0.15; setCarry(w, 'schwein'); b.status = 'Bringt Schwein nach Hause'; });
+      deliver(w, 'schwein', 1);
     } else {
       const inp = { getreide: 1, wasser: 1 };
-      if (!canAfford(inp)) { const miss = Object.keys(inp).filter(k => stock[k] < 1).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss + ' zum Füttern', 2); }
-      b.working = false; b.status = 'Holt Getreide + Wasser';
-      fetchInputs(w, b, inp);
+      if (!hasIn(b, inp)) { const miss = Object.keys(inp).filter(k => !(b.in[k] > 0)).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss + ' zum Füttern', 2); }
+      takeIn(b, inp); b.working = false; b.status = 'Bringt Futter zum Trog'; setCarry(w, 'getreide');
       moveTo(w, trough); doFn(w, () => { setCarry(w, null); b.status = 'Füttert die Ferkel'; b.fx.feed.visible = true; });
       work(w, 3, 'sow', () => { for (const p of pigs) p.growth = Math.min(1, p.growth + 0.2); b.fx.feed.visible = false; b.status = 'Schweine wachsen'; });
       moveTo(w, b.door);
@@ -55661,34 +55760,36 @@ function planNext(b) {
     const dir = new V3(b.x - best.x, 0, b.z - best.z).normalize(); const shore = new V3(best.x, 0, best.z);
     for (let k = 0; k < 40 && height(shore.x, shore.z) < 0.1; k++) shore.addScaledVector(dir, 0.5);
     moveTo(w, shore); doFn(w, () => { b.status = 'Angelt'; faceTo(w, best); });
-    work(w, 5, 'fish', () => { best.amount--; best.reserved = false; setCarry(w, 'fisch'); b.status = 'Bringt Fisch ins Lager'; });
+    work(w, 5, 'fish', () => { best.amount--; best.reserved = false; setCarry(w, 'fisch'); b.status = 'Bringt Fisch nach Hause'; });
     deliver(w, 'fisch', 1); moveTo(w, b.door);
   } else if (T === 'brunnen') {
     b.working = true; b.status = 'Schöpft Wasser'; doFn(w, () => faceTo(w, b));
-    work(w, 3, 'pull', () => { setCarry(w, 'wasser'); b.status = 'Bringt Wasser ins Lager'; });
+    work(w, 3, 'pull', () => { setCarry(w, 'wasser'); b.status = 'Bringt Wasser nach Hause'; });
     deliver(w, 'wasser', 1); moveTo(w, b.door);
   } else {
     const rec = { saegewerk: [{ stamm: 1 }, 'bretter', 2, 4, 'Sägt Bretter'], muehle: [{ getreide: 1 }, 'mehl', 1, 4, 'Mahlt Mehl'], baeckerei: [{ mehl: 1, wasser: 1 }, 'brot', 2, 5, 'Backt Brot'],
       steinmine: [{ brot: 1 }, 'stein', 2, 6, 'Arbeitet im Stollen'], eisenmine: [{ brot: 1 }, 'eisenerz', 2, 6, 'Baut Eisenerz ab'], kohlemine: [{ brot: 1 }, 'kohle', 2, 6, 'Baut Kohle ab'],
       schmelze: [{ eisenerz: 1, kohle: 1 }, 'eisenbarren', 1, 6, 'Schmilzt Eisen'],
       waffenschnitzer: [{ bretter: 1 }, 'kampfstock', 1, 5, 'Schnitzt einen Kampfstock'],
+      goldmine: [{ brot: 1 }, 'golderz', 2, 6, 'Baut Gold ab'], muenzpraege: [{ golderz: 1, kohle: 1 }, 'muenzen', 1, 6, 'Prägt Münzen'],
       metzger: [{ schwein: 1 }, 'schinken', 2, 5, 'Macht Schinken'],
       schmied: [{ eisenbarren: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
     let [inp, out, n, t, verb] = rec;
-    if (TYPES[T].mine) { const food = ['brot', 'fisch', 'schinken'].sort((a, c) => stock[c] - stock[a])[0]; inp = { [food]: 1 }; }
-    if (!canAfford(inp)) { if (TYPES[T].mine) return idle('Wartet auf Essen (Brot, Fisch oder Schinken)', 2); const miss = Object.keys(inp).filter(k => stock[k] < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
-    b.working = false; b.status = 'Holt ' + Object.keys(inp).map(k => ITEMS[k].name).join(' + ');
-    fetchInputs(w, b, inp);
-    doFn(w, () => { setCarry(w, null); b.working = true; b.status = verb; w.g.visible = false; });
-    work(w, t, null, () => { w.g.visible = true; b.working = false; setCarry(w, out); b.status = `Bringt ${ITEMS[out].name} ins Lager`; });
-    deliver(w, out, n); moveTo(w, b.door);
+    if (TYPES[T].mine) { const food = FOODS.filter(f => b.in[f] > 0).sort((a, c) => b.in[c] - b.in[a])[0]; if (!food) return idle('Wartet auf Essen (Brot, Fisch oder Schinken)', 2); inp = { [food]: 1 }; }
+    if (b.paused) return idle('Angehalten', 2);
+    if ((b.out[out] || 0) >= 8) return idle('Ausgang voll – Träger holen ab', 2);
+    if (!hasIn(b, inp)) { const miss = Object.keys(inp).filter(k => (b.in[k] || 0) < inp[k]).map(k => ITEMS[k].name).join(' + '); return idle('Wartet auf ' + miss, 2); }
+    takeIn(b, inp);
+    doFn(w, () => { b.working = true; b.status = verb; w.g.visible = false; });
+    work(w, t, null, () => { w.g.visible = true; b.working = false; setCarry(w, out); });
+    deliver(w, out, n);
   }
 }
 function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - w.g.position.z); }
 
 // ---------- Lager-Anzeige ----------
 function refreshPiles() {
-  const lager = buildings[0]; if (!lager) return;
+  for (const lager of buildings.filter(b => b.type === 'lager' && b.fx.piles))
   for (const [k, pg] of Object.entries(lager.fx.piles)) {
     const n = Math.min(6, stock[k]);
     while (pg.children.length < n) { const i = pg.children.length, m = new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m); m.castShadow = true; m.position.set((i % 2) * 0.45 - 0.22, 0.12 + Math.floor(i / 4) * 0.3, (Math.floor(i / 2) % 2) * 0.4 - 0.2); pg.add(m); }
@@ -55702,9 +55803,6 @@ const puffs = [];
 function puff(p) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.25, 0), new THREE.MeshStandardMaterial({ color: 0xdddddd, transparent: true, opacity: 0.5, flatShading: true })); m.position.copy(p); scene.add(m); puffs.push({ m, t: 0 }); }
 
 // ---------- Start ----------
-addTerritory(0, 0, 32);
-const lager = placeBuilding('lager', 0, 0, 0, true);
-refreshPiles();
 
 // ---------- UI ----------
 
@@ -55716,10 +55814,10 @@ const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).j
 const CATS = [
   { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'saegewerk', 'steinmetz'] },
   { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger'] },
-  { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine'] },
-  { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied'] },
+  { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
+  { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
   { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'wachturm'] },
-  { name: 'Wege', icon: '🌉', types: ['bruecke'] },
+  { name: 'Wege & Lager', icon: '🛤️', types: ['strasse', 'bruecke', 'lager'] },
 ];
 let openCat = -1;
 $('menu').innerHTML = CATS.map((c, i) => `<button class="cat" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${c.types.length} Gebäude</small></button>`).join('');
@@ -55740,30 +55838,40 @@ document.querySelectorAll('#menu .cat').forEach(btn => btn.onclick = () => { con
 let ghostLocked = false, placing = null, ghost = null, ghostRot = 0, selected = null;
 const ringMat = new THREE.MeshBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.45, depthWrite: false });
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 32).rotateX(-Math.PI / 2), ringMat); ring.visible = false; scene.add(ring);
-function startPlacing(t) {
-  cancelPlacing(); placing = t; ghost = buildModel(t).g;
+function startPlacing(t, keepMove) {
+  const mf = moveFrom; cancelPlacing(); if (keepMove) moveFrom = mf; placing = t; ghost = buildModel(t).g;
   ghost.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; o.castShadow = false; } });
   scene.add(ghost); ghost.visible = false; ring.scale.setScalar(TYPES[t].r + 0.4);
   $('place').style.display = 'flex'; $('menu').style.display = 'none'; $('sub').style.display = 'none'; selectB(null);
-  $('placeinfo').textContent = `${TYPES[t].name}: ${TYPES[t].desc} – Klicke auf einen grünen Platz, dann ✔ Bauen. Neu klicken = anderer Platz, Rechtsklick/✕ = abbrechen.`;
+  $('placeinfo').textContent = t === 'strasse' ? 'Straße: Startpunkt anklicken, dann Endpunkt anklicken, dann ✔ Bauen. Danach geht es vom Endpunkt aus weiter. Esc/✕ = fertig.' : `${moveFrom ? 'Umsetzen – ' : ''}${TYPES[t].name}: ${TYPES[t].desc} – Klicke auf einen grünen Platz, dann ✔ Bauen. Neu klicken = anderer Platz, Rechtsklick/✕ = abbrechen.`;
 }
-function cancelPlacing() { ghostLocked = false; if (ghost) scene.remove(ghost); ghost = null; placing = null; ring.visible = false; $('place').style.display = 'none'; $('menu').style.display = 'flex'; }
+function cancelPlacing() { moveFrom = null; roadStart = null; roadCells = null; if (typeof showRoadPreview === 'function') showRoadPreview(null); ghostLocked = false; if (ghost) scene.remove(ghost); ghost = null; placing = null; ring.visible = false; $('place').style.display = 'none'; $('menu').style.display = 'flex'; }
 $('cancel').onclick = cancelPlacing;
 $('rotate').onclick = () => { ghostRot += Math.PI / 2; if (ghost) ghost.rotation.y = ghostRot; };
 $('confirm').onclick = () => doBuild();
 addEventListener('keydown', e => { if (!placing) return; if (e.key === 'Enter') doBuild(); if (e.key === 'Escape') cancelPlacing(); if (e.key === 'r' || e.key === 'R') $('rotate').click(); });
 function doBuild() {
+  if (placing === 'strasse') {
+    if (!roadCells) return toast('Erst Start- und Endpunkt anklicken');
+    const cost = roadCost(roadCells); if (!canAfford(cost)) return toast('Nicht genug Steine: ' + costStr(cost));
+    for (const [k, v] of Object.entries(cost)) { stock[k] -= v; stat('use', k, v); }
+    for (const c of roadCells) road[c] = 1; roadsAny = true; rebuildRoads();
+    roadStart = { x: ghost.position.x, z: ghost.position.z }; roadCells = null; showRoadPreview(null); refreshPiles();
+    return toast('Straße gebaut! Nächsten Endpunkt anklicken oder Esc = fertig');
+  }
   if (!ghost || !ghost.visible) return toast('Klicke zuerst auf einen Platz');
   const { x, z } = ghost.position;
-  const why = placeReason(placing, x, z); if (why) return toast('Hier geht es nicht: ' + why);
+  const mf = moveFrom; if (mf) { mf.removed = true; }
+  const why = placeReason(placing, x, z); if (mf) mf.removed = false; if (why) return toast('Hier geht es nicht: ' + why);
+  if (mf) { demolish(mf, true); }
   if (!canAfford(TYPES[placing].cost)) return toast('Nicht genug Material');
-  for (const [k, v] of Object.entries(TYPES[placing].cost)) stock[k] -= v;
+  for (const [k, v] of Object.entries(TYPES[placing].cost)) { stock[k] -= v; stat('use', k, v); }
   const t = placing; placeBuilding(placing, x, z, placing === 'bruecke' ? bridgeRot(z) : ghostRot); refreshPiles(); cancelPlacing(); toast(TYPES[t].name + ' wird gebaut');
 }
 function selectB(b) {
   selected = b; const p = $('info');
   if (!b) { p.style.display = 'none'; ring.visible = !!placing && ring.visible; return; }
-  p.style.display = 'block'; renderInfo();
+  p.style.display = 'block'; confirmDel = false; renderInfo(); renderInfoBtns();
 }
 function renderInfo() {
   const b = selected; if (!b) return; const T = TYPES[b.type];
@@ -55772,6 +55880,9 @@ function renderInfo() {
   if (b.type === 'bauernhof') extra = `Felder: ${b.plots.length} · reif: ${b.plots.filter(p => p.state === 'reif').length} · wachsend: ${b.plots.filter(p => p.state === 'wächst').length}`;
   if (b.type === 'schweinezucht') extra = 'Schweine: ' + b.fx.pigs.map(p => Math.round(p.growth * 100) + ' %').join(' · ');
   if (b.type === 'wachturm' && b.guard) extra = 'Wächter: 1 · Gebiet: Radius 22';
+  const inStr = Object.entries(b.in).filter(([, v]) => v > 0).map(([k, v]) => ITEMS[k].icon + v).join(' '), outStr = Object.entries(b.out).filter(([, v]) => v > 0).map(([k, v]) => ITEMS[k].icon + v).join(' ');
+  if (inStr || outStr) extra += `<br>Eingang: ${inStr || '–'} · Ausgang: ${outStr || '–'}`;
+  if (b.paused) extra += '<br>⏸ angehalten';
   if (b.progress < 1) extra = `Baufortschritt: ${Math.floor(b.progress * 100)} %`;
   p_info.innerHTML = `<b>${T.icon} ${T.name}</b><br><small>${T.desc}</small><br>${b.type !== 'lager' ? '➜ ' + b.status + '<br>' : ''}${extra}`;
 }
@@ -55821,6 +55932,14 @@ function hoverGhost(cx, cy) {
   ring.position.set(gx, Math.max(-0.2, height(gx, z)) + 0.15, z); ring.visible = true;
 }
 function tap(cx, cy) {
+  if (placing === 'strasse') {
+    ghostLocked = false; hoverGhost(cx, cy); ghostLocked = true; if (!ghost.visible) return;
+    const p = { x: ghost.position.x, z: ghost.position.z }, why = placeReason('strasse', p.x, p.z); if (why) return toast('Hier geht es nicht: ' + why);
+    if (!roadStart) { roadStart = p; ghostLocked = false; return toast('Startpunkt gesetzt – jetzt den Endpunkt anklicken'); }
+    const cells = roadCellsBetween(roadStart, p); if (!cells) return toast('Kein Weg dorthin');
+    if (cells.some(c => { const [x, z] = pCenter(c); return !inTerritory(x, z, 0); })) return toast('Die Straße verlässt dein Gebiet');
+    roadCells = cells; showRoadPreview(cells); return toast('Länge ' + cells.length * PC + ' m · Kosten ' + costStr(roadCost(cells)) + ' – ✔ Bauen');
+  }
   if (placing) { ghostLocked = false; hoverGhost(cx, cy); ghostLocked = true; const why = ghost && ghost.visible && placeReason(placing, ghost.position.x, ghost.position.z); toast(why ? 'Hier geht es nicht: ' + why : 'Platz gewählt – jetzt ✔ Bauen drücken (oder Enter)'); return; }
   const p = groundHit(cx, cy); if (!p) return;
   let best = null, bd = 99; for (const b of buildings) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < TYPES[b.type].r + 1 && d < bd) { bd = d; best = b; } }
@@ -55856,19 +55975,20 @@ function nearestWalk(c) {
 }
 const gScore = new Float32Array(PN * PN), came = new Int32Array(PN * PN), stamp = new Uint32Array(PN * PN), closed = new Uint32Array(PN * PN);
 let runId = 0;
-function lineFree(ax, az, bx, bz) {
-  const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / (PC * 0.5));
-  for (let k = 1; k < n; k++) { const c = pIdx(ax + (bx - ax) * k / n, az + (bz - az) * k / n); if (c < 0 || !walk[c]) return false; }
+let roadsAny = false;
+function lineFree(ax, az, bx, bz, sameRoad) {
+  const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / (PC * 0.5)); const r0 = sameRoad ? road[pIdx(ax, az)] : 0;
+  for (let k = 1; k < n; k++) { const c = pIdx(ax + (bx - ax) * k / n, az + (bz - az) * k / n); if (c < 0 || !walk[c] || sameRoad && road[c] !== r0) return false; }
   return true;
 }
-function findPath(ax, az, bx, bz) {
-  if (lineFree(ax, az, bx, bz)) return [[bx, bz]];
+function findPath(ax, az, bx, bz, ignoreRoads) {
+  if (lineFree(ax, az, bx, bz) && (ignoreRoads || !roadsAny || Math.hypot(bx - ax, bz - az) < 8)) return [[bx, bz]];
   const s = nearestWalk(pIdx(ax, az)), g = nearestWalk(pIdx(bx, bz));
   if (s < 0 || g < 0) return null;
   runId++;
   const heap = [], push = (c, f) => { heap.push([f, c]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
   const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top[1]; };
-  const gi = g % PN, gj = Math.floor(g / PN), hf = c => { const dx = Math.abs(c % PN - gi), dz = Math.abs(Math.floor(c / PN) - gj); return (dx + dz) + (1.4142 - 2) * Math.min(dx, dz); };
+  const gi = g % PN, gj = Math.floor(g / PN), hf = c => { const dx = Math.abs(c % PN - gi), dz = Math.abs(Math.floor(c / PN) - gj); return ((dx + dz) + (1.4142 - 2) * Math.min(dx, dz)) * (ignoreRoads || !roadsAny ? 1 : 0.55); };
   stamp[s] = runId; gScore[s] = 0; came[s] = -1; push(s, hf(s));
   let found = false, iter = 0;
   while (heap.length && iter++ < 60000) {
@@ -55879,7 +55999,7 @@ function findPath(ax, az, bx, bz) {
       if (!di && !dj) continue; const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= PN || nj >= PN) continue;
       const n = nj * PN + ni; if (!walk[n] || closed[n] === runId) continue;
       if (di && dj && (!walk[cj * PN + ni] || !walk[nj * PN + ci])) continue;
-      const ng = gScore[c] + (di && dj ? 1.4142 : 1);
+      const ng = gScore[c] + (di && dj ? 1.4142 : 1) * (!ignoreRoads && road[n] ? 0.55 : 1);
       if (stamp[n] !== runId || ng < gScore[n]) { stamp[n] = runId; gScore[n] = ng; came[n] = c; push(n, ng + hf(n)); }
     }
   }
@@ -55889,13 +56009,40 @@ function findPath(ax, az, bx, bz) {
   // Glätten: so weit wie möglich geradeaus
   const out = []; let cx = ax, cz = az, k = 0;
   while (k < pts.length) {
-    let far = k; for (let m = pts.length - 1; m > k; m--) if (lineFree(cx, cz, pts[m][0], pts[m][1])) { far = m; break; }
+    let far = k; for (let m = pts.length - 1; m > k; m--) if (lineFree(cx, cz, pts[m][0], pts[m][1], !ignoreRoads && roadsAny)) { far = m; break; }
     out.push(pts[far]); cx = pts[far][0]; cz = pts[far][1]; k = far + 1;
   }
   return out;
 }
 
 buildWalk();
+// ---------- Straßen ----------
+const road = new Uint8Array(PN * PN);
+const RCAP = 30000;
+const roadMat = new THREE.MeshStandardMaterial({ color: 0xc9a777, flatShading: true });
+const roadIM = new THREE.InstancedMesh(new THREE.BoxGeometry(PC * 1.02, 0.08, PC * 1.02), roadMat, RCAP); roadIM.receiveShadow = true; roadIM.count = 0; roadIM.frustumCulled = false; scene.add(roadIM);
+const prevIM = new THREE.InstancedMesh(new THREE.BoxGeometry(PC * 0.9, 0.12, PC * 0.9), new THREE.MeshBasicMaterial({ color: 0xffe060, transparent: true, opacity: 0.6 }), 2000); prevIM.count = 0; prevIM.frustumCulled = false; scene.add(prevIM);
+function cellH(c) { const [x, z] = pCenter(c); return Math.max(height(x, z), b2top(x, z)); }
+function b2top(x, z) { let y = -9; for (const br of bridgesDone()) { const lx = new V3(x - br.x, 0, z - br.z).applyAxisAngle(new V3(0, 1, 0), -br.rot); if (Math.abs(lx.z) < 1.3 && Math.abs(lx.x) < 7.5) y = Math.max(y, 1.05); } return y; }
+function rebuildRoads() {
+  let n = 0;
+  for (let c = 0; c < road.length && n < RCAP; c++) if (road[c]) { const [x, z] = pCenter(c); _m.compose(_p.set(x, cellH(c) + 0.03, z), _q.identity(), _s.set(1, 1, 1)); roadIM.setMatrixAt(n++, _m); }
+  roadIM.count = n; roadIM.instanceMatrix.needsUpdate = true;
+}
+function roadCellsBetween(a, b) {
+  const path = findPath(a.x, a.z, b.x, b.z, true); if (!path) return null;
+  const cells = new Set(); let px = a.x, pz = a.z;
+  for (const [x, z] of path) { const d = Math.hypot(x - px, z - pz), n = Math.max(1, Math.ceil(d / (PC * 0.4))); for (let k = 0; k <= n; k++) { const c = pIdx(px + (x - px) * k / n, pz + (z - pz) * k / n); if (c >= 0) cells.add(c); } px = x; pz = z; }
+  return [...cells];
+}
+let roadStart = null, roadCells = null;
+function showRoadPreview(cells) {
+  prevIM.count = 0; if (!cells) { prevIM.instanceMatrix.needsUpdate = true; return; }
+  cells.slice(0, 2000).forEach((c, i) => { const [x, z] = pCenter(c); _m.compose(_p.set(x, cellH(c) + 0.1, z), _q.identity(), _s.set(1, 1, 1)); prevIM.setMatrixAt(i, _m); });
+  prevIM.count = Math.min(2000, cells.length); prevIM.instanceMatrix.needsUpdate = true;
+}
+const roadCost = cells => ({ stein: Math.max(1, Math.ceil(cells.filter(c => !road[c]).length / 5)) });
+
 // ---------- Minikarte ----------
 const mini = $('mini'), mctx = mini.getContext('2d'), MP = 200, MS = SIZE / MP;
 const miniBase = mctx.createImageData(MP, MP);
@@ -55933,19 +56080,146 @@ function miniJump(e) { const r = mini.getBoundingClientRect(); target.x = THREE.
 mini.addEventListener('pointerdown', e => { e.stopPropagation(); mini.setPointerCapture(e.pointerId); miniJump(e); mini.dragging = true; });
 mini.addEventListener('pointermove', e => { if (mini.dragging) miniJump(e); });
 mini.addEventListener('pointerup', () => { mini.dragging = false; });
-let miniT = 0;
+let miniT = 0, statT = 0;
 
+// ---------- Abreißen & Umsetzen ----------
+function demolish(b, fullRefund) {
+  if (b === buildings[0]) { toast('Das Hauptlager kann nicht abgerissen werden'); return false; }
+  b.removed = true;
+  for (const o of [b.g, b.scaffold, b.outPile]) if (o) scene.remove(o);
+  for (const p of b.plots) scene.remove(p.g);
+  const f = fullRefund ? 1 : 0.5;
+  for (const [k, v] of Object.entries(TYPES[b.type].cost)) stock[k] += Math.floor(v * f);
+  for (const box of [b.in, b.out]) for (const [k, v] of Object.entries(box)) if (v > 0) stock[k] += v;
+  if (b.worker) { b.worker.removed = true; scene.remove(b.worker.g); stock.werkzeug++; }
+  if (b.guard) { b.guard.removed = true; stock.kampfstock++; const i = territories.findIndex(t => Math.abs(t.x - b.x) < 0.01 && Math.abs(t.z - b.z) < 0.01); if (i >= 0) territories.splice(i, 1); rebuildFlags(); }
+  for (const t of trees) if (t.reserved && Math.hypot(t.x - b.x, t.z - b.z) < 40) t.reserved = false;
+  for (const r of rocks) r.reserved = false; for (const fs of fishSpots) fs.reserved = false;
+  buildings.splice(buildings.indexOf(b), 1);
+  if (b.type === 'bruecke') { buildWalk(); rebuildRoads(); }
+  refreshPiles(); if (selected === b) selectB(null);
+  return true;
+}
+let moveFrom = null;
+
+// ---------- Info-Knöpfe: Priorität, Anhalten, Umsetzen, Abreißen ----------
+let confirmDel = false;
+function renderInfoBtns() {
+  const b = selected, box = $('infobtns'); if (!b) { box.innerHTML = ''; return; }
+  const prod = b.type !== 'lager' && b.type !== 'bruecke' && b.type !== 'wachturm';
+  let h = '';
+  if (prod) h += `<div class="row"><span>Vorrang:</span>${['Hoch', 'Normal', 'Niedrig'].map((n, i) => `<button data-prio="${i}" class="${b.prio === i ? 'on' : ''}">${n}</button>`).join('')}</div>
+    <div class="row"><button data-act="pause">${b.paused ? '▶ Weiterarbeiten' : '⏸ Anhalten'}</button></div>`;
+  if (b !== buildings[0]) h += `<div class="row"><button data-act="move">🔀 Umsetzen</button><button data-act="del" class="${confirmDel ? 'warn' : ''}">${confirmDel ? '❗ Wirklich abreißen?' : '🗑 Abreißen'}</button></div>`;
+  box.innerHTML = h;
+  box.querySelectorAll('[data-prio]').forEach(x => x.onclick = () => { b.prio = +x.dataset.prio; renderInfoBtns(); });
+  box.querySelectorAll('[data-act]').forEach(x => x.onclick = () => {
+    const a = x.dataset.act;
+    if (a === 'pause') { b.paused = !b.paused; renderInfoBtns(); }
+    if (a === 'del') { if (!confirmDel) { confirmDel = true; renderInfoBtns(); return; } confirmDel = false; if (demolish(b, false)) toast(TYPES[b.type].name + ' abgerissen – die Hälfte des Materials kommt zurück'); }
+    if (a === 'move') { moveFrom = b; startPlacing(b.type, true); toast('Neuen Platz wählen – das Gebäude zieht ohne Kosten um'); }
+  });
+}
+
+// ---------- Statistik-Fenster ----------
+function renderStats() {
+  if ($('stats').style.display !== 'block') return;
+  const win = Math.min(180, Math.max(10, simT)), from = simT - win, prod = {}, use = {};
+  for (const [t, k, it, n] of statLog) if (t >= from) (k === 'prod' ? prod : use)[it] = ((k === 'prod' ? prod : use)[it] || 0) + n;
+  const per = v => v ? (v * 60 / win).toFixed(1) : '–';
+  let h = `<div class="subhead">📊 Statistik <small>(pro Minute, letzte ${Math.round(win / 60 * 10) / 10} Min.)</small></div><table><tr><th></th><th>Lager</th><th>+ /min</th><th>− /min</th></tr>`;
+  for (const [k, it] of Object.entries(ITEMS)) { const p = prod[k] || 0, u = use[k] || 0; const cls = u > p * 1.05 && stock[k] < 5 ? 'bad' : ''; h += `<tr class="${cls}"><td>${it.icon} ${it.name}</td><td>${stock[k]}</td><td>${per(p)}</td><td>${per(u)}</td></tr>`; }
+  h += '</table>';
+  const waits = {}; for (const b of buildings) if (/^Wartet|Kein |Ausgang voll|Angehalten/.test(b.status || '')) { const key = TYPES[b.type].icon + ' ' + TYPES[b.type].name + ': ' + b.status; waits[key] = (waits[key] || 0) + 1; }
+  const wl = Object.entries(waits);
+  h += `<div class="subhead">⚠️ Wo fehlt etwas?</div>` + (wl.length ? wl.map(([k, n]) => `<div class="w">${n > 1 ? n + '× ' : ''}${k}</div>`).join('') : '<div class="w">Alles läuft 👍</div>');
+  h += `<div class="w">🧺 Träger unterwegs: ${carriers.length}</div>`;
+  $('statsbody').innerHTML = h;
+}
+$('statbtn').onclick = () => { const s = $('stats'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; $('savemenu').style.display = 'none'; renderStats(); };
+$('closestats').onclick = () => $('stats').style.display = 'none';
+
+// ---------- Speichern & Laden ----------
+const SAVEKEY = k => 'odws_' + k;
+const r1 = v => Math.round(v * 10) / 10;
+function serialize() {
+  return {
+    v: 1, t: Date.now(), simT, stock: { ...stock }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    trees: trees.filter(t => t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
+    rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount), roads: Array.from(road).reduce((a, v, i) => (v && a.push(i), a), []),
+    cam: [target.x, target.z, yaw, pitch, dist],
+    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
+  };
+}
+function saveGame(slot) { try { localStorage.setItem(SAVEKEY(slot), JSON.stringify(serialize())); if (slot !== 'auto') toast('Gespeichert in Spielstand ' + slot); renderSaveMenu(); } catch (e) { toast('Speichern fehlgeschlagen: ' + e.message); } }
+function applySave(d) {
+  Object.assign(stock, d.stock);
+  for (let i = 0; i < explored.length; i++) explored[i] = d.explored.charCodeAt(i) === 49 ? 1 : 0;
+  for (const t of [...trees]) removeTree(t);
+  for (const [x, z, g] of d.trees) addTree(x, z, g);
+  d.rocks.forEach((a, i) => { const r = rocks[i]; if (!r) return; r.amount = a; if (a <= 0) scene.remove(r.g); else r.g.scale.setScalar(0.35 + 0.65 * a / r.max); });
+  d.fish.forEach((a, i) => { if (fishSpots[i]) fishSpots[i].amount = a; });
+  territories.length = 0; territories.push(...d.territories); rebuildFlags();
+  placeBuilding.noPlots = true;
+  for (const s of d.buildings) {
+    const b = placeBuilding(s.type, s.x, s.z, s.rot, s.progress >= 1);
+    b.progress = s.progress; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
+    for (const [x, z, st, gr] of s.plots || []) { const p = createPlot(b, x, z); p.state = st; p.growth = gr; updatePlot(p); }
+    if (s.pigs && b.fx.pigs) s.pigs.forEach((g, i) => { if (b.fx.pigs[i]) b.fx.pigs[i].growth = b.fx.pigs[i].shown = g; });
+    if (b.progress < 1) { b.g.scale.set(1, 0.02 + 0.98 * b.progress, 1); continue; }
+    if (b.scaffold) scene.remove(b.scaffold); b.g.scale.set(1, 1, 1);
+    if (b.type === 'bruecke') { markBridge(b); b.status = 'Fertig – Siedler können den Fluss überqueren'; }
+    else if (b.type === 'wachturm') { if (s.guard) { const w = makeWorker('waechter'); w.g.visible = false; w.home = null; workers.push(w); b.guard = w; b.status = 'Besetzt – Gebiet erweitert'; } else { b.needsGuard = true; b.status = 'Wartet auf Kampfstock 🏏'; } }
+    else if (b.type !== 'lager') { if (s.worker) { const w = makeWorker(b.type); w.g.position.copy(b.door); w.g.position.y = height(b.door.x, b.door.z); b.worker = w; w.home = b; workers.push(w); b.status = 'Bereit'; } else { b.needsWorker = true; b.status = 'Wartet auf Werkzeug 🔨'; } }
+  }
+  placeBuilding.noPlots = false;
+  buildWalk();
+  for (const c of d.roads) road[c] = 1; roadsAny = d.roads.length > 0; rebuildRoads();
+  if (d.cam) { target.x = d.cam[0]; target.z = d.cam[1]; yaw = d.cam[2]; pitch = d.cam[3]; dist = d.cam[4]; }
+  simT = d.simT || 0; fogDirty = true;
+}
+function renderSaveMenu() {
+  const fmt = k => { try { const d = JSON.parse(localStorage.getItem(SAVEKEY(k)) || 'null'); return d ? new Date(d.t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' Uhr' : null; } catch (e) { return null; } };
+  let h = '<div class="subhead">💾 Spielstände</div>';
+  for (const k of ['auto', '1', '2', '3']) {
+    const t = fmt(k);
+    h += `<div class="row slot"><span><b>${k === 'auto' ? 'Automatisch' : 'Spielstand ' + k}</b><small>${t || 'leer'}</small></span>${k !== 'auto' ? `<button data-save="${k}">Speichern</button>` : ''}<button data-load="${k}" ${t ? '' : 'disabled'}>Laden</button></div>`;
+  }
+  h += '<div class="row"><button data-new="1" class="warn">🆕 Neues Spiel</button></div><small>Automatisch gespeichert wird jede Minute. Beim Öffnen geht es mit dem automatischen Spielstand weiter.</small>';
+  $('savebody').innerHTML = h;
+  $('savebody').querySelectorAll('[data-save]').forEach(x => x.onclick = () => saveGame(x.dataset.save));
+  $('savebody').querySelectorAll('[data-load]').forEach(x => x.onclick = () => { saveGame('auto_before_load'); sessionStorage.setItem('odws_load', x.dataset.load); location.reload(); });
+  $('savebody').querySelectorAll('[data-new]').forEach(x => x.onclick = () => { if (x.dataset.sure) { saveGame('auto'); sessionStorage.setItem('odws_new', '1'); location.reload(); } else { x.dataset.sure = 1; x.textContent = '❗ Wirklich neu anfangen? (Auto-Stand bleibt erhalten)'; } });
+}
+$('savebtn').onclick = () => { const s = $('savemenu'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; $('stats').style.display = 'none'; renderSaveMenu(); };
+$('closesave').onclick = () => $('savemenu').style.display = 'none';
+let autoT = 0;
+
+const clock = new THREE.Clock(); let infoT = 0, simT = 0, carT = 0;
+// ---------- Start / Laden ----------
+{
+  const wantSlot = sessionStorage.getItem('odws_load'); sessionStorage.removeItem('odws_load');
+  const fresh = sessionStorage.getItem('odws_new'); sessionStorage.removeItem('odws_new');
+  const slot = wantSlot || (!fresh && localStorage.getItem(SAVEKEY('auto')) ? 'auto' : null);
+  let ok = false;
+  if (slot) { try { applySave(JSON.parse(localStorage.getItem(SAVEKEY(slot)))); ok = true; setTimeout(() => toast('Spielstand geladen – weiter geht\'s!'), 300); } catch (e) { console.error(e); } }
+  if (!ok) { addTerritory(0, 0, 32); placeBuilding('lager', 0, 0, 0, true); }
+  refreshPiles();
+}
 // ---------- Hauptschleife ----------
-const clock = new THREE.Clock(); let infoT = 0, simT = 0;
 function step(dt) {
   simT += dt;
   // Bau
   for (const b of buildings) if (b.needsGuard) trySpawnGuard(b);
   for (const b of [...buildings].sort((a, c) => (['schmied', 'schmelze'].indexOf(c.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(c.type)) - (['schmied', 'schmelze'].indexOf(a.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(a.type)))) if (b.needsWorker) trySpawnWorker(b);
   for (const b of buildings) if (b.progress < 1) { b.progress = Math.min(1, b.progress + dt / 8); b.g.scale.set(1, 0.02 + 0.98 * b.progress, 1); if (b.progress >= 1) finishBuilding(b); }
+  // Träger
+  carT += dt; if (carT > 2 && carriers.length < carrierTarget()) { carT = 0; spawnCarrier(); }
   // Arbeiter
   for (const w of workers) {
+    if (w.removed) continue;
     if (!w.queue.length && w.home) planNext(w.home);
+    if (!w.queue.length && w.isCarrier) planCarrier(w);
     const q = w.queue[0]; if (!q) continue;
     let walking = false;
     w.arm.rotation.x = 0; w.body.rotation.x = 0;
@@ -55955,7 +56229,7 @@ function step(dt) {
       if (path && path.length > 1) { w.queue.shift(); w.queue.unshift(...path.map(([x, z]) => ({ to: new V3(x, 0, z), routed: true }))); continue; }
     }
     if (q.to) {
-      const p = w.g.position, d = new V3(q.to.x - p.x, 0, q.to.z - p.z), L = d.length(), sp = 2.4 * dt;
+      const p = w.g.position, d = new V3(q.to.x - p.x, 0, q.to.z - p.z), L = d.length(), sp = 2.4 * dt * (road[pIdx(p.x, p.z)] ? 1.8 : 1);
       if (L <= sp) { p.x = q.to.x; p.z = q.to.z; w.queue.shift(); }
       else { d.multiplyScalar(sp / L); p.x += d.x; p.z += d.z; w.g.rotation.y = Math.atan2(d.x, d.z); walking = true; }
       p.y = height(p.x, p.z);
@@ -56000,8 +56274,8 @@ function step(dt) {
     }
     if (b.fx.flag) b.fx.flag.rotation.y = Math.sin(simT * 3 + b.x) * 0.35;
     if (b.fx.glow) b.fx.glow.emissiveIntensity = b.working ? 1.6 + Math.sin(simT * 9) * 0.5 : 0.2;
-    if ((b.type === 'schmied' || b.type === 'schmelze') && b.working && Math.random() < dt * (b.type === 'schmelze' ? 6 : 3)) puff(b.fx.smokeAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position));
-    if ((b.type === 'schmied' || b.type === 'schmelze') && b.working && Math.random() < dt * 8) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), new THREE.MeshBasicMaterial({ color: 0xffb030 })); s.position.copy(b.fx.sparkAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position)); scene.add(s); puffs.push({ m: s, t: 0, chip: new V3((Math.random() - 0.5) * 3, 3, (Math.random() - 0.5) * 3) }); }
+    if ((b.type === 'schmied' || b.type === 'schmelze' || b.type === 'muenzpraege') && b.working && Math.random() < dt * (b.type === 'schmelze' ? 6 : 3)) puff(b.fx.smokeAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position));
+    if ((b.type === 'schmied' || b.type === 'schmelze' || b.type === 'muenzpraege') && b.working && Math.random() < dt * 8) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), new THREE.MeshBasicMaterial({ color: 0xffb030 })); s.position.copy(b.fx.sparkAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position)); scene.add(s); puffs.push({ m: s, t: 0, chip: new V3((Math.random() - 0.5) * 3, 3, (Math.random() - 0.5) * 3) }); }
     if (b.type === 'baeckerei' && b.working && Math.random() < dt * 4) puff(b.fx.smokeAt.clone().applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position));
     if (b.type === 'saegewerk' && b.working && Math.random() < dt * 6) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), mat.plank); s.position.copy(new V3(0.3, 0.9, 2.1).applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position)); scene.add(s); puffs.push({ m: s, t: 0, chip: new V3((Math.random() - 0.5) * 2, 2, (Math.random() - 0.5) * 2) }); }
     if (b.type === 'muehle' && b.working && Math.random() < dt * 3) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })); s.position.copy(new V3(0, 0.5, 1.7).applyAxisAngle(new V3(0, 1, 0), b.rot).add(b.g.position)); scene.add(s); puffs.push({ m: s, t: 0 }); }
@@ -56022,6 +56296,8 @@ function animate() {
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
+  statT += real; if (statT > 1) { statT = 0; renderStats(); }
+  autoT += real; if (autoT > 60) { autoT = 0; saveGame('auto'); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
   camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist);
@@ -56034,5 +56310,5 @@ function animate() {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
 toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
-window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath };
+window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, carriers, demolish, saveGame, serialize, road, rebuildRoads, roadCellsBetween };
 </script></body></html>
