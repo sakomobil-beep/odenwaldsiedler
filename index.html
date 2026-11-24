@@ -107,6 +107,7 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 #bellbtn{position:relative}#bellcnt{display:none;position:absolute;top:-5px;right:-5px;background:#c0392b;color:#fff;border-radius:9px;font-size:10px;padding:1px 5px;font-weight:bold}
 #notewin{max-height:70vh;overflow:auto;width:min(460px,94vw)}#notewin .note{padding:5px 7px;margin:3px 0;border-radius:6px;background:rgba(255,255,255,.06);font-size:13px}#notewin .note.go{cursor:pointer}#notewin .note.go:hover{background:rgba(217,162,58,.35)}
 @media (max-width:1600px){#res .gh small,#clock small,.hbox small{display:none}}@media (max-width:1250px){#res .pins .rs:nth-child(n+3){display:none}}
+#sub .card.locked{opacity:.5;filter:grayscale(.85);position:relative}#sub .card.locked:hover{transform:none}#sub .card .lock{position:absolute;top:6px;left:6px;right:6px;z-index:2;background:rgba(30,20,12,.82);border-radius:8px;padding:3px 5px;font-size:15px;line-height:1.1;text-align:center}#sub .card .lock small{display:block;font-size:10px;opacity:.9}
 </style></head><body>
 <div id="top" class="panel"><div id="res"></div><div id="popinfo" class="hbox"></div><div id="clock" class="hbox"></div><div id="spd" class="hbox"><button data-sp="0" title="Pause (Leertaste)">⏸</button><button data-sp="1" class="on" title="Normal (1)">▶</button><button data-sp="2" title="Schnell (2)">⏩</button><button data-sp="4" title="Sehr schnell (3)">⏭</button></div><div class="tbg"><button id="statbtn" class="tb" title="Statistik (T)">📊</button><button id="chainbtn" class="tb" title="Produktionsketten (K)">🔗</button><button id="milbtn" class="tb" title="Militär (M)">⚔️</button></div><div class="tbg"><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus (L)">🏷️</button><button id="sndbtn" class="tb" title="Ton an/aus (V)">🔊</button></div><button id="bellbtn" class="tb" title="Meldungen (N)">🔔<span id="bellcnt"></span></button><button id="menubtn" class="tb" title="Menü (Esc)">☰</button><button id="speed" style="display:none">1×</button></div>
 <div id="notewin" class="panel pop"><button id="closenote" class="x">✕</button><div id="notebody"></div></div><button id="chainbtn" class="tb" title="Produktionsketten">🔗</button><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
@@ -6810,22 +6811,36 @@ const CATS = [
   { name: 'Wege & Lager', icon: '🛤️', types: ['bruecke', 'lager', 'wagner'] },
 ];
 let openCat = -1;
-$('menu').innerHTML = CATS.map((c, i) => `<button class="cat" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${c.types.length} Gebäude</small></button>`).join('');
+// ---------- Freischalten über Wohnhäuser ----------
+const UNLOCK = {
+  hopfenbauer: 1, brauerei: 1, wirtshaus: 1, schaefer: 1, weberei: 1, schneider: 1, raeucherei: 1, kuhstall: 1, kaeserei: 1, koehler: 1, markt: 1, goldmine: 1, muenzpraege: 1,
+  imker: 2, konditorei: 2, lehmgrube: 2, toepfer: 2, flachsbauer: 2, seilerei: 2, bogenbauer: 2, waffenschmied: 2, kaserne: 2,
+  burg: 3,
+};
+const TIER_TXT = ['', 'dem ersten Fachwerkhaus 🏠', '4 Fachwerkhäusern 🏠🏠🏠🏠', 'dem ersten Bürgerhaus 🏛️'];
+let UNL = CFG && CFG.unlock === 'alle' ? 3 : 0;
+const isUnlocked = t => (UNLOCK[t] || 0) <= UNL;
+function tierNow() { const H = buildings.filter(b => b.type === 'wohnhaus' && b.progress >= 1 && !b.removed); const f = H.filter(b => (b.lvl || 0) >= 1).length, bu = H.filter(b => (b.lvl || 0) >= 2).length; let t = 0; if (f >= 1) t = 1; if (f >= 4) t = 2; if (bu >= 1) t = 3; for (const b of buildings) if (!b.removed && UNLOCK[b.type]) t = Math.max(t, UNLOCK[b.type]); return t; }
+function checkUnlock(silent) { const t = tierNow(); if (t <= UNL) return; const old = UNL; UNL = t; const neu = Object.keys(UNLOCK).filter(k => UNLOCK[k] > old && UNLOCK[k] <= t); if (!silent && neu.length) { toast(`🔓 Neue Gebäude freigeschaltet: ${neu.map(k => TYPES[k].icon + ' ' + TYPES[k].name).join(', ')}`); try { sfx && sfx('done'); } catch (e) { } } renderSub(); renderCats(); }
+function renderCats() { $('menu').innerHTML = CATS.map((c, i) => { const n = c.types.filter(isUnlocked).length; return `<button class="cat${openCat === i ? ' on' : ''}" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${n}${n < c.types.length ? ' von ' + c.types.length : ''} Gebäude</small></button>`; }).join(''); if (typeof bindCats === 'function') bindCats(); }
+renderCats();
 function renderSub() {
   const sub = $('sub');
   document.querySelectorAll('#menu .cat').forEach(b => b.classList.toggle('on', +b.dataset.c === openCat));
   if (openCat < 0) { sub.style.display = 'none'; return; }
   const chips = c => Object.entries(c).map(([k, v]) => `<span class="chip${stock[k] < v ? ' miss' : ''}">${ITEMS[k].icon}${v}</span>`).join('');
-  sub.innerHTML = `<div class="subhead">${CATS[openCat].icon} ${CATS[openCat].name}</div><div class="cards">` + CATS[openCat].types.map(k => { const T = TYPES[k]; return `<button data-t="${k}" class="card" title="${T.desc}"><div class="thumb">${BIMG[k] ? `<img src="${BIMG[k]}">` : `<i>${T.icon}</i>`}</div><b>${T.name}</b><div class="chips">${chips(T.cost) || '<span class="chip">kostenlos</span>'}</div><small>${T.desc}</small></button>`; }).join('') + '</div>';
+  sub.innerHTML = `<div class="subhead">${CATS[openCat].icon} ${CATS[openCat].name}</div><div class="cards">` + CATS[openCat].types.map(k => { const T = TYPES[k], lk = !isUnlocked(k); return `<button data-t="${k}" class="card${lk ? ' locked' : ''}" title="${lk ? 'Gesperrt – wird freigeschaltet mit ' + TIER_TXT[UNLOCK[k]] : T.desc}">${lk ? `<span class="lock">🔒<small>ab ${TIER_TXT[UNLOCK[k]]}</small></span>` : ''}<div class="thumb">${BIMG[k] ? `<img src="${BIMG[k]}">` : `<i>${T.icon}</i>`}</div><b>${T.name}</b><div class="chips">${chips(T.cost) || '<span class="chip">kostenlos</span>'}</div><small>${T.desc}</small></button>`; }).join('') + '</div>';
   sub.style.display = 'block';
   sub.querySelectorAll('button[data-t]').forEach(btn => btn.onclick = () => {
     const t = btn.dataset.t;
+    if (!isUnlocked(t)) return toast(`🔒 ${TYPES[t].name} wird freigeschaltet mit ${TIER_TXT[UNLOCK[t]]}`);
     if (!canAfford(TYPES[t].cost)) return toast('Nicht genug Material: ' + costStr(TYPES[t].cost));
     openCat = -1; renderSub(); startPlacing(t);
   });
   updateHUD();
 }
-document.querySelectorAll('#menu .cat').forEach(btn => btn.onclick = () => { const c = +btn.dataset.c; openCat = openCat === c ? -1 : c; renderSub(); });
+function bindCats() { document.querySelectorAll('#menu .cat').forEach(btn => btn.onclick = () => { const c = +btn.dataset.c; openCat = openCat === c ? -1 : c; renderSub(); }); }
+bindCats();
 let ghostLocked = false, placing = null, ghost = null, ghostRot = 0, ghostShown = 0, selected = null;
 function rotGhost(d) { if (!placing || placing === 'bruecke' || placing === 'strasse') return; ghostRot += d; }
 const ringMat = new THREE.MeshBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.45, depthWrite: false });
@@ -7222,7 +7237,7 @@ function serialize() {
   const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
   for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 2, trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 2, unl: UNL, trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
@@ -7267,6 +7282,7 @@ function applySave(d) {
   }
   placeBuilding.noPlots = false;
   if (d.trader) TRADER = { ...d.trader };
+  UNL = Math.max(UNL, d.unl == null ? 3 : d.unl); checkUnlock(true); renderCats();
   if (d.sold) { const L = buildings.filter(x => !x.removed); for (const so of d.sold) { const b = L[so.post]; if (!b) continue; if (b.guard && !b.guard.soldierUsed && b.type === 'wachturm') { b.guard.soldierUsed = true; b.garrison = []; } const s = { kind: so.kind, rank: so.rank, xp: so.xp, food: 1, post: b }; SOLD.push(s); (b.garrison = b.garrison || []).push(s); if (b.type === 'kaserne') makeSoldierW(s, b.door); } }
   else for (const b of buildings) if (b.guard && !(b.garrison || []).length) { const s = { kind: 'schwert', rank: 0, xp: 0, food: 1, post: b }; SOLD.push(s); b.garrison = [s]; }
   for (const b of buildings) if (b.type === 'burg' && b.progress >= 1 && !(b.garrison || []).length) { b.needsGuard = true; }
@@ -7281,9 +7297,9 @@ let autoT = 0;
 // ---------- Menüs ----------
 const fmtDate = t => new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
 const fmtTime = s => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return h ? `${h} Std. ${m} Min.` : `${m} Min.`; };
-const LBL = { size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, tempo: { gemuetlich: 'Gemütlich', normal: 'Normal', schnell: 'Schnell' } };
-const LBLN = { size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial', tempo: '⏳ Spieltempo' };
-let NEWCFG = Object.assign({ size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
+const LBL = { unlock: { normal: 'Nach und nach freischalten', alle: 'Alles von Anfang an' }, size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, tempo: { gemuetlich: 'Gemütlich', normal: 'Normal', schnell: 'Schnell' } };
+const LBLN = { unlock: '🔓 Gebäude', size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial', tempo: '⏳ Spieltempo' };
+let NEWCFG = Object.assign({ unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
 function openScreen(html, back) { const s = $('screen'); s.innerHTML = `<button class="x" id="scrback">✕</button>` + html; s.style.display = 'block'; $('scrback').onclick = back || closeScreen; return s; }
 function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('mainmenu').style.display = 'flex'; else if (paused) showPause(); }
 function showMain() {
@@ -7531,7 +7547,7 @@ function animate() {
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
-  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); checkProblems(); }
+  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); checkProblems(); checkUnlock(); }
   autoT += real; if (SET.autosave && autoT > SET.autosave && !INMENU) { autoT = 0; saveGame(null, true); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
