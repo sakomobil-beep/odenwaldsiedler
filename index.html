@@ -5132,7 +5132,7 @@ function rebuildFlags() {
   poleIM.count = flagIM.count = Math.min(FCAP, flagPts.length);
   poleIM.instanceMatrix.needsUpdate = flagIM.instanceMatrix.needsUpdate = true;
 }
-function addTerritory(x, z, r) { territories.push({ x, z, r }); reveal(x, z, r + 22); rebuildFlags(); if (typeof grassDirty !== 'undefined') grassDirty = true; }
+function addTerritory(x, z, r) { if (typeof AIS !== 'undefined') for (const a of AIS) for (const t of a.terr) r = Math.max(8, Math.min(r, Math.hypot(t.x - x, t.z - z) - t.r - 2)); territories.push({ x, z, r }); reveal(x, z, r + 22); rebuildFlags(); if (typeof grassDirty !== 'undefined') grassDirty = true; }
 
 // ---------- Gras & Blumen (rund um den Blickpunkt, wippen im Wind) ----------
 const GRASS_N = !SET.grass ? 1 : { hoch: 50000, mittel: 28000, niedrig: 14000 }[QUALITY] || 28000, FLOWER_N = !SET.grass ? 1 : QUALITY === 'hoch' ? 3500 : 1600, GRASS_R = QUALITY === 'hoch' ? 75 : 60;
@@ -6283,6 +6283,7 @@ const bridgesDone = () => buildings.filter(b => b.type === 'bruecke' && b.progre
 const reachable = (x, z) => riverSide(x, z) === riverSide(0, 0) || bridgesDone().length > 0;
 function placeReason(type, x, z) {
   const r = TYPES[type].r, mk = TYPES[type].mine;
+  { const o = typeof AIS !== 'undefined' && aiOwner(x, z, -r); if (o) return 'Fremdes Gebiet – gehört ' + o.name; }
   if (type === 'strasse') { if (!inTerritory(x, z, 0)) return 'Außerhalb deines Gebiets'; const c = pIdx(x, z); if (c < 0 || !walk[c]) return 'Im Wasser'; return null; }
   if (type === 'bruecke') {
     if (Math.abs(x - riverX(z)) > 3) return 'Eine Brücke muss über den Fluss gebaut werden';
@@ -7086,7 +7087,7 @@ function updateHUD() {
   let h = `<div class="coins" title="Goldmünzen: ${stock.muenzen}">${ITEMS.muenzen.icon}<b>${stock.muenzen}</b>${trendOf('muenzen')}</div><div class="pins">${HUD_PIN.filter(k => ITEMS[k]).map(hudChip).join('')}</div>`;
   h += HUD_GROUPS.map(([ic, name, ks], i) => { const sum = ks.reduce((a, k) => a + (stock[k] || 0), 0), low = (i === 1 && hudLowFood); return `<div class="grp${hudOpen === i ? ' open' : ''}${low ? ' low' : ''}" data-g="${i}" title="${name}${low ? ' – kein Brot, Fisch oder Schinken! Baue eine Bäckerei, einen Fischer oder einen Metzger.' : ''}"><span class="gh">${ic}<b>${sum}</b><small>${name}</small></span><div class="gdrop"><div class="gt">${ic} ${name}</div>${ks.map(hudChip).join('')}</div></div>`; }).join('');
   if (h !== updateHUD.last) { updateHUD.last = h; $('res').innerHTML = h; $('res').querySelectorAll('.grp').forEach(x => { x.onclick = e => { e.stopPropagation(); hudOpen = hudOpen === +x.dataset.g ? null : +x.dataset.g; updateHUD(); }; }); }
-  const pop = workers.filter(w => !w.removed).length, car = carriers.filter(c => !c.removed).length, free = Object.values(POOL).reduce((a, n) => a + n, 0);
+  const pop = workers.filter(w => !w.removed && !w.ai).length, car = carriers.filter(c => !c.removed).length, free = Object.values(POOL).reduce((a, n) => a + n, 0);
   const waiting = buildings.reduce((a, x) => a + Object.entries(x.out).reduce((q, [k, v]) => q + Math.max(0, v - (x.outRes[k] || 0)), 0), 0), busy = carriers.filter(c => !c.removed && c.queue.length).length, short = waiting > 12 && busy >= car;
   $('popinfo').innerHTML = `<span class="${short ? 'warnc' : ''}" title="Arbeiter / Träger / wartend im Lager${short ? ' – ⚠️ Träger kommen nicht hinterher (' + waiting + ' Waren warten). Baue Wohnhäuser oder ein Lagerhaus für mehr Träger.' : ''}">👥 <b>${pop}</b><small>/${car}/${free}</small>${short ? ' ⚠️' : ''}</span><span title="Kämpfer">⚔️ <b>${typeof SOLD !== 'undefined' ? SOLD.length : 0}</b></span>`;
   const day = 1 + Math.floor((simT + 200) / 600), m = ((simT + 200) % 600) / 600 * 1440, hh = Math.floor(m / 60);
@@ -7507,6 +7508,7 @@ function drawMini() {
   mctx.fillStyle = '#' + new THREE.Color(WAPPEN_C).getHexString() + '38'; mctx.strokeStyle = '#' + new THREE.Color(WAPPEN_C).getHexString(); mctx.lineWidth = 1.5;
   for (const t of territories) { mctx.beginPath(); mctx.arc(px(t.x), px(t.z), t.r * sc, 0, Math.PI * 2); mctx.fill(); }
   mctx.fillStyle = '#' + new THREE.Color(WAPPEN_C).getHexString(); for (const [x, z] of flagPts) mctx.fillRect(px(x) - 0.7, px(z) - 0.7, 1.4, 1.4);
+  for (const a of AIS) { const hx = '#' + new THREE.Color(a.col).getHexString(); mctx.fillStyle = hx + '38'; for (const t of a.terr) if (isExplored(t.x, t.z)) { mctx.beginPath(); mctx.arc(px(t.x), px(t.z), t.r * sc, 0, Math.PI * 2); mctx.fill(); } mctx.fillStyle = hx; for (const b of a.blds) if (isExplored(b.x, b.z)) mctx.fillRect(px(b.x) - 1.5, px(b.z) - 1.5, 3, 3); }
   for (const b of buildings) { mctx.fillStyle = b.type === 'lager' ? '#ffd24a' : isPost(b) ? '#ff5050' : '#ffffff'; const s = b.type === 'lager' ? 5 : 3; mctx.fillRect(px(b.x) - s / 2, px(b.z) - s / 2, s, s); }
   // Blickfeld
   const vw = dist * 1.1 * sc;
@@ -7622,7 +7624,7 @@ function serialize() {
   const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
   for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 2, hv: 4, goldLeft: deposits.map(d => d.left ?? null), tut: TUT_ON ? { s: tutStep, d: tutDone } : null, unl: UNL, depFound: deposits.map(d => d.found ? 1 : 0), trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, militia: !!s.militia, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 2, hv: 4, ai: aiSave(), goldLeft: deposits.map(d => d.left ?? null), tut: TUT_ON ? { s: tutStep, d: tutDone } : null, unl: UNL, depFound: deposits.map(d => d.found ? 1 : 0), trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, militia: !!s.militia, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
@@ -7652,7 +7654,7 @@ function applySave(d) {
   else { const rm = new Set(d.treeRemoved || []); for (const t of [...trees]) if (t.orig !== undefined && rm.has(t.orig)) removeTree(t); for (const [x, z, g] of d.treeAdded || []) addTree(x, z, g); }
   d.rocks.forEach((a, i) => { const r = rocks[i]; if (!r) return; r.amount = a; if (a <= 0) scene.remove(r.g); else r.g.scale.setScalar(0.35 + 0.65 * a / r.max); });
   d.fish.forEach((a, i) => { if (fishSpots[i]) fishSpots[i].amount = a; });
-  territories.length = 0; territories.push(...d.territories); rebuildFlags();
+  territories.length = 0; territories.push(...d.territories); rebuildFlags(); aiLoad(d.ai);
   placeBuilding.noPlots = true;
   for (const s of d.buildings) {
     const b = placeBuilding(s.type, s.x, s.z, s.rot, s.progress >= 1);
@@ -7685,9 +7687,9 @@ let autoT = 0;
 // ---------- Menüs ----------
 const fmtDate = t => new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
 const fmtTime = s => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return h ? `${h} Std. ${m} Min.` : `${m} Min.`; };
-const LBL = { unlock: { normal: 'Nach und nach freischalten', alle: 'Alles von Anfang an' }, size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, tempo: { gemuetlich: 'Gemütlich', normal: 'Normal', schnell: 'Schnell' } };
-const LBLN = { unlock: '🔓 Gebäude', size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial', tempo: '⏳ Spieltempo' };
-let NEWCFG = Object.assign({ unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
+const LBL = { modus: { frieden: '🕊️ Friedlich siedeln', kampf: '⚔️ Mit Kämpfen' }, ki: { '0': 'Keine', '1': '1', '2': '2', '3': '3' }, kistufe: { leicht: 'Leicht', mittel: 'Mittel', schwer: 'Schwer' }, unlock: { normal: 'Nach und nach freischalten', alle: 'Alles von Anfang an' }, size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, tempo: { gemuetlich: 'Gemütlich', normal: 'Normal', schnell: 'Schnell' } };
+const LBLN = { modus: '🎮 Spielart', ki: '🤖 KI-Gegner', kistufe: '💪 KI-Stärke', unlock: '🔓 Gebäude', size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial', tempo: '⏳ Spieltempo' };
+let NEWCFG = Object.assign({ modus: 'kampf', ki: '1', kistufe: 'mittel', unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
 function openScreen(html, back) { const s = $('screen'); s.innerHTML = `<button class="x" id="scrback">✕</button>` + html; s.style.display = 'block'; $('scrback').onclick = back || closeScreen; return s; }
 function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('mainmenu').style.display = 'flex'; else if (paused) showPause(); }
 function showMain() {
@@ -7807,11 +7809,128 @@ $('menubtn').onclick = () => paused ? hidePause() : showPause();
 addEventListener('keydown', e => { if (e.key === 'Escape' && !placing && !INMENU) { if ($('screen').style.display === 'block') { $('screen').style.display = 'none'; showPause(); } else paused ? hidePause() : showPause(); } });
 
 const clock = new THREE.Clock(); let infoT = 0, simT = 0, carT = 0;
+// ---------- KI-Gegner (Teil 1: Siedlungen, Wirtschaft, Gebiete) ----------
+const AI_NAMES = ['Graf von Erbach', 'Fürst von Breuberg', 'Abt von Amorbach'], AI_COLS = [0xb02a2a, 0xd8a020, 0x7a3aa0];
+AI_COLS.forEach((c, i) => { LOOK['ki' + i] = { c, hat: 'cap', hc: 0x3a2a1a }; LOOK['kis' + i] = { c, hat: 'helmet' }; });
+const AIS = [];
+const AI_DIFF = { leicht: { iv: 60, posts: 0.6 }, mittel: { iv: 38, posts: 1 }, schwer: { iv: 24, posts: 1.5 } };
+const AI_PLAN = ['holzfaeller', 'steinmetz', 'holzfaeller', 'saegewerk', 'foerster', 'brunnen', 'wohnhaus', 'bauernhof', 'muehle', 'baeckerei', 'POST', 'wohnhaus', 'schweinezucht', 'metzger', 'holzfaeller', 'POST', 'schmelze', 'schmied', 'waffenschnitzer', 'kaserne', 'wohnhaus', 'POST', 'waffenschmied', 'bogenbauer', 'POST', 'wohnhaus', 'bauernhof', 'POST'];
+const AI_LOOP = ['POST', 'wohnhaus', 'holzfaeller', 'POST', 'bauernhof', 'wohnhaus', 'POST', 'baeckerei'];
+const AI_PROD = { lager: ['bau', 1], holzfaeller: ['bau', 1.5], saegewerk: ['bau', 1.5], steinmetz: ['bau', 1.5], foerster: ['bau', 0.3], bauernhof: ['nahr', 1], muehle: ['nahr', 0.6], baeckerei: ['nahr', 1], schweinezucht: ['nahr', 0.6], metzger: ['nahr', 1], brunnen: ['nahr', 0.3], schmelze: ['waff', 0.4], schmied: ['waff', 0.4], waffenschnitzer: ['waff', 0.5], waffenschmied: ['waff', 0.6], bogenbauer: ['waff', 0.5] };
+const aiCost = t => Object.values(TYPES[t].cost || {}).reduce((a, n) => a + n, 0);
+const aiInTerr = (a, x, z, m = 0) => a.terr.some(t => Math.hypot(t.x - x, t.z - z) <= t.r - m);
+function aiOwner(x, z, m = 0) { return AIS.find(a => aiInTerr(a, x, z, m)) || null; }
+function aiSpotOK(a, type, x, z, init) {
+  const r = TYPES[type].r;
+  if (!freeSpot(x, z, r + 0.5)) return false;
+  if (mountain(x, z) > 2.5 || Math.abs(x - riverX(z)) < 5 + r || lakeDepth(x, z) < 0.6 + r * 0.2) return false;
+  if (inTerritory(x, z, -6)) return false;
+  if (!init && !aiInTerr(a, x, z, r * 0.5 + 2)) return false;
+  for (const o of AIS) for (const b of o.blds) if (Math.hypot(b.x - x, b.z - z) < TYPES[b.type].r + r + 1.8) return false;
+  let lo = 99, hi = -99; for (let k = 0; k < 8; k++) { const h = height(x + Math.cos(k) * r, z + Math.sin(k) * r); lo = Math.min(lo, h); hi = Math.max(hi, h); }
+  return hi - lo < 2.4 && lo > -0.2;
+}
+function aiTerrR(a, x, z, r) { // Gebiet darf fremdes Land nicht überdecken
+  for (const t of territories) r = Math.min(r, Math.hypot(t.x - x, t.z - z) - t.r - 2);
+  for (const o of AIS) if (o !== a) for (const t of o.terr) r = Math.min(r, Math.hypot(t.x - x, t.z - z) - t.r - 2);
+  return r;
+}
+function aiFlagsInit(a) {
+  const mt = new THREE.MeshStandardMaterial({ color: a.col, flatShading: true });
+  a.pole = new THREE.InstancedMesh(poleIM.geometry, mat.beam, 1500); a.flag = new THREE.InstancedMesh(flagIM.geometry, mt, 1500);
+  for (const im of [a.pole, a.flag]) { im.castShadow = true; im.frustumCulled = false; im.count = 0; scene.add(im); }
+}
+function aiFlags(a) {
+  let n = 0;
+  for (const t of a.terr) { const c = Math.ceil(2 * Math.PI * t.r / 4.5); for (let k = 0; k < c && n < 1500; k++) { const an = k / c * Math.PI * 2, x = t.x + Math.cos(an) * t.r, z = t.z + Math.sin(an) * t.r; if (a.terr.some(o => o !== t && Math.hypot(o.x - x, o.z - z) < o.r - 0.5) || Math.abs(x - riverX(z)) < 3.5 || !isExplored(x, z)) continue; _m.compose(_p.set(x, height(x, z), z), _q.setFromEuler(_e.set(0, -an, 0)), _s.set(1, 1, 1)); a.pole.setMatrixAt(n, _m); a.flag.setMatrixAt(n, _m); n++; } }
+  a.pole.count = a.flag.count = n; a.pole.instanceMatrix.needsUpdate = a.flag.instanceMatrix.needsUpdate = true;
+}
+function aiPlace(a, type, x, z, rot, p) {
+  clearTrees(x, z, TYPES[type].r + 1.2);
+  const { g } = buildModel(type); let sum = 0, n = 0; for (let k = 0; k < 8; k++) for (const rr of [0, TYPES[type].r]) { sum += height(x + Math.cos(k) * rr, z + Math.sin(k) * rr); n++; }
+  const flat = { x, z, r: TYPES[type].r + 0.4, y: sum / n, k: 1 }; FLATS.push(flat); updateFlat(flat);
+  g.position.set(x, flat.y, z); g.rotation.y = rot; g.scale.set(1, Math.max(0.05, p), 1); g.visible = isExplored(x, z); scene.add(g);
+  const b = { type, x, z, rot, p, g, plots: [], ai: a }; const d = new V3(0, 0, TYPES[type].r + 0.6).applyAxisAngle(new V3(0, 1, 0), rot); b.door = new V3(x + d.x, 0, z + d.z);
+  a.blds.push(b); if (typeof walk !== 'undefined' && walk.length) blockBuilding(b); grassDirty = true;
+  if (p >= 1) aiFinish(a, b, true); return b;
+}
+function aiFinish(a, b, quiet) {
+  b.p = 1; b.g.scale.set(1, 1, 1);
+  const P = PLAT[b.type], n = b.type === 'wachstube' ? 1 : b.type === 'wachturm' ? 2 : b.type === 'wehrturm' ? 2 : b.type === 'burg' ? 3 : 0;
+  b.guards = [];
+  for (let i = 0; i < n; i++) { const w = makeWorker('kis' + a.i); let pos; if (P && P.spots[i]) { const [lx, lz] = P.spots[i], v = new V3(lx, 0, lz).applyAxisAngle(new V3(0, 1, 0), b.rot); pos = new V3(b.x + v.x, b.g.position.y + P.y, b.z + v.z); w.g.rotation.y = Math.atan2(v.x, v.z); } else { pos = b.door.clone(); pos.x += (i - 0.5) * 0.8; pos.y = height(pos.x, pos.z); w.g.rotation.y = b.rot; } w.g.position.copy(pos); w.g.visible = b.g.visible; if (!w.g.parent) scene.add(w.g); b.guards.push(w); }
+  if (POSTS[b.type]) { const r = aiTerrR(a, b.x, b.z, POSTS[b.type].r); if (r > 8) { a.terr.push({ x: b.x, z: b.z, r }); aiFlags(a); } if (!quiet && isExplored(b.x, b.z)) toast(`🤖 ${a.name} hat ${TYPES[b.type].name === 'Wachstube' ? 'eine Wachstube' : 'einen ' + TYPES[b.type].name} gebaut – sein Gebiet wächst.`); }
+}
+function aiNew(i, x, z, diff, peace) {
+  const a = { i, name: AI_NAMES[i], col: AI_COLS[i], x, z, diff, peace, terr: [{ x, z, r: 32 }], blds: [], st: { bau: 30, nahr: 5, waff: 0, sold: 0 }, pi: 0, nt: 8 + i * 5, kt: 0, folk: [] };
+  AIS.push(a); aiFlagsInit(a); return a;
+}
+function aiInit() {
+  const n = +(CFG.ki || 0); if (!n || CFG.classic && CFG.tutorial) return;
+  const peace = CFG.modus === 'frieden', diff = CFG.kistufe || 'mittel', a0 = Math.random() * Math.PI * 2;
+  const dirs = ['Osten', 'Südosten', 'Süden', 'Südwesten', 'Westen', 'Nordwesten', 'Norden', 'Nordosten'];
+  for (let i = 0; i < n; i++) {
+    let spot = null;
+    for (let k = 0; k < 400 && !spot; k++) { const an = a0 + i * Math.PI * 2 / n + (Math.random() - 0.5) * 1.2, d = MAP * (0.55 + Math.random() * 0.25), x = Math.cos(an) * d, z = Math.sin(an) * d; if (Math.abs(x) > MAP - 40 || Math.abs(z) > MAP - 40) continue; if (AIS.some(o => Math.hypot(o.x - x, o.z - z) < 90)) continue; const tmp = { terr: [] }; if (aiSpotOK(tmp, 'lager', x, z, true) && (k > 250 || Math.abs(x - riverX(z)) > 20)) spot = [x, z, an]; }
+    if (!spot) continue;
+    const a = aiNew(i, spot[0], spot[1], diff, peace); aiPlace(a, 'lager', a.x, a.z, Math.atan2(-a.x, -a.z), 1); aiFlags(a);
+    const dir = dirs[Math.round(((Math.atan2(-a.z, a.x) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8];
+    setTimeout(() => toast(`🤖 ${a.name} siedelt irgendwo im ${dir}${peace ? ' – friedlich' : ''}. Erkunde das Land, um ihn zu finden!`), 1500 + i * 2500);
+  }
+}
+function aiPickSpot(a, type) {
+  const r = TYPES[type].r;
+  for (let k = 0; k < 60; k++) { const t = a.terr[Math.floor(Math.random() * a.terr.length)], an = Math.random() * Math.PI * 2, d = 6 + Math.random() * (t.r - r - 6), x = t.x + Math.cos(an) * d, z = t.z + Math.sin(an) * d; if (aiSpotOK(a, type, x, z)) return [x, z]; }
+  return null;
+}
+function aiPickPost(a, type) {
+  for (let k = 0; k < 60; k++) { const t = a.terr[Math.floor(Math.random() * a.terr.length)], an = Math.random() * Math.PI * 2, x = t.x + Math.cos(an) * t.r * 0.82, z = t.z + Math.sin(an) * t.r * 0.82; if (!aiSpotOK(a, type, x, z)) continue; if (aiTerrR(a, x, z, POSTS[type].r) < 14) continue; if (a.terr.some(o => Math.hypot(o.x - x, o.z - z) < o.r * 0.55)) continue; return [x, z]; }
+  return null;
+}
+function aiThink(a) {
+  const D = AI_DIFF[a.diff] || AI_DIFF.mittel; a.nt = D.iv * (0.8 + Math.random() * 0.4);
+  if (a.blds.some(b => b.p < 1)) return;
+  let t = a.pi < AI_PLAN.length ? AI_PLAN[a.pi] : AI_LOOP[(a.pi - AI_PLAN.length) % AI_LOOP.length];
+  if (t === 'POST') { if (Math.random() > D.posts && a.pi >= 10) { a.pi++; return; } t = a.st.sold >= 6 && a.blds.length > 26 ? 'burg' : a.st.sold >= 4 ? 'wehrturm' : a.st.sold >= 2 ? 'wachturm' : 'wachstube'; }
+  const c = aiCost(t); if (a.st.bau < c) return;
+  const sp = POSTS[t] ? aiPickPost(a, t) : aiPickSpot(a, t);
+  if (!sp) { a.pi++; return; }
+  a.st.bau -= c; if (POSTS[t] && t !== 'wachstube') a.st.sold -= ({ wachturm: 2, wehrturm: 3, burg: 5 })[t];
+  aiPlace(a, t, sp[0], sp[1], Math.atan2(a.x - sp[0], a.z - sp[1]) + (Math.random() - 0.5) * 0.4, 0); a.pi++;
+}
+let aiVisT = 0;
+function aiStep(dt) {
+  if (!AIS.length) return;
+  aiVisT -= dt; const vis = aiVisT < 0; if (vis) aiVisT = 3;
+  for (const a of AIS) {
+    for (const b of a.blds) {
+      if (b.p < 1) { b.p = Math.min(1, b.p + dt / 22); b.g.scale.y = Math.max(0.05, b.p); if (b.p >= 1) aiFinish(a, b); }
+      else { const pr = AI_PROD[b.type]; if (pr) { if (pr[0] === 'waff') { if (a.st.nahr > 0.05) { a.st.nahr -= dt / 60 * 0.3; a.st.waff += pr[1] * dt / 60; } } else a.st[pr[0]] += pr[1] * dt / 60; } }
+      if (vis) { const v = isExplored(b.x, b.z); b.g.visible = v; for (const w of b.guards || []) w.g.visible = v; }
+    }
+    if (vis && !a.seen && a.blds.some(b => isExplored(b.x, b.z))) { a.seen = true; toast(`🤖 Du hast die Siedlung von ${a.name} entdeckt!`, a.blds[0]); }
+    a.ct = (a.ct || 0) + dt; if (a.ct > 50) { a.ct = 0; for (const b of a.blds) if (b.type === 'holzfaeller' && b.p >= 1) { const t = trees.find(t => t.alive && !t.falling && Math.hypot(t.x - b.x, t.z - b.z) < 14); if (t) removeTree(t); } }
+    a.kt += dt; if (a.kt > 45) { a.kt = 0; if (a.blds.some(b => b.type === 'kaserne' && b.p >= 1) && a.st.waff >= 1) { a.st.waff -= 1; a.st.sold++; } }
+    a.nt -= dt; if (a.nt < 0) aiThink(a);
+    // Siedler, die durch das Dorf laufen
+    const want = Math.min(12, 2 + Math.floor(a.blds.filter(b => b.p >= 1).length / 2));
+    while (a.folk.length < want) { const w = makeWorker('ki' + a.i); w.ai = a; w.home = null; const b0 = a.blds[0]; w.g.position.copy(b0.door); w.g.position.y = height(b0.door.x, b0.door.z); if (!w.g.parent) scene.add(w.g); workers.push(w); a.folk.push(w); }
+    for (const w of a.folk) { if (!w.queue.length) { const done = a.blds.filter(b => b.p >= 1), b = done[Math.floor(Math.random() * done.length)]; if (b) { moveTo(w, b.door); w.queue.push({ wait: 2 + Math.random() * 6 }); } } if (vis) w.g.visible = isExplored(w.g.position.x, w.g.position.z); }
+    if (vis && Math.random() < 0.3) aiFlags(a);
+  }
+}
+function aiSave() { return AIS.map(a => ({ i: a.i, x: a.x, z: a.z, diff: a.diff, peace: a.peace, terr: a.terr, st: a.st, pi: a.pi, nt: a.nt, seen: !!a.seen, blds: a.blds.map(b => [b.type, +b.x.toFixed(2), +b.z.toFixed(2), +b.rot.toFixed(3), +b.p.toFixed(3)]) })); }
+function aiLoad(L) {
+  for (const s of L || []) { const a = aiNew(s.i, s.x, s.z, s.diff, s.peace); a.terr = []; Object.assign(a.st, s.st); a.pi = s.pi; a.nt = s.nt; a.seen = s.seen;
+    for (const [t, x, z, rot, p] of s.blds) aiPlace(a, t, x, z, rot, p >= 1 ? 1 : p);
+    a.terr = s.terr.map(t => ({ ...t })); aiFlags(a); }
+}
+
 // ---------- Start / Laden ----------
 {
   let ok = false;
   if (BOOT && BOOT.mode === 'load') { try { applySave(JSON.parse(localStorage.getItem('odws_save_' + BOOT.id))); ok = true; setTimeout(() => toast('Spielstand geladen – weiter geht\'s!'), 300); } catch (e) { console.error(e); toast('Spielstand konnte nicht geladen werden'); } }
-  if (!ok && !INMENU) { addTerritory(0, 0, 32); placeBuilding('lager', 0, 0, 0, true); for (const k of ['bretter', 'stein', 'stamm', 'werkzeug', 'kampfstock']) stock[k] = Math.round(stock[k] * W.start); }
+  if (!ok && !INMENU) { addTerritory(0, 0, 32); placeBuilding('lager', 0, 0, 0, true); for (const k of ['bretter', 'stein', 'stamm', 'werkzeug', 'kampfstock']) stock[k] = Math.round(stock[k] * W.start); aiInit(); }
   if (INMENU) { reveal(0, 0, MAP * 1.6); document.body.classList.add('inmenu'); dist = 95; pitch = 0.55; showMain(); }
   setSpeed(SET.speed || 1);
   refreshPiles(); applyLiveSettings();
@@ -7824,7 +7943,7 @@ function step(dt) {
   for (const b of buildings) if (b.needsGuard) trySpawnGuard(b);
   for (const b of [...buildings].sort((a, c) => (['schmied', 'schmelze'].indexOf(c.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(c.type)) - (['schmied', 'schmelze'].indexOf(a.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(a.type)))) if (b.needsWorker) trySpawnWorker(b);
   for (const b of [...buildings]) if (b.progress < 1 && !b.removed) { if (b.pendingSite) { b.pendingSite = false; startSite(b); } siteStep(b, dt); }
-  militaryStep(dt); economyStep(dt);
+  militaryStep(dt); economyStep(dt); aiStep(dt);
   // Träger
   carT += dt; if (carT > 2 && carriers.length < carrierTarget()) { carT = 0; spawnCarrier(); }
   // Arbeiter
@@ -7958,5 +8077,5 @@ function animate() {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); if (composer) composer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
 if (TUT_ON) tutRender(); else toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
-window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, walk, carriers, demolish, saveGame, rev: reveal, buildModel, mk: makeWorker, setCarry, refreshPiles, h: height, serialize, road, rebuildRoads, roadCellsBetween };
+window.__dbg = { AIS, aiInit,  stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, walk, carriers, demolish, saveGame, rev: reveal, buildModel, mk: makeWorker, setCarry, refreshPiles, h: height, serialize, road, rebuildRoads, roadCellsBetween };
 </script></body></html>
