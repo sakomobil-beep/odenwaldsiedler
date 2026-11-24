@@ -5232,7 +5232,8 @@ const stock = { stamm: 8, bretter: 80, stein: 55, getreide: 0, mehl: 0, wasser: 
 const TYPES = {
   lager: { name: 'Lager', icon: '🏠', cost: { bretter: 6, stein: 4 }, r: 3.2, desc: 'Hier landen alle Waren. Ein zweites Lager verkürzt die Wege der Träger in fernen Gebieten.' },
   strasse: { name: 'Straße', icon: '🛤️', cost: {}, r: 0.5, desc: 'Startpunkt und Endpunkt anklicken. Auf Straßen laufen Siedler fast doppelt so schnell. 1 Stein je 10 m.' },
-  holzfaeller: { name: 'Holzfäller', icon: '🪓', cost: { bretter: 3 }, r: 2, desc: 'Fällt Bäume → Baumstämme. Pflanzt neue Bäume nach.' },
+  holzfaeller: { name: 'Holzfäller', icon: '🪓', cost: { bretter: 3 }, r: 2, desc: 'Fällt Bäume → Baumstämme. Pflanzt nur ab und zu nach (etwa 1 von 3).' },
+  foerster: { name: 'Förster', icon: '🌲', cost: { bretter: 2 }, r: 2, plantR: 9, desc: 'Pflanzt im grünen Umkreis neue Bäume – damit dem Holzfäller das Holz nicht ausgeht.' },
   saegewerk: { name: 'Sägewerk', icon: '🪚', cost: { bretter: 4, stein: 2 }, r: 2.3, desc: '1 Baumstamm → 2 Bretter' },
   steinmetz: { name: 'Steinmetz', icon: '⛏️', cost: { bretter: 3 }, r: 2, desc: 'Schlägt Steine aus Felsen.' },
   bauernhof: { name: 'Bauernhof', icon: '🌾', cost: { bretter: 5, stein: 2 }, r: 2.6, desc: 'Sät, lässt wachsen, erntet → Getreide' },
@@ -5268,7 +5269,7 @@ function buildModelOld(type) {
     g.add(mesh(box(5.4, 0.15, 4), mat.wood, 0, 0.08, 0));
     fx.piles = {}; let i = 0;
     for (const k of Object.keys(ITEMS)) { const pg = new THREE.Group(); pg.position.set(-2.2 + (i % 5) * 1.1, 0.15, -1.4 + Math.floor(i / 5) * 1.0); g.add(pg); fx.piles[k] = pg; i++; }
-  } else if (type === 'holzfaeller') {
+  } else if (type === 'holzfaeller' || type === 'foerster') {
     const h = gable(2.4, 2, 1.7, mat.roof2); g.add(h);
     g.add(mesh(new THREE.CylinderGeometry(0.4, 0.45, 0.5, 8), mat.trunk, 1.7, 0.25, 0.8));
     for (let i = 0; i < 4; i++) g.add(mesh(ITEMS.stamm.geo.clone().scale(1.6, 1.6, 1.6), mat.trunk, -1.6, 0.2 + Math.floor(i / 2) * 0.3, -0.3 + (i % 2) * 0.5));
@@ -5588,7 +5589,7 @@ function buildModel(type) {
     g = owRathaus(); fx.piles = {}; let i = 0;
     for (const k of Object.keys(ITEMS)) { const pg = new THREE.Group(); pg.position.set(-1.9 + (i % 5) * 0.95, 0.36, -1.3 + Math.floor(i / 5) * 0.95); g.add(pg); fx.piles[k] = pg; i++; }
     crate(g, 2.6, 2.1, 1.1, 0.3); barrel(g, -2.6, 2.1); barrel(g, -2.95, 1.8, 0.9);
-  } else if (type === 'holzfaeller') {
+  } else if (type === 'holzfaeller' || type === 'foerster') {
     g = H({ w: 2.0, d: 1.7, h1: 1.0, h2: 1.0, roof: OW.slate, dormer: false, frontWin: [1] });
     logPile(g, -1.75, 0, 4, Math.PI / 2); const blk = mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.45, 9), [OW.wood, mat.plank, mat.plank], 1.55, 0.22, 0.9); g.add(blk);
     const axe = makeItem('werkzeug'); axe.position.set(1.55, 0.52, 0.9); axe.rotation.set(0, 0.3, 1.1); g.add(axe);
@@ -5792,12 +5793,12 @@ function buildModel(type) {
 
 // ---------- Gebäude & Arbeiter ----------
 const buildings = [], workers = [];
-const shirt = { traeger: 0x8a5a2a, schweinezucht: 0x7a8a3a, metzger: 0xeeeeee, fischer: 0x2f8a8a, waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
+const shirt = { foerster: 0x2f6a2f, traeger: 0x8a5a2a, schweinezucht: 0x7a8a3a, metzger: 0xeeeeee, fischer: 0x2f8a8a, waechter: 0x2f4fa0, waffenschnitzer: 0x8a6a3a, holzfaeller: 0x4f8a3b, saegewerk: 0xc79a2b, steinmetz: 0x777777, bauernhof: 0xb6433b, muehle: 0xe8e0d0, brunnen: 0x3b6fb6, baeckerei: 0xf0f0f0 };
 const HAIR = [0x3b2a1a, 0x6b4a2b, 0xa0763a, 0xd8b060, 0x2a2a2a, 0x8a3a1a, 0xbdbdbd];
 const SKIN = [0xf0c8a0, 0xe8b890, 0xd9a47a, 0xf5d2b0];
 const PANTS = [0x5a4a3a, 0x4a4f5a, 0x6a5a3a, 0x3f4a3a];
 const LOOK = { // Kleidung & Kopfbedeckung je Beruf
-  holzfaeller: { c: 0x4f8a3b, hat: 'cap', hc: 0x2f5a2a }, saegewerk: { c: 0xc79a2b, hat: 'cap', hc: 0x7a5a2a, apron: 0x8a6a45 }, steinmetz: { c: 0x8a8a8a, hat: 'none', apron: 0x6a5a4a },
+  holzfaeller: { c: 0x4f8a3b, hat: 'cap', hc: 0x2f5a2a }, foerster: { c: 0x2f6a2f, hat: 'cap', hc: 0x1f4a1f }, saegewerk: { c: 0xc79a2b, hat: 'cap', hc: 0x7a5a2a, apron: 0x8a6a45 }, steinmetz: { c: 0x8a8a8a, hat: 'none', apron: 0x6a5a4a },
   bauernhof: { c: 0xb6433b, hat: 'straw' }, muehle: { c: 0xe8e0d0, hat: 'cap', hc: 0xffffff }, brunnen: { c: 0x3b6fb6, hat: 'scarf', hc: 0xd8c070 }, baeckerei: { c: 0xf4f0e8, hat: 'chef', apron: 0xffffff },
   steinmine: { c: 0x5a5048, hat: 'miner' }, eisenmine: { c: 0x6a4a3a, hat: 'miner' }, kohlemine: { c: 0x3a3a40, hat: 'miner' }, goldmine: { c: 0x7a6a3a, hat: 'miner' },
   schmelze: { c: 0x8a4a2a, hat: 'none', apron: 0x4a3020 }, schmied: { c: 0x5a3a2a, hat: 'none', apron: 0x3a2618 }, muenzpraege: { c: 0x7a5aa0, hat: 'cap', hc: 0x4a3a6a, apron: 0x3a2618 },
@@ -6193,7 +6194,7 @@ function renderMil() {
 
 // ---------- Produktionsketten ----------
 const CHAIN_IO = {
-  holzfaeller: [[], ['stamm']], saegewerk: [['stamm'], ['bretter']], steinmetz: [[], ['stein']],
+  holzfaeller: [[], ['stamm']], foerster: [[], []], saegewerk: [['stamm'], ['bretter']], steinmetz: [[], ['stein']],
   bauernhof: [[], ['getreide']], muehle: [['getreide'], ['mehl']], brunnen: [[], ['wasser']], baeckerei: [['mehl', 'wasser'], ['brot']],
   fischer: [[], ['fisch']], schweinezucht: [['getreide', 'wasser'], ['schwein']], metzger: [['schwein'], ['schinken']],
   steinmine: [['brot|fisch|schinken'], ['stein']], kohlemine: [['brot|fisch|schinken'], ['kohle']], eisenmine: [['brot|fisch|schinken'], ['eisenerz']], goldmine: [['brot|fisch|schinken'], ['golderz']],
@@ -6204,7 +6205,7 @@ const CHAIN_IO = {
   kaserne: [['schwert', 'schild', 'bogen', 'pfeile', 'muenzen'], ['⚔️ Kämpfer']],
 };
 const CHAINS = [
-  ['🪵 Baustoffe', ['holzfaeller', 'saegewerk', 'steinmetz', 'steinmine']],
+  ['🪵 Baustoffe', ['foerster', 'holzfaeller', 'saegewerk', 'steinmetz', 'steinmine']],
   ['🍞 Nahrung', ['bauernhof', 'brunnen', 'muehle', 'baeckerei', 'fischer', 'schweinezucht', 'metzger']],
   ['⛏️ Bergbau & Metall', ['kohlemine', 'eisenmine', 'schmelze', 'schmied', 'wagner']],
   ['🪙 Gold', ['goldmine', 'muenzpraege']],
@@ -6262,12 +6263,24 @@ function planNext(b) {
     doFn(w, () => { b.status = 'Fällt Baum'; faceTo(w, best); });
     work(w, 3.5, 'chop', () => { best.alive = false; best.falling = 0.001; best.fallDir = Math.atan2(w.g.position.x - best.x, w.g.position.z - best.z) + Math.PI; setCarry(w, 'stamm'); b.status = 'Bringt Stamm nach Hause'; });
     deliver(w, 'stamm', 1);
-    doFn(w, () => { b.status = 'Pflanzt neuen Baum'; });
+    b.cut = (b.cut || 0) + 1;
     const sp = new V3(best.x + (hash(best.x, 5) - 0.5) * 3, 0, best.z + (hash(best.z, 6) - 0.5) * 3);
-    if (freeSpot(sp.x, sp.z, 0.6) && Math.hypot(sp.x - b.x, sp.z - b.z) > 4) {
+    if (b.cut % 3 === 0 && freeSpot(sp.x, sp.z, 0.6) && Math.hypot(sp.x - b.x, sp.z - b.z) > 4) {
+      doFn(w, () => { b.status = 'Pflanzt neuen Baum'; });
       moveTo(w, approach(sp, b.door, 0.8)); work(w, 1.5, 'dig', () => addTree(sp.x, sp.z, 0.02));
     }
     moveTo(w, b.door);
+  } else if (T === 'foerster') {
+    const PR = TYPES.foerster.plantR;
+    let near = 0; for (const t of trees) if (t.alive && Math.hypot(t.x - b.x, t.z - b.z) < PR) near++;
+    if (near >= 28) return idle('Wald ist dicht genug', 4);
+    let sp = null;
+    for (let k = 0; k < 14 && !sp; k++) { const a = Math.random() * Math.PI * 2, d = 3.5 + Math.random() * (PR - 3.5), x = b.x + Math.cos(a) * d, z = b.z + Math.sin(a) * d; if (freeSpot(x, z, 0.9) && (reachable(x, z) || riverSide(x, z) === riverSide(b.x, b.z))) sp = new V3(x, 0, z); }
+    if (!sp) return idle('Kein freier Platz zum Pflanzen', 3);
+    b.working = true; b.status = 'Geht pflanzen';
+    moveTo(w, approach(sp, b.door, 0.8)); doFn(w, () => { b.status = 'Pflanzt Setzling'; });
+    work(w, 2, 'dig', () => addTree(sp.x, sp.z, 0.02));
+    moveTo(w, b.door); work(w, 2, null);
   } else if (T === 'steinmetz') {
     let best = null, bd = 40;
     for (const k of rocks) { if (k.amount <= 0 || k.reserved || riverSide(k.x, k.z) !== riverSide(b.x, b.z) && !bridgesDone().length) continue; const d = Math.hypot(k.x - b.x, k.z - b.z); if (d < bd) { bd = d; best = k; } }
@@ -6428,7 +6441,7 @@ function genBuildIcons() {
 }
 genBuildIcons();
 const CATS = [
-  { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'saegewerk', 'steinmetz'] },
+  { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'foerster', 'saegewerk', 'steinmetz'] },
   { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger'] },
   { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
@@ -6455,9 +6468,11 @@ document.querySelectorAll('#menu .cat').forEach(btn => btn.onclick = () => { con
 let ghostLocked = false, placing = null, ghost = null, ghostRot = 0, selected = null;
 const ringMat = new THREE.MeshBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.45, depthWrite: false });
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 32).rotateX(-Math.PI / 2), ringMat); ring.visible = false; scene.add(ring);
+const plantRing = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x2fdc4f, transparent: true, opacity: 0.6, depthWrite: false })); plantRing.position.y = 0.3;
 function startPlacing(t, keepMove) {
   const mf = moveFrom; cancelPlacing(); if (keepMove) moveFrom = mf; placing = t; ghost = buildModel(t).g;
   ghost.traverse(o => { if (o.isMesh) { const ghostMat = m => { const c = m.clone(); c.transparent = true; c.opacity = 0.55; return c; }; o.material = Array.isArray(o.material) ? o.material.map(ghostMat) : ghostMat(o.material); o.castShadow = false; } });
+  if (TYPES[t].plantR) { plantRing.scale.setScalar(TYPES[t].plantR); ghost.add(plantRing); }
   scene.add(ghost); ghost.visible = false; ring.scale.setScalar(TYPES[t].r + 0.4);
   $('place').style.display = 'flex'; $('menu').style.display = 'none'; $('sub').style.display = 'none'; selectB(null);
   $('placeinfo').textContent = t === 'strasse' ? 'Straße: Startpunkt anklicken, dann Endpunkt anklicken, dann ✔ Bauen. Danach geht es vom Endpunkt aus weiter. Esc/✕ = fertig.' : `${moveFrom ? 'Umsetzen – ' : ''}${TYPES[t].name}: ${TYPES[t].desc} – Klicke auf einen grünen Platz, dann ✔ Bauen. Neu klicken = anderer Platz, Rechtsklick/✕ = abbrechen.`;
@@ -6492,7 +6507,7 @@ function selectB(b) {
 }
 // ---------- Berufs-Schilder über den Gebäuden ----------
 const labelBox = document.createElement('div'); labelBox.id = 'labels'; document.body.appendChild(labelBox);
-const JOB = { flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Bergmann (Stein)', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
+const JOB = { flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', foerster: 'Förster', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Bergmann (Stein)', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
 const _lv = new V3();
 function updatePauseIcons() {
   for (const b of buildings) {
