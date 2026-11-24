@@ -6758,23 +6758,26 @@ function renderSub() {
   updateHUD();
 }
 document.querySelectorAll('#menu .cat').forEach(btn => btn.onclick = () => { const c = +btn.dataset.c; openCat = openCat === c ? -1 : c; renderSub(); });
-let ghostLocked = false, placing = null, ghost = null, ghostRot = 0, selected = null;
+let ghostLocked = false, placing = null, ghost = null, ghostRot = 0, ghostShown = 0, selected = null;
+function rotGhost(d) { if (!placing || placing === 'bruecke' || placing === 'strasse') return; ghostRot += d; }
 const ringMat = new THREE.MeshBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.45, depthWrite: false });
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 32).rotateX(-Math.PI / 2), ringMat); ring.visible = false; scene.add(ring);
 const plantRing = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x2fdc4f, transparent: true, opacity: 0.6, depthWrite: false })); plantRing.position.y = 0.3;
 function startPlacing(t, keepMove) {
   const mf = moveFrom; cancelPlacing(); if (keepMove) moveFrom = mf; placing = t; ghost = buildModel(t).g;
-  ghost.traverse(o => { if (o.isMesh) { const ghostMat = m => { const c = m.clone(); c.transparent = true; c.opacity = 0.55; return c; }; o.material = Array.isArray(o.material) ? o.material.map(ghostMat) : ghostMat(o.material); o.castShadow = false; } });
+  ghost.traverse(o => { if (o.isMesh && !(o.parent && o.parent.userData.isArrow)) { const ghostMat = m => { const c = m.clone(); c.transparent = true; c.opacity = 0.55; return c; }; o.material = Array.isArray(o.material) ? o.material.map(ghostMat) : ghostMat(o.material); o.castShadow = false; } });
   if (TYPES[t].plantR) { plantRing.scale.setScalar(TYPES[t].plantR); ghost.add(plantRing); }
+  if (t !== 'strasse' && t !== 'bruecke') { const ar = new THREE.Group(), am = new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }); const sh = new THREE.Shape(); sh.moveTo(-0.22, 0); sh.lineTo(0.22, 0); sh.lineTo(0.22, 0.5); sh.lineTo(0.48, 0.5); sh.lineTo(0, 1.05); sh.lineTo(-0.48, 0.5); sh.lineTo(-0.22, 0.5); sh.closePath(); const m = new THREE.Mesh(new THREE.ShapeGeometry(sh).rotateX(Math.PI / 2), am); m.position.y = 0.14; m.renderOrder = 5; ar.add(m); const lb = new THREE.Mesh(new THREE.ShapeGeometry(sh).rotateX(Math.PI / 2).scale(1.25, 1, 1.15), new THREE.MeshBasicMaterial({ color: 0x3a2614, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide })); lb.position.set(0, 0.1, -0.05); ar.add(lb); ar.scale.setScalar(1.7); ar.position.set(0, 0.15, TYPES[t].r + 0.5); ar.userData.isArrow = true; ghost.add(ar); ghost.userData.arrow = ar; }
+  ghost.rotation.y = t === 'bruecke' ? 0 : ghostRot; ghostShown = ghost.rotation.y;
   scene.add(ghost); ghost.visible = false; ring.scale.setScalar(TYPES[t].r + 0.4);
   $('place').style.display = 'flex'; $('menu').style.display = 'none'; $('sub').style.display = 'none'; selectB(null);
   $('placeinfo').textContent = t === 'strasse' ? 'Straße: Startpunkt anklicken, dann Endpunkt anklicken, dann ✔ Bauen. Danach geht es vom Endpunkt aus weiter. Esc/✕ = fertig.' : `${moveFrom ? 'Umsetzen – ' : ''}${TYPES[t].name}: ${TYPES[t].desc} – Klicke auf einen grünen Platz, dann ✔ Bauen. Neu klicken = anderer Platz, Rechtsklick/✕ = abbrechen.`;
 }
 function cancelPlacing() { moveFrom = null; roadStart = null; roadCells = null; if (typeof showRoadPreview === 'function') showRoadPreview(null); ghostLocked = false; if (ghost) scene.remove(ghost); ghost = null; placing = null; ring.visible = false; $('place').style.display = 'none'; $('menu').style.display = 'flex'; }
 $('cancel').onclick = cancelPlacing;
-$('rotate').onclick = () => { ghostRot += Math.PI / 2; if (ghost) ghost.rotation.y = ghostRot; };
+$('rotate').onclick = () => rotGhost(Math.PI / 2);
 $('confirm').onclick = () => doBuild();
-addEventListener('keydown', e => { if (!placing) return; if (e.key === 'Enter') doBuild(); if (e.key === 'Escape') cancelPlacing(); if (e.key === 'r' || e.key === 'R') $('rotate').click(); });
+addEventListener('keydown', e => { if (!placing) return; if (e.key === 'Enter') doBuild(); if (e.key === 'Escape') cancelPlacing(); if (e.key === 'r' || e.key === 'R') $('rotate').click(); if (e.key === 'q' || e.key === 'Q') rotGhost(Math.PI / 12); if (e.key === 'e' || e.key === 'E') rotGhost(-Math.PI / 12); });
 function doBuild() {
   if (placing === 'strasse') {
     if (!roadCells) return toast('Erst Start- und Endpunkt anklicken');
@@ -6902,7 +6905,7 @@ function endPointer(e) {
   pointers.delete(e.pointerId); gesture = null; if (pointers.size === 0) downInfo = null;
 }
 el.addEventListener('pointerup', endPointer); el.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); gesture = null; downInfo = null; });
-el.addEventListener('wheel', e => { dist = THREE.MathUtils.clamp(dist * (1 + e.deltaY * 0.001), 12, 150); }, { passive: true });
+el.addEventListener('wheel', e => { if (placing && placing !== 'strasse' && placing !== 'bruecke' && !e.shiftKey) { rotGhost(Math.sign(e.deltaY) * Math.PI / 12); return; } dist = THREE.MathUtils.clamp(dist * (1 + e.deltaY * 0.001), 12, 150); }, { passive: true });
 function groundHit(cx, cy) { ndc.set(cx / innerWidth * 2 - 1, -cy / innerHeight * 2 + 1); ray.setFromCamera(ndc, camera); const h = ray.intersectObject(ground)[0]; return h ? h.point : null; }
 function hoverGhost(cx, cy) {
   if (ghostLocked) return;
@@ -7453,6 +7456,8 @@ function animate() {
   const real = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
   const sub = paused || INMENU ? 0 : speed; for (let i = 0; i < sub; i++) step(real);
   if (INMENU) yaw += real * 0.05;
+  if (ghost && placing && placing !== 'bruecke') { ghostShown += (ghostRot - ghostShown) * Math.min(1, real * 12); ghost.rotation.y = ghostShown; }
+  if (ghost && ghost.userData.arrow) { const a = ghost.userData.arrow; a.position.z = (TYPES[placing] ? TYPES[placing].r : 2) + 0.5 + Math.sin(clock.elapsedTime * 4) * 0.12; }
   if (SET.edge && !INMENU && mouseIn && !pointers.size) { const m = 14, k = dist * 0.9 * real; const fw = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), rt = new V3(Math.cos(yaw), 0, -Math.sin(yaw)); if (mouseX < m) target.addScaledVector(rt, -k); if (mouseX > innerWidth - m) target.addScaledVector(rt, k); if (mouseY < m) target.addScaledVector(fw, k); if (mouseY > innerHeight - m) target.addScaledVector(fw, -k); target.x = THREE.MathUtils.clamp(target.x, -MAP + 10, MAP - 10); target.z = THREE.MathUtils.clamp(target.z, -MAP + 10, MAP - 10); }
   waterMat.uniforms.uTime.value = t;
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
