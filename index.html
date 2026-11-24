@@ -5624,7 +5624,7 @@ function shedRoof(g, w, d, h, x, z, m) { // einfacher Unterstand
 function buildModel(type) {
   const fx = {}; let g;
   const P = pal(), ST = ['voll', 'voll', 'giebel', 'giebel', 'putz'][Math.floor(Math.random() * 5)], H = o => owHouse(Object.assign({ beam: P[0], plaster: P[1], shut: P[2], style: ST }, o));
-  if (type === 'lager' && buildings.some(b => b.type === 'lager' && !b.removed)) {
+  if (type === 'lager' && (buildModel.store || buildings.some(b => b.type === 'lager' && !b.removed))) {
     // Zusätzliches Lager: Zehntscheune im Odenwald-Stil mit Ladehof
     g = new THREE.Group(); const W = 3.6, D = 2.2, z0 = -1.0;
     B(g, W, 1.4, D, OW.sand, 0, 0.7, z0); for (let k = 0; k < 30; k++) B(g, 0.34, 0.13, 0.02, k % 2 ? OW.sand2 : OW.sand3, (k % 10 - 4.5) * 0.36, 0.2 + Math.floor(k / 10) * 0.45, z0 + D / 2 + 0.005);
@@ -6722,7 +6722,7 @@ function genBuildIcons() {
   const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 100), bx = new THREE.Box3(), c = new V3(), sz = new V3();
   for (const k of Object.keys(TYPES)) {
     if (k === 'strasse') continue;
-    const g = buildModel(k).g; g.rotation.y = -0.6; sc.add(g); bx.setFromObject(g); bx.getCenter(c); bx.getSize(sz);
+    buildModel.store = k === 'lager'; const g = buildModel(k).g; buildModel.store = false; g.rotation.y = -0.6; sc.add(g); bx.setFromObject(g); bx.getCenter(c); bx.getSize(sz);
     const r = Math.max(sz.x, sz.y, sz.z) * 0.62; cam.position.set(c.x + r * 1.1, c.y + r * 1.3, c.z + r * 2.3); cam.lookAt(c);
     renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(sc, cam); renderer.readRenderTargetPixels(rt, 0, 0, S, S, px); renderer.setRenderTarget(null);
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const si = ((S - 1 - y) * S + x) * 4, di = (y * S + x) * 4; for (let q = 0; q < 4; q++) idata.data[di + q] = px[si + q]; }
