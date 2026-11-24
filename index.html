@@ -8161,6 +8161,16 @@ const MISSIONS = [
       { icon: '🏰', t: 'Beide Gegner besiegt', v: () => (simT > 30 && !AIS.length) ? 1 : 0, n: 1 },
     ],
     win: 'Rabeneck und Hohenstein-Mümling haben sich ergeben. Mit vollen Schatzkammern und starken Mauern ist deine Siedlung zur mächtigsten Stadt im Odenwald geworden.' },
+  { id: 4, name: 'Die Krone des Odenwalds', icon: '👑', finale: true,
+    story: 'Der listige Abt von Kloster Waldbrunn hat die besiegten Herren um sich geschart. Rabeneck, Hohenstein-Mümling und das Kloster ziehen gemeinsam gegen dich – es ist der Kampf um die Krone des Odenwalds.<br><br>Errichte eine Burg als Zeichen deiner Macht, versorge deine Bürger mit allem, was sie brauchen, und besiege alle drei Gegner.',
+    cfg: { modus: 'kampf', ki: '3', kistufe: 'schwer', unlock: 'normal', size: 'gross', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 1212 },
+    goals: [
+      { icon: '🏰', t: 'Eine Burg fertig gebaut', v: () => buildings.filter(b => !b.removed && b.type === 'burg' && b.progress >= 1).length, n: 1 },
+      { icon: '🏛️', t: 'Erstes zufriedenes Bürgerhaus', v: () => UNL >= 4 ? 1 : 0, n: 1 },
+      { icon: '⚔️', t: '40 Soldaten ausgebildet', v: () => SOLD.length, n: 40 },
+      { icon: '👑', t: 'Alle drei Gegner besiegt', v: () => (simT > 30 && !AIS.length) ? 1 : 0, n: 1 },
+    ],
+    win: 'Der Odenwald liegt dir zu Füßen! Von deiner Burg weht das Banner über alle Täler – die Chronik nennt dich fortan den Herrn von Valewright.<br><br><b>📜 Ende von Buch I: Das Erbe des Tals</b>' },
 ];
 const MIS_DONE = (() => { try { return JSON.parse(localStorage.getItem('odws_mis') || '{}'); } catch (e) { return {}; } })();
 function showMissions() {
