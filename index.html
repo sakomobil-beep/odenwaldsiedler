@@ -6152,13 +6152,17 @@ function makePlots(b) {
     createPlot(b, x, z);
   }
 }
+const _gRay = new THREE.Raycaster(), _gO = new THREE.Vector3(), _gD = new THREE.Vector3(0, -1, 0);
+function groundY(x, z) { _gO.set(x, 200, z); _gRay.set(_gO, _gD); const h = _gRay.intersectObject(ground, false)[0]; return h ? h.point.y : height(x, z); }
 function createPlot(b, x, z) {
     clearTrees(x, z, 1.8);
     const g = new THREE.Group(); g.position.set(x, height(x, z), z);
-    const soil = mesh(box(2, 0.12, 2, 4, 1, 4), mat.field); soil.position.y = 0.04; g.add(soil);
+    const y0 = height(x, z), sg = new THREE.PlaneGeometry(2.1, 2.1, 8, 8).rotateX(-Math.PI / 2), sp = sg.attributes.position;
+    for (let k = 0; k < sp.count; k++) { const vx = sp.getX(k), vz = sp.getZ(k), edge = Math.abs(vx) > 1.04 || Math.abs(vz) > 1.04; sp.setY(k, Math.max(groundY(x + vx, z + vz), height(x + vx, z + vz)) - y0 + (edge ? 0.03 : 0.08)); } sg.computeVertexNormals();
+    const soil = mesh(sg, mat.field); soil.receiveShadow = true; g.add(soil);
     const crops = [];
     const stalkM = M(0x6fa83a), earM = M(0xd8b450); addWind(stalkM, 0.25, 0); addWind(earM, 0.25, 0);
-    for (let i = 0; i < 25; i++) { const t = new THREE.Group(); t.position.set(-0.8 + (i % 5) * 0.4 + (hash(i, x) - 0.5) * 0.12, 0.1, -0.8 + Math.floor(i / 5) * 0.4 + (hash(z, i) - 0.5) * 0.12); t.rotation.y = hash(i, z) * 6;
+    for (let i = 0; i < 25; i++) { const t = new THREE.Group(); { const px = -0.8 + (i % 5) * 0.4 + (hash(i, x) - 0.5) * 0.12, pz = -0.8 + Math.floor(i / 5) * 0.4 + (hash(z, i) - 0.5) * 0.12; t.position.set(px, Math.max(groundY(x + px, z + pz), height(x + px, z + pz)) - y0 + 0.08, pz); } t.rotation.y = hash(i, z) * 6;
       const ears = []; for (let k = 0; k < 5; k++) { const a = k / 5 * 6.283, lean = 0.12 + hash(k, i) * 0.1, h = 0.55 + hash(i, k) * 0.2; const st = mesh(new THREE.CylinderGeometry(0.008, 0.012, h, 3).translate(0, h / 2, 0), stalkM, Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04); st.rotation.set(Math.sin(a) * lean, 0, -Math.cos(a) * lean); st.castShadow = false; t.add(st);
         const leaf = mesh(new THREE.PlaneGeometry(0.03, 0.28).translate(0, 0.14, 0), stalkM, 0, 0.05, 0); leaf.material = stalkM; leaf.rotation.set(0.7, a, 0); t.add(leaf);
         const ear = mesh(new THREE.CapsuleGeometry(0.022, 0.1, 2, 5), earM, 0, h + 0.05, 0); ear.castShadow = false; st.add(ear); ear.position.set(0, h + 0.04, 0); ears.push(ear);
