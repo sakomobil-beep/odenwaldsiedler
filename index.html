@@ -7374,7 +7374,8 @@ function tap(cx, cy) {
   const p = groundHit(cx, cy); if (!p) return;
   let best = null, bd = 99; for (const b of buildings) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < TYPES[b.type].r + 1 && d < bd) { bd = d; best = b; } }
   if (!best) for (const b of buildings) for (const pl of b.plots) if (Math.hypot(pl.x - p.x, pl.z - p.z) < 1.3) best = b;
-  selectB(best);
+  if (!best) { const ab = pickAi(p); if (ab) { selectB(null); return showAiInfo(ab); } }
+  showAiInfo(null); selectB(best);
 }
 
 // ---------- Wegfindung (A* auf einem 2-m-Raster) ----------
@@ -7624,7 +7625,7 @@ function serialize() {
   const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
   for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 2, hv: 4, ai: aiSave(), goldLeft: deposits.map(d => d.left ?? null), tut: TUT_ON ? { s: tutStep, d: tutDone } : null, unl: UNL, depFound: deposits.map(d => d.found ? 1 : 0), trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, militia: !!s.militia, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 2, hv: 4, ai: aiSave(), goldLeft: deposits.map(d => d.left ?? null), tut: TUT_ON ? { s: tutStep, d: tutDone } : null, unl: UNL, depFound: deposits.map(d => d.found ? 1 : 0), trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => (s.post || s.from) && !(s.post || s.from).removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, militia: !!s.militia, post: buildings.filter(x => !x.removed).indexOf(s.post || s.from) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
@@ -7857,9 +7858,9 @@ function aiPlace(a, type, x, z, rot, p) {
 function aiFinish(a, b, quiet) {
   b.p = 1; b.g.scale.set(1, 1, 1);
   const P = PLAT[b.type], n = b.type === 'wachstube' ? 1 : b.type === 'wachturm' ? 2 : b.type === 'wehrturm' ? 2 : b.type === 'burg' ? 3 : 0;
-  b.guards = [];
+  b.guards = []; if (POSTS[b.type]) { b.gar = b.gar || []; } else
   for (let i = 0; i < n; i++) { const w = makeWorker('kis' + a.i); let pos; if (P && P.spots[i]) { const [lx, lz] = P.spots[i], v = new V3(lx, 0, lz).applyAxisAngle(new V3(0, 1, 0), b.rot); pos = new V3(b.x + v.x, b.g.position.y + P.y, b.z + v.z); w.g.rotation.y = Math.atan2(v.x, v.z); } else { pos = b.door.clone(); pos.x += (i - 0.5) * 0.8; pos.y = height(pos.x, pos.z); w.g.rotation.y = b.rot; } w.g.position.copy(pos); w.g.visible = b.g.visible; if (!w.g.parent) scene.add(w.g); b.guards.push(w); }
-  if (POSTS[b.type]) { const r = aiTerrR(a, b.x, b.z, POSTS[b.type].r); if (r > 8) { a.terr.push({ x: b.x, z: b.z, r }); aiFlags(a); } if (!quiet && isExplored(b.x, b.z)) toast(`🤖 ${a.name} hat ${TYPES[b.type].name === 'Wachstube' ? 'eine Wachstube' : 'einen ' + TYPES[b.type].name} gebaut – sein Gebiet wächst.`); }
+  if (POSTS[b.type]) { aiFillPosts(a); const r = aiTerrR(a, b.x, b.z, POSTS[b.type].r); if (r > 8) { a.terr.push({ x: b.x, z: b.z, r }); aiFlags(a); } if (!quiet && isExplored(b.x, b.z)) toast(`🤖 ${a.name} hat ${TYPES[b.type].name === 'Wachstube' ? 'eine Wachstube' : 'einen ' + TYPES[b.type].name} gebaut – sein Gebiet wächst.`); }
 }
 function aiNew(i, x, z, diff, peace) {
   const a = { i, name: AI_NAMES[i], col: AI_COLS[i], x, z, diff, peace, terr: [{ x, z, r: 32 }], blds: [], st: { bau: 30, nahr: 5, waff: 0, sold: 0 }, pi: 0, nt: 8 + i * 5, kt: 0, folk: [] };
@@ -7900,6 +7901,7 @@ function aiThink(a) {
 }
 let aiVisT = 0;
 function aiStep(dt) {
+  battleStep(dt);
   if (!AIS.length) return;
   aiVisT -= dt; const vis = aiVisT < 0; if (vis) aiVisT = 3;
   for (const a of AIS) {
@@ -7912,6 +7914,7 @@ function aiStep(dt) {
     a.ct = (a.ct || 0) + dt; if (a.ct > 50) { a.ct = 0; for (const b of a.blds) if (b.type === 'holzfaeller' && b.p >= 1) { const t = trees.find(t => t.alive && !t.falling && Math.hypot(t.x - b.x, t.z - b.z) < 14); if (t) removeTree(t); } }
     a.kt += dt; if (a.kt > 45) { a.kt = 0; if (a.blds.some(b => b.type === 'kaserne' && b.p >= 1) && a.st.waff >= 1) { a.st.waff -= 1; a.st.sold++; } }
     a.nt -= dt; if (a.nt < 0) aiThink(a);
+    if (vis) aiFillPosts(a); aiWar(a, dt);
     // Siedler, die durch das Dorf laufen
     const want = Math.min(12, 2 + Math.floor(a.blds.filter(b => b.p >= 1).length / 2));
     while (a.folk.length < want) { const w = makeWorker('ki' + a.i); w.ai = a; w.home = null; const b0 = a.blds[0]; w.g.position.copy(b0.door); w.g.position.y = height(b0.door.x, b0.door.z); if (!w.g.parent) scene.add(w.g); workers.push(w); a.folk.push(w); }
@@ -7919,12 +7922,209 @@ function aiStep(dt) {
     if (vis && Math.random() < 0.3) aiFlags(a);
   }
 }
-function aiSave() { return AIS.map(a => ({ i: a.i, x: a.x, z: a.z, diff: a.diff, peace: a.peace, terr: a.terr, st: a.st, pi: a.pi, nt: a.nt, seen: !!a.seen, blds: a.blds.map(b => [b.type, +b.x.toFixed(2), +b.z.toFixed(2), +b.rot.toFixed(3), +b.p.toFixed(3)]) })); }
+function aiSave() { return AIS.map(a => ({ i: a.i, x: a.x, z: a.z, diff: a.diff, peace: a.peace, terr: a.terr, st: a.st, pi: a.pi, nt: a.nt, seen: !!a.seen, blds: a.blds.map(b => [b.type, +b.x.toFixed(2), +b.z.toFixed(2), +b.rot.toFixed(3), +b.p.toFixed(3), (b.gar || []).map(d => [d.kind, d.rank])]), angry: !!a.angry, wt: a.wt })); }
 function aiLoad(L) {
-  for (const s of L || []) { const a = aiNew(s.i, s.x, s.z, s.diff, s.peace); a.terr = []; Object.assign(a.st, s.st); a.pi = s.pi; a.nt = s.nt; a.seen = s.seen;
-    for (const [t, x, z, rot, p] of s.blds) aiPlace(a, t, x, z, rot, p >= 1 ? 1 : p);
-    a.terr = s.terr.map(t => ({ ...t })); aiFlags(a); }
+  for (const s of L || []) { const a = aiNew(s.i, s.x, s.z, s.diff, s.peace); a.terr = []; a.loading = true; Object.assign(a.st, s.st); a.pi = s.pi; a.nt = s.nt; a.seen = s.seen;
+    a.angry = s.angry; a.wt = s.wt; for (const [t, x, z, rot, p, gar] of s.blds) { const b = aiPlace(a, t, x, z, rot, p >= 1 ? 1 : p); if (gar && gar.length) { b.gar = gar.map(([kind, rank]) => { const d = { kind, rank, hp: 0 }; d.hp = hpMax(d); return d; }); aiDress(a, b); } }
+    a.terr = s.terr.map(t => ({ ...t })); a.loading = false; aiFlags(a); }
 }
+
+// ---------- KI-Gegner Teil 2: Kämpfe, Eroberung, KI-Taktik ----------
+const PEACE = () => CFG.modus === 'frieden';
+const hpMax = u => (u.kind === 'bogen' ? 30 : 40) * (1 + u.rank * 0.5);
+const dmgOf = u => (u.kind === 'bogen' ? 6 : 9) * (1 + u.rank * 0.35) * (u.hungry ? 0.6 : 1);
+const AI_RANK = { leicht: () => 0, mittel: () => Math.random() < 0.4 ? 1 : 0, schwer: () => 1 + (Math.random() < 0.4 ? 1 : 0) };
+const BATTLES = [], ARROWS = [], SINK = [];
+const FEM = t => ['wachstube', 'burg', 'kaserne'].includes(t);
+const artA = (t, p) => (FEM(t) ? (p ? 'deine ' : 'die ') : (p ? 'deinen ' : 'den ')) + TYPES[t].name;
+const isAiB = b => !!(b && b.ai);
+// --- Verteidiger eines Gebäudes ---
+function defsOf(B) {
+  if (isAiB(B)) return B.gar || (B.gar = []);
+  if (B === buildings[0]) return SOLD.filter(s => s.post && s.post.type === 'kaserne' && Math.hypot(s.post.x - B.x, s.post.z - B.z) < 60);
+  return SOLD.filter(s => s.post === B);
+}
+function aiCap(b) { const P = POSTS[b.type]; return P ? (P.schwert || 0) + (P.bogen || 0) : 0; }
+function aiDress(a, b) { // sichtbare KI-Soldaten am Posten
+  for (const w of b.guards || []) { scene.remove(w.g); w.removed = true; }
+  b.guards = []; const P = PLAT[b.type]; let ai = 0, si = 0;
+  for (const d of b.gar || []) {
+    if (d.out) continue;
+    const w = makeWorker('kis' + a.i); if (!w.g.parent) scene.add(w.g);
+    if (d.kind === 'bogen' && P && P.spots[ai]) { const [lx, lz] = P.spots[ai++], v = new V3(lx, 0, lz).applyAxisAngle(new V3(0, 1, 0), b.rot); w.g.position.set(b.x + v.x, b.g.position.y + P.y, b.z + v.z); w.g.rotation.y = Math.atan2(v.x, v.z); }
+    else { if (si >= 2) { w.g.visible = false; } const v = new V3((si++ - 0.5) * 0.9, 0, 0).applyAxisAngle(new V3(0, 1, 0), b.rot); w.g.position.set(b.door.x + v.x, height(b.door.x + v.x, b.door.z + v.z), b.door.z + v.z); w.g.rotation.y = b.rot; }
+    if (w.g.visible !== false) w.g.visible = isExplored(b.x, b.z); d.w = w; b.guards.push(w);
+  }
+}
+function aiFillPosts(a) { // KI besetzt ihre Posten mit Soldaten aus dem Haupthaus
+  if (a.loading) return;
+  for (const b of a.blds) { if (!POSTS[b.type] || b.p < 1 || BATTLES.some(x => x.B === b)) continue; b.gar = b.gar || []; let ch = false;
+    if (!b.gar.length) { b.gar.push({ kind: 'schwert', rank: 0, hp: 40 }); ch = true; }
+    while (a.st.sold >= 1 && b.gar.length < aiCap(b)) { const P = POSTS[b.type], nb = b.gar.filter(d => d.kind === 'bogen').length, kind = nb < (P.bogen || 0) && (a.diff !== 'leicht' || Math.random() < 0.5) ? 'bogen' : 'schwert'; const d = { kind, rank: AI_RANK[a.diff](), hp: 0 }; d.hp = hpMax(d); b.gar.push(d); a.st.sold--; ch = true; }
+    if (ch) aiDress(a, b); }
+  const L = a.blds[0]; if (L && L.type === 'lager') { L.gar = L.gar || []; }
+}
+// --- Figuren & Effekte ---
+function shootArrow(from, to, cb) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.55), M(0x6a4a2a)); const p0 = from.clone(), p1 = to.clone(); m.position.copy(p0); scene.add(m);
+  ARROWS.push({ m, p0, p1, t: 0, cb }); play('chirp', p0.x, p0.z, 0.25);
+}
+function dieFig(w) { if (!w) return; w.queue.length = 0; w.dead = 0.001; w.removedSoon = true; }
+function sinkBuilding(g, x, z) { SINK.push({ g, t: 0 }); for (let k = 0; k < 6; k++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial({ color: k % 2 ? 0x555555 : 0xff7a2a, transparent: true, opacity: 0.8 })); m.position.set(x + (Math.random() - 0.5) * 3, height(x, z) + 1 + Math.random() * 2, z + (Math.random() - 0.5) * 3); scene.add(m); puffs.push({ m, t: 0, chip: new V3((Math.random() - 0.5), 2, (Math.random() - 0.5)) }); } play('crash', x, z, 0.8); }
+// --- Einheiten ---
+function mkUnitP(s) { const u = { side: 'p', kind: s.kind, rank: s.rank, s, hungry: s.hungry }; s.hp = s.hp ?? hpMax(s); u.w = s.w || makeSoldierW(s, s.post ? s.post.door : lagerDoor(0, 0)); s.w = u.w; u.w.g.visible = true; u.w.onPost = false; u.w.queue.length = 0; return u; }
+const uHp = u => u.side === 'p' ? u.s.hp : u.d.hp;
+function uHit(u, n) { if (u.side === 'p') u.s.hp -= n; else u.d.hp -= n; }
+function uPos(u) { return u.w.g.position; }
+function startBattle(B, attacker, units) {
+  let bt = BATTLES.find(x => x.B === B && x.att === attacker); if (!bt) { bt = { B, att: attacker, units: [], duel: null, t: 0, st: 0 }; BATTLES.push(bt); }
+  const away = new V3(B.x, 0, B.z).sub(uPos(units[0]).clone().setY(0)).normalize().multiplyScalar(-1); if (!isFinite(away.x)) away.set(1, 0, 0);
+  units.forEach((u, i) => { u.bt = bt; const side = new V3(-away.z, 0, away.x), dd = u.kind === 'bogen' ? 11 : 4.5, off = (i % 5 - 2) * 1.3; u.spot = new V3(B.x + away.x * (TYPES[B.type].r + dd) + side.x * off, 0, B.z + away.z * (TYPES[B.type].r + dd) + side.z * off); moveTo(u.w, u.spot); u.cd = Math.random() * 2; bt.units.push(u); });
+  if (attacker !== 'p') { // Spieler wird angegriffen
+    toast(`⚔️ ${attacker.name} greift ${B === buildings[0] ? 'dein Haupthaus' : artA(B.type, 1)} an!`, B); play('crash', B.x, B.z, 0.5);
+    for (const P of buildings) if (!P.removed && P !== B && isPost(P) && Math.hypot(P.x - B.x, P.z - B.z) < 38) { const sw = SOLD.filter(s => s.post === P && s.kind === 'schwert'); if (sw.length > 1) { const s = sw.sort((a, c) => c.rank - a.rank)[0]; sendToPost(s, B); toast('🛡️ Verstärkung eilt zu Hilfe!', B, true); } }
+  } else { const a = B.ai; a.angry = true; if (a.diff !== 'leicht') setTimeout(() => { if (a.dead || B.dead) return; if (a.st.sold >= 1 && B.gar.length < aiCap(B) + 2) { a.st.sold--; const d = { kind: 'schwert', rank: AI_RANK[a.diff](), hp: 0 }; d.hp = hpMax(d); B.gar.push(d); aiDress(a, B); } }, 15000); }
+  return bt;
+}
+// Spieler greift an
+function playerAttack(B, nS, nB) {
+  const pool = SOLD.filter(s => s.post && !s.post.removed && !s.inBattle && Math.hypot(s.post.x - B.x, s.post.z - B.z) < 110);
+  const keep = new Map(); const pick = [];
+  for (const kind of ['schwert', 'bogen']) { let need = kind === 'schwert' ? nS : nB; for (const s of pool.filter(s => s.kind === kind).sort((a, c) => c.rank - a.rank)) { if (need <= 0) break; const P = s.post, left = SOLD.filter(x => x.post === P && !pick.includes(x)).length; if (P.type !== 'kaserne' && left <= 1) continue; pick.push(s); need--; } }
+  if (!pick.length) return toast('Keine freien Kämpfer in der Nähe – in jedem Posten bleibt mindestens einer zurück.');
+  const units = pick.map(s => { const from = s.post; if (from.garrison) from.garrison.splice(from.garrison.indexOf(s), 1); s.from = from; s.post = null; s.spot = null; s.inBattle = true; return mkUnitP(s); });
+  startBattle(B, 'p', units); toast(`⚔️ ${units.length} Kämpfer ziehen gegen ${B.ai.name}!`, B);
+}
+function availP(B) { const pool = SOLD.filter(s => s.post && !s.post.removed && !s.inBattle && Math.hypot(s.post.x - B.x, s.post.z - B.z) < 110); const by = {}; for (const s of pool) (by[buildings.indexOf(s.post)] = by[buildings.indexOf(s.post)] || []).push(s); let S = 0, Bo = 0; for (const L of Object.values(by)) { const k = L[0].post.type === 'kaserne' ? L.length : L.length - 1; const srt = L.sort((a, c) => (a.kind === 'bogen') - (c.kind === 'bogen')); for (const s of srt.slice(L[0].post.type === 'kaserne' ? 0 : 1)) s.kind === 'bogen' ? Bo++ : S++; } return { S, B: Bo }; }
+// KI greift an
+function aiAttack(a, B, n) {
+  const src = a.blds.filter(b => b.p >= 1 && (POSTS[b.type] || b.type === 'lager')).sort((x, y) => Math.hypot(x.x - B.x, x.z - B.z) - Math.hypot(y.x - B.x, y.z - B.z));
+  const units = [];
+  for (const b of src) { b.gar = b.gar || []; while (units.length < n && (b.type === 'lager' ? a.st.sold >= 1 : b.gar.length > 1)) { let d; if (b.type === 'lager') { a.st.sold--; d = { kind: Math.random() < 0.3 ? 'bogen' : 'schwert', rank: AI_RANK[a.diff](), hp: 0 }; d.hp = hpMax(d); } else { const i = b.gar.findIndex(x => x.kind === 'schwert'); d = b.gar.splice(i >= 0 ? i : 0, 1)[0]; } const w = makeWorker('kis' + a.i); w.ai = a; w.home = null; if (!w.g.parent) scene.add(w.g); w.g.position.set(b.door.x, height(b.door.x, b.door.z), b.door.z); workers.push(w); units.push({ side: a, kind: d.kind, rank: d.rank, d, w }); } if (b.type !== 'lager') aiDress(a, b); if (units.length >= n) break; }
+  if (units.length) startBattle(B, a, units);
+  return units.length;
+}
+// --- Kampfablauf ---
+function battleStep(dt) {
+  for (const s of SOLD) if (!s.inBattle && s.hp != null && s.hp < hpMax(s)) s.hp = Math.min(hpMax(s), s.hp + dt * 0.4);
+  for (const ar of ARROWS) { ar.t += dt / 0.55; const k = Math.min(1, ar.t); ar.m.position.lerpVectors(ar.p0, ar.p1, k); ar.m.position.y += Math.sin(k * Math.PI) * 1.8; ar.m.lookAt(ar.p1.x, ar.p1.y + (1 - k) * 2, ar.p1.z); if (k >= 1) { scene.remove(ar.m); ar.done = true; ar.cb && ar.cb(); } }
+  for (let i = ARROWS.length - 1; i >= 0; i--) if (ARROWS[i].done) ARROWS.splice(i, 1);
+  for (const sk of SINK) { sk.t += dt; sk.g.position.y -= dt * 1.2; sk.g.rotation.z += dt * 0.08; if (sk.t > 3) { scene.remove(sk.g); sk.done = true; } }
+  for (let i = SINK.length - 1; i >= 0; i--) if (SINK[i].done) SINK.splice(i, 1);
+  for (const w of workers) if (w.dead) { w.dead += dt; w.g.rotation.x = -Math.min(1.5, w.dead * 3); if (w.dead > 3) { w.removed = true; scene.remove(w.g); w.dead = 0; } }
+  for (const bt of BATTLES) {
+    const B = bt.B; bt.t += dt; bt.units = bt.units.filter(u => !u.gone);
+    const here = bt.units.filter(u => !u.w.queue.length && uPos(u).distanceTo(new V3(B.x, uPos(u).y, B.z)) < 20);
+    const defs = defsOf(B).filter(d => (d.hp ?? 1) > 0);
+    const arch = defs.filter(d => d.kind === 'bogen');
+    const P = PLAT[B.type], topY = B.g.position.y + (P ? P.y : 2.5) + 0.8;
+    // Verteidiger-Bogenschützen schießen von oben
+    for (const d of arch) { d.cd = (d.cd ?? Math.random() * 2) - dt; if (d.cd > 0 || !here.length || d.out) continue; d.cd = 2.3; const tgt = here.filter(u => u.kind === 'bogen')[0] || here[Math.floor(Math.random() * here.length)]; const from = d.w ? d.w.g.position.clone().setY(topY) : new V3(B.x, topY, B.z); shootArrow(from, uPos(tgt).clone().setY(uPos(tgt).y + 0.8), () => { if (Math.random() < 0.55 && !tgt.gone) { uHit(tgt, dmgOf(d)); if (uHp(tgt) <= 0) unitDies(tgt); } }); }
+    // Angreifer-Bogenschützen
+    for (const u of here.filter(u => u.kind === 'bogen')) { u.cd -= dt; if (u.cd > 0) continue; u.cd = 2.2; const dt2 = (bt.duel && bt.duel.d) || arch[0] || defs[0]; if (!dt2) continue; u.w.g.rotation.y = Math.atan2(B.x - uPos(u).x, B.z - uPos(u).z); u.w.arm.rotation.x = -1.4; const to = dt2.w && dt2.w.g.visible ? dt2.w.g.position.clone().setY(dt2.w.g.position.y + 0.8) : new V3(B.x, topY, B.z); shootArrow(uPos(u).clone().setY(uPos(u).y + 1), to, () => { if (Math.random() < 0.5 && (dt2.hp ?? 1) > 0) { dt2.hp = (dt2.hp ?? hpMax(dt2)) - dmgOf(u); if (dt2.hp <= 0) defDies(bt, dt2); } }); }
+    // Zweikampf vor dem Posten
+    const sw = here.filter(u => u.kind === 'schwert');
+    if (!bt.duel && (sw.length || (!defs.some(d => d.kind === 'schwert') && here.length))) {
+      const att = sw[0] || here[0]; const d = defs.filter(d => !d.out).sort((a, c) => (a.kind === 'bogen') - (c.kind === 'bogen'))[0];
+      if (d) { d.out = true; let w = d.w; if (bt.att === 'p') { if (!w) { w = makeWorker('kis' + B.ai.i); if (!w.g.parent) scene.add(w.g); d.w = w; } } else { w = d.w || makeSoldierW(d, B.door); d.w = w; d.inBattle = true; } w.g.visible = true; w.onPost = false; w.queue.length = 0; w.g.rotation.x = 0; w.g.position.set(B.door.x, height(B.door.x, B.door.z), B.door.z); if (bt.att === 'p') B.guards = (B.guards || []).filter(x => x !== w); bt.duel = { u: att, d, t: 0 }; moveTo(att.w, new V3(B.door.x + (uPos(att).x - B.door.x) * 0.2, 0, B.door.z + (uPos(att).z - B.door.z) * 0.2)); }
+    }
+    if (bt.duel) { const { u, d } = bt.duel; if (u.gone) { bt.duel = null; d.out = false; } else if (!u.w.queue.length) { bt.duel.t += dt; const pu = uPos(u), pd = d.w.g.position; if (pu.distanceTo(pd) > 1.4) { const v = pd.clone().sub(pu).setY(0).normalize(); pd.x = pu.x + v.x * 1.1; pd.z = pu.z + v.z * 1.1; pd.y = height(pd.x, pd.z); }
+        u.w.g.rotation.y = Math.atan2(pd.x - pu.x, pd.z - pu.z); d.w.g.rotation.y = u.w.g.rotation.y + Math.PI; const ph = bt.duel.t * 6; u.w.arm.rotation.x = -1.6 + Math.abs(Math.sin(ph)) * 2; d.w.arm.rotation.x = -1.6 + Math.abs(Math.cos(ph)) * 2; u.w.body.rotation.x = Math.sin(ph) * 0.1;
+        bt.duel.nh = (bt.duel.nh ?? 0.5) - dt; if (bt.duel.nh <= 0) { bt.duel.nh = 0.9; play('hammer', pu.x, pu.z, 0.6); if (Math.random() < 0.6) uHit(u, dmgOf(d)); if (Math.random() < 0.6) d.hp = (d.hp ?? hpMax(d)) - dmgOf(u); if (uHp(u) <= 0) { unitDies(u); d.out = false; bt.duel = null; if (d.w && bt.att === 'p') { aiDress(B.ai, B); } else if (d.w) { d.inBattle = false; sendToPost(d, d.post || B); } } else if ((d.hp ?? 1) <= 0) { defDies(bt, d); bt.duel = null; u.w.arm.rotation.x = 0; if (u.side === 'p') { u.s.xp = (u.s.xp || 0) + 0.5; } } } } }
+    // Ende?
+    const alive = bt.units.filter(u => !u.gone);
+    if (!alive.length) { bt.over = true; if (bt.att === 'p') toast(`❌ Dein Angriff auf ${B.ai.name} ist gescheitert.`, B); else toast(`🛡️ Du hast den Angriff von ${bt.att.name} abgewehrt!`, B); for (const d of defsOf(B)) d.out = false; if (isAiB(B)) aiDress(B.ai, B); continue; }
+    if (!defsOf(B).filter(d => (d.hp ?? 1) > 0).length && here.length && !BATTLES.some(o => o !== bt && o.B === B && !o.over && o.done)) { bt.over = true; capture(bt, alive); }
+  }
+  for (let i = BATTLES.length - 1; i >= 0; i--) if (BATTLES[i].over) BATTLES.splice(i, 1);
+}
+function unitDies(u) { u.gone = true; dieFig(u.w); if (u.side === 'p') { const s = u.s; SOLD.splice(SOLD.indexOf(s), 1); s.dead = true; toast(`💀 ${RANKS[s.kind][s.rank]} ist im Kampf gefallen.`, null, true); } }
+function defDies(bt, d) {
+  const B = bt.B; d.hp = 0; dieFig(d.w);
+  if (isAiB(B)) { B.gar.splice(B.gar.indexOf(d), 1); B.guards = (B.guards || []).filter(w => w !== d.w); }
+  else { if (d.post && d.post.garrison) d.post.garrison.splice(d.post.garrison.indexOf(d), 1); SOLD.splice(SOLD.indexOf(d), 1); d.dead = true; if (B.guard === d.w) B.guard = null; toast(`💀 Ein Verteidiger ist gefallen!`, B, true); }
+}
+function capture(bt, alive) {
+  const B = bt.B;
+  if (bt.att === 'p') { // Spieler erobert
+    const a = B.ai; aiRemove(a, B);
+    if (B.type === 'lager') { aiDefeat(a); for (const u of alive) homeUnit(u); return; }
+    const nb = placeBuilding(B.type, B.x, B.z, B.rot, true); nb.g.scale.set(1, 1, 1); nb.needsGuard = false; nb.status = 'Erobert – besetzt'; nb.garrison = []; nb.claimed = true;
+    for (const u of alive) { const s = u.s; s.inBattle = false; if (slotFree(nb, s)) { s.post = nb; nb.garrison.push(s); s.from = null; if (!placeOnPost(s, nb)) { moveTo(u.w, nb.door); u.w.queue.push({ fn: () => { u.w.g.visible = false; } }); } } else homeUnit(u); }
+    addTerritory(nb.x, nb.z, POSTS[nb.type].r); aiBurnOutside(a);
+    toast(`🏴 Du hast ${artA(nb.type)} von ${a.name} erobert!`, nb);
+  } else { // KI erobert
+    const a = bt.att;
+    if (B === buildings[0]) { gameOver(false, a); return; }
+    const keep = { ...stock }; B.guard = null; B.garrison = []; const g = B.g; demolish(B); Object.assign(stock, keep); refreshPiles();
+    const i = territories.findIndex(t => Math.abs(t.x - B.x) < 0.01 && Math.abs(t.z - B.z) < 0.01); if (i >= 0) territories.splice(i, 1); rebuildFlags();
+    const nb = aiPlace(a, B.type, B.x, B.z, B.rot, 1); const PP = POSTS[nb.type], cnt = { schwert: 0, bogen: 0 }; nb.gar = []; for (const u of alive) { dieFigQuiet(u.w); if (cnt[u.d.kind] < (PP[u.d.kind] || 0)) { cnt[u.d.kind]++; nb.gar.push(u.d); } else a.st.sold++; } if (!nb.gar.length) { nb.gar.push(alive[0].d); a.st.sold--; } aiDress(a, nb);
+    toast(`🔥 ${a.name} hat ${artA(B.type, 1)} erobert!`, B);
+    for (const b of buildings) if (!b.removed && b !== buildings[0] && !inTerritory(b.x, b.z) && b.type !== 'bruecke' && b.type !== 'strasse') { const k2 = { ...stock }, g2 = b.g; b.guard = null; for (const s of SOLD.filter(s => s.post === b)) { SOLD.splice(SOLD.indexOf(s), 1); if (s.w) dieFig(s.w); } demolish(b); Object.assign(stock, k2); scene.add(g2); sinkBuilding(g2, b.x, b.z); }
+  }
+}
+function dieFigQuiet(w) { w.removed = true; scene.remove(w.g); }
+function homeUnit(u) { const s = u.s; s.inBattle = false; const k = kasernen()[0] || (s.from && !s.from.removed ? s.from : null); if (k) sendToPost(s, k); else { s.post = buildings.find(b => isPost(b) && !b.removed) || null; } }
+function aiRemove(a, B) {
+  B.dead = true; a.blds.splice(a.blds.indexOf(B), 1); scene.remove(B.g); for (const w of B.guards || []) { w.removed = true; scene.remove(w.g); }
+  const i = a.terr.findIndex(t => Math.abs(t.x - B.x) < 0.01 && Math.abs(t.z - B.z) < 0.01); if (i >= 0) a.terr.splice(i, 1);
+  aiFlags(a);
+}
+function aiBurnOutside(a) { for (const b of [...a.blds]) if (b.type !== 'lager' && !aiInTerr(a, b.x, b.z)) { aiRemove(a, b); scene.add(b.g); sinkBuilding(b.g, b.x, b.z); } }
+function aiDefeat(a) {
+  a.dead = true; for (const b of [...a.blds]) { aiRemove(a, b); scene.add(b.g); sinkBuilding(b.g, b.x, b.z); } a.terr.length = 0; aiFlags(a);
+  for (const w of a.folk) { w.removed = true; scene.remove(w.g); }
+  toast(`🏆 ${a.name} ist besiegt! Sein Haupthaus ist gefallen.`); AIS.splice(AIS.indexOf(a), 1);
+  if (!AIS.length) gameOver(true);
+}
+function gameOver(win, a) {
+  const d = document.createElement('div'); d.id = 'gameover'; d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:60;font-family:inherit';
+  d.innerHTML = `<div style="background:#2a1d12;border:2px solid #c9a24a;border-radius:14px;padding:26px 34px;color:#f4e6c8;text-align:center;max-width:420px"><div style="font-size:46px">${win ? '🏆' : '🔥'}</div><h2 style="margin:8px 0">${win ? 'Sieg!' : 'Niederlage'}</h2><p>${win ? 'Alle Gegner sind besiegt – der Odenwald gehört dir!' : `${a.name} hat dein Haupthaus erobert.`}</p><button id="goon" style="margin:6px;padding:8px 16px">${win ? 'Weiter siedeln' : 'Zuschauen'}</button><button id="gomenu" style="margin:6px;padding:8px 16px">Hauptmenü</button></div>`;
+  document.body.appendChild(d); $('goon').onclick = () => d.remove(); $('gomenu').onclick = () => { location.href = location.pathname; };
+  if (!win) { for (const a2 of AIS) a2.won = true; }
+}
+// --- KI-Taktik je Stärke ---
+function aiTargets(a) {
+  const posts = buildings.filter(b => !b.removed && isPost(b) && b.progress >= 1 && !b.needsGuard);
+  const L = buildings[0]; const list = posts.length ? posts : [L];
+  const near = t => Math.min(...a.terr.map(o => Math.hypot(o.x - t.x, o.z - t.z) - o.r));
+  return list.map(b => { const d = defsOf(b); return { b, near: near(b), def: d.reduce((s, x) => s + strength(x), 0), arch: d.some(x => x.kind === 'bogen'), n: d.length }; }).filter(t => t.near < 70);
+}
+function aiWar(a, dt) {
+  if (PEACE() || a.dead || a.won) return;
+  a.wt = (a.wt ?? 120) - dt; if (a.wt > 0) return;
+  const D = { leicht: { start: 3600, iv: 600 }, mittel: { start: 2700, iv: 420 }, schwer: { start: 1500, iv: 240 } }[a.diff] || { start: 2700, iv: 420 };
+  a.wt = D.iv * (0.8 + Math.random() * 0.4);
+  if (simT < D.start && !(a.angry && a.diff !== 'leicht')) return;
+  const avail = a.st.sold + a.blds.reduce((s, b) => s + Math.max(0, (b.gar || []).length - 1), 0);
+  const T = aiTargets(a); if (!T.length || avail < 2) return;
+  if (a.diff === 'leicht') { if (!a.angry && Math.random() < 0.7) return; const t = T.sort((x, y) => x.near - y.near)[0]; aiAttack(a, t.b, Math.min(3, Math.floor(avail / 2))); return; }
+  if (a.diff === 'mittel') { const t = T.sort((x, y) => x.near - y.near)[0]; if (avail < t.n + 2) return; aiAttack(a, t.b, Math.ceil(avail * 0.5)); return; }
+  // schwer: schwächsten Posten suchen, ggf. Ablenkung
+  const sc = t => t.def + (t.arch ? 25 : 0) + t.near * 0.3 - (t.n === 0 ? 100 : 0);
+  T.sort((x, y) => sc(x) - sc(y)); const main = T[0];
+  if (avail < main.n + 2) return;
+  if (T.length > 1 && avail >= 6) { aiAttack(a, T[1].b, 2); setTimeout(() => { if (!a.dead && !main.b.removed) aiAttack(a, main.b, Math.ceil(avail * 0.7)); }, 25000 / Math.max(1, typeof speed !== 'undefined' ? speed : 1)); }
+  else aiAttack(a, main.b, Math.ceil(avail * 0.75));
+}
+// --- Info-Fenster für fremde Gebäude ---
+const aiPanel = document.createElement('div'); aiPanel.id = 'aiinfo'; aiPanel.style.cssText = 'position:fixed;left:14px;bottom:110px;width:290px;background:rgba(42,29,18,.94);border:2px solid #c9a24a;border-radius:12px;padding:12px 14px;color:#f4e6c8;z-index:30;display:none;font-size:14px'; document.body.appendChild(aiPanel);
+let aiSel = null;
+function showAiInfo(b) {
+  aiSel = b; if (!b) { aiPanel.style.display = 'none'; return; }
+  const a = b.ai, col = '#' + new THREE.Color(a.col).getHexString(), mil = POSTS[b.type] || b.type === 'lager';
+  const g = b.type === 'lager' ? null : b.gar || [];
+  let h = `<div style="display:flex;justify-content:space-between"><b>${TYPES[b.type].icon || ''} ${b.type === 'lager' ? 'Haupthaus' : TYPES[b.type].name}</b><span id="aiclose" style="cursor:pointer">✖</span></div><div style="margin:4px 0 8px"><span style="display:inline-block;width:10px;height:10px;background:${col};border-radius:2px"></span> ${a.name} · ${{ leicht: 'Leicht', mittel: 'Mittel', schwer: 'Schwer' }[a.diff]}</div>`;
+  if (b.p < 1) h += 'Wird gebaut …';
+  else if (mil) { h += g ? `Besatzung: ⚔️ ${g.filter(d => d.kind === 'schwert').length} · 🏹 ${g.filter(d => d.kind === 'bogen').length}` : 'Besatzung: unbekannt – das Haupthaus wird von seinen Soldaten verteidigt';
+    if (PEACE()) h += '<div style="margin-top:8px;color:#bfe3a0">🕊️ Friedliches Spiel – keine Kämpfe</div>';
+    else { const av = availP(b); h += `<div style="margin-top:10px">Verfügbar: ⚔️ ${av.S} · 🏹 ${av.B}</div><div>⚔️ <input id="ans" type="range" min="0" max="${av.S}" value="${Math.min(av.S, 5)}"> <b id="ansv">${Math.min(av.S, 5)}</b></div><div>🏹 <input id="anb" type="range" min="0" max="${av.B}" value="${Math.min(av.B, 3)}"> <b id="anbv">${Math.min(av.B, 3)}</b></div><button id="aigo" style="margin-top:8px;width:100%;padding:7px;background:#8a2a1a;color:#fff;border:1px solid #e0a060;border-radius:8px;font-weight:bold">⚔ Angreifen</button>`; }
+  } else h += 'Ein Gebäude des Gegners. Erobere den nächsten Posten, dann brennt es nieder.';
+  aiPanel.innerHTML = h; aiPanel.style.display = 'block';
+  $('aiclose').onclick = () => showAiInfo(null);
+  if ($('aigo')) { $('ans').oninput = e => $('ansv').textContent = e.target.value; $('anb').oninput = e => $('anbv').textContent = e.target.value; $('aigo').onclick = () => { playerAttack(b, +$('ans').value, +$('anb').value); showAiInfo(null); }; }
+}
+function pickAi(p) { let best = null, bd = 99; for (const a of AIS) for (const b of a.blds) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (b.g.visible && d < TYPES[b.type].r + 1 && d < bd) { bd = d; best = b; } } return best; }
 
 // ---------- Start / Laden ----------
 {
