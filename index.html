@@ -5680,7 +5680,16 @@ function buildModel(type) {
   } else {
     const old = buildModelOld(type); g = old.g; Object.assign(fx, old.fx);
     if (type === 'brunnen') { g.traverse(o => { if (o.isMesh && o.material === mat.stone) o.material = OW.sand; if (o.isMesh && o.material === mat.roof) o.material = OW.tile; if (o.isMesh && o.material === mat.beam) o.material = OW.brown; }); const crank = new THREE.Group(); crank.position.set(0, 1.65, 0); g.add(crank); crank.add(mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.7, 8).rotateZ(Math.PI / 2), M(0x8a6038))); B(crank, 0.04, 0.3, 0.04, OW.iron, 0.9, -0.12, 0); B(crank, 0.04, 0.04, 0.2, OW.iron, 0.9, -0.27, 0.1); barrel(g, 1.0, 0.7, 0.75); }
-    if (TYPES[type] && TYPES[type].mine) { g.traverse(o => { if (o.isMesh && o.material === mat.trunk) o.material = OW.brown; }); sandArch(g, 0, 1.55, 0.88, 0.8); const lamp = new THREE.Group(); lamp.position.set(0.95, 1.45, 1.0); g.add(lamp); B(lamp, 0.12, 0.16, 0.12, OW.lamp || DM.lamp, 0, 0, 0); const hut = H({ w: 1.3, d: 1.1, h1: 0.75, h2: 0.7, frontWin: [1], dormer: false, chimney: false }); hut.scale.setScalar(0.75); hut.position.set(-1.9, 0, 1.4); hut.rotation.y = 0.4; g.add(hut); }
+    if (TYPES[type] && TYPES[type].mine) { g.traverse(o => { if (o.isMesh && o.material === mat.trunk) o.material = OW.brown; }); sandArch(g, 0, 1.55, 0.88, 0.8); const lamp = new THREE.Group(); lamp.position.set(0.95, 1.45, 1.0); g.add(lamp); B(lamp, 0.12, 0.16, 0.12, OW.lamp || DM.lamp, 0, 0, 0); const hf = new THREE.Group(); hf.position.set(-1.9, 0, 1.2); g.add(hf);
+      for (const sx of [-1, 1]) { const l = B(hf, 0.14, 3.2, 0.14, OW.brown, sx * 0.55, 1.55, 0); l.rotation.z = -sx * 0.12; const st = B(hf, 0.1, 2.4, 0.1, OW.brown, sx * 0.4, 1.1, 0.9); st.rotation.x = -0.4; }
+      for (const y of [0.9, 1.8]) B(hf, 1.2 - y * 0.12, 0.08, 0.08, OW.brown, 0, y, 0);
+      for (const s2 of [-1, 1]) { const x = B(hf, 0.06, 1.0, 0.06, OW.brown, 0, 1.35, 0); x.rotation.z = s2 * 0.7; }
+      B(hf, 0.8, 0.12, 0.4, OW.brown, 0, 3.1, 0);
+      const wheel = new THREE.Group(); wheel.position.set(0, 3.35, 0); hf.add(wheel); wheel.add(mesh(new THREE.TorusGeometry(0.38, 0.045, 5, 16), OW.iron)); for (let k = 0; k < 4; k++) { const sp = mesh(box(0.03, 0.76, 0.03), OW.iron); sp.rotation.z = k * Math.PI / 4; wheel.add(sp); } fx.spin2 = wheel;
+      B(hf, 0.015, 2.9, 0.015, M(0x8a7a5a), 0.38, 1.9, 0);
+      B(hf, 1.3, 0.3, 1.0, OW.brown, 0, 0.15, 0); B(hf, 1.0, 0.04, 0.7, M(0x111111), 0, 0.31, 0);
+      const wh = new THREE.Group(); wh.position.set(-1.4, 0, 1.0); hf.add(wh); B(wh, 0.9, 0.7, 0.8, OW.sand, 0, 0.35, 0); B(wh, 1.05, 0.07, 1.0, OW.slate, 0, 0.78, 0, 0.25, 0, 0);
+      for (let i = 0; i < 3; i++) { const o = makeItem({ steinmine: 'stein', eisenmine: 'eisenerz', kohlemine: 'kohle', goldmine: 'golderz' }[type]); o.position.set(1.2 + (i % 2) * 0.3, 0.12 + Math.floor(i / 2) * 0.2, 1.5); g.add(o); } }
     if (type === 'schmelze') g.traverse(o => { if (o.isMesh && o.material === mat.stone) o.material = OW.sand; if (o.isMesh && o.material === mat.roof2) o.material = OW.tile; });
     if (type === 'schweinezucht') g.traverse(o => { if (o.isMesh && o.material === mat.roof2) o.material = OW.tile; });
     if (type === 'bruecke') { for (const s of [-1, 1]) { const p = mesh(box(1.0, 1.4, 2.4), OW.sand, s * 6.2, 0.2, 0); g.add(p); } g.traverse(o => { if (o.isMesh && o.material === mat.trunk) o.material = OW.sand2; }); }
