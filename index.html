@@ -5184,6 +5184,11 @@ const ITEMS = {
   kerzen: { name: 'Kerzen', icon: '🕯️', m: M(0xf4e6b8), geo: box(0.3, 0.3, 0.3) },
   lehm: { name: 'Lehm', icon: '🟫', m: M(0x9a6a44), geo: box(0.3, 0.3, 0.3) },
   kruege: { name: 'Krüge', icon: '🏺', m: M(0xb06a3a), geo: box(0.3, 0.3, 0.3) },
+  raeucherfisch: { name: 'Räucherfisch', icon: '🐟', m: M(0xb07a3a), geo: box(0.3, 0.3, 0.3) },
+  wurst: { name: 'Wurst', icon: '🌭', m: M(0xa04a3a), geo: box(0.3, 0.3, 0.3) },
+  milch: { name: 'Milch', icon: '🥛', m: M(0xf4f2ea), geo: box(0.3, 0.3, 0.3) },
+  kaese: { name: 'Käse', icon: '🧀', m: M(0xf0c850), geo: box(0.3, 0.3, 0.3) },
+  kuchen: { name: 'Kuchen', icon: '🥧', m: M(0xd89a50), geo: box(0.3, 0.3, 0.3) },
   ziegel: { name: 'Dachziegel', icon: '🧱', m: M(0xa8452c), geo: box(0.3, 0.3, 0.3) },
 };
 // ---------- Realistische Warenmodelle ----------
@@ -5195,6 +5200,11 @@ const IMAT = { bark: IM(0x5e4128), endw: IM(0xd9b27a), ring: IM(0xb8895a), plank
 const im = (geo, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = true; return o; };
 const rockGeo = (s, seed) => { const g = new THREE.DodecahedronGeometry(s, 0), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const f = 0.8 + hash(i, seed) * 0.4; p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.8, p.getZ(i) * f); } g.computeVertexNormals(); return g; };
 const ITEM_MAKE = {
+  raeucherfisch: () => { const g = new THREE.Group(); for (let k = 0; k < 2; k++) { const b = im(new THREE.SphereGeometry(0.09, 8, 5), IM(0xb07a3a, { roughness: 0.4 }), 0, k * 0.08, (k - 0.5) * 0.08); b.scale.set(2.4, 0.8, 0.5); g.add(b); g.add(im(new THREE.ConeGeometry(0.07, 0.12, 4).rotateZ(Math.PI / 2), IM(0x8a5a2a), -0.27, k * 0.08, (k - 0.5) * 0.08)); } g.add(im(new THREE.TorusGeometry(0.05, 0.01, 4, 8), IMAT.twine, 0.2, 0.06, 0)); return g; },
+  wurst: () => { const g = new THREE.Group(); for (let k = 0; k < 4; k++) { const w = im(new THREE.CapsuleGeometry(0.035, 0.16, 3, 6), IM(0xa04a3a), (k - 1.5) * 0.08, 0, 0, 0, 0, Math.PI / 2 + Math.sin(k) * 0.3); g.add(w); } g.add(im(new THREE.CylinderGeometry(0.008, 0.008, 0.34, 4).rotateZ(Math.PI / 2), IMAT.twine, 0, 0.05, 0)); return g; },
+  milch: () => { const g = new THREE.Group(); g.add(im(new THREE.CylinderGeometry(0.11, 0.13, 0.32, 10), IM(0xc8ccd0, { metalness: 0.6, roughness: 0.35 }))); g.add(im(new THREE.CylinderGeometry(0.06, 0.1, 0.08, 10), IM(0xc8ccd0, { metalness: 0.6 }), 0, 0.2, 0)); g.add(im(new THREE.CylinderGeometry(0.065, 0.065, 0.03, 10), IM(0xf8f6ee), 0, 0.245, 0)); return g; },
+  kaese: () => { const g = new THREE.Group(); g.add(im(new THREE.CylinderGeometry(0.17, 0.17, 0.12, 14), IM(0xf0c850))); g.add(im(new THREE.CylinderGeometry(0.17, 0.17, 0.02, 14), IM(0xd8a830), 0, 0.06, 0)); const w = im(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 10, 1, false, 0, Math.PI / 3), IM(0xf0c850), 0.12, 0.12, 0); g.add(w); return g; },
+  kuchen: () => { const g = new THREE.Group(); g.add(im(new THREE.CylinderGeometry(0.2, 0.2, 0.03, 14), IM(0xeeeeee))); g.add(im(new THREE.CylinderGeometry(0.17, 0.17, 0.1, 14), IM(0xd89a50), 0, 0.065, 0)); for (let k = 0; k < 6; k++) g.add(im(new THREE.SphereGeometry(0.025, 5, 4), IM(0xc0392b), Math.cos(k) * 0.11, 0.125, Math.sin(k) * 0.11)); return g; },
   hopfen: () => { const g = new THREE.Group(); for (let k = 0; k < 7; k++) { const c = im(new THREE.ConeGeometry(0.06, 0.13, 6), IM(0x9ac050), (hash(k, 1) - 0.5) * 0.22, (k % 3) * 0.07, (hash(k, 2) - 0.5) * 0.18, Math.PI); g.add(c); } g.add(im(new THREE.CylinderGeometry(0.008, 0.008, 0.35, 3), IM(0x5a7a2a), 0, 0.1, 0, 0, 0, 1.2)); return g; },
   bier: () => { const g = new THREE.Group(); g.add(im(new THREE.CylinderGeometry(0.15, 0.15, 0.32, 10), IMAT.wood)); g.add(im(new THREE.SphereGeometry(0.155, 10, 6).scale(1, 0.25, 1), IMAT.wood, 0, 0, 0)); for (const y of [-0.1, 0.1]) g.add(im(new THREE.TorusGeometry(0.155, 0.012, 4, 14), IMAT.iron, 0, y, 0, Math.PI / 2)); g.add(im(new THREE.CylinderGeometry(0.02, 0.02, 0.05, 6), IMAT.iron, 0, 0, 0.16, Math.PI / 2)); return g; },
   wolle: () => { const g = new THREE.Group(); for (let k = 0; k < 5; k++) g.add(im(new THREE.SphereGeometry(0.1 + hash(k, 3) * 0.04, 7, 5), IM(0xf2eee4), (hash(k, 4) - 0.5) * 0.22, (k % 2) * 0.08, (hash(k, 5) - 0.5) * 0.18)); return g; },
@@ -5234,7 +5244,7 @@ const ITEM_MAKE = {
 const ITEM_PROTO = {};
 function makeItem(k) { if (!ITEM_PROTO[k]) ITEM_PROTO[k] = (ITEM_MAKE[k] || (() => new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m)))(); return ITEM_PROTO[k].clone(); }
 // Trageweise: Schulter (lang & schwer), Rücken (Säcke/Garben), vorne (Tier, Kisten), Hand (klein)
-const CARRY = { hopfen: 'back', bier: 'front', wolle: 'back', stoff: 'shoulder', kleidung: 'hand', honig: 'hand', met: 'hand', kerzen: 'hand', lehm: 'front', kruege: 'front', ziegel: 'front', flachs: 'back', sehne: 'hand', schwert: 'shoulder', schild: 'front', bogen: 'shoulder', pfeile: 'hand', stamm: 'shoulder', bretter: 'shoulder', kampfstock: 'shoulder', getreide: 'back', mehl: 'back', schwein: 'front', stein: 'front', eisenerz: 'front', kohle: 'front', golderz: 'front', wasser: 'hand', fisch: 'hand', schinken: 'hand', brot: 'hand', eisenbarren: 'front', muenzen: 'hand', werkzeug: 'hand' };
+const CARRY = { raeucherfisch: 'hand', wurst: 'hand', milch: 'hand', kaese: 'hand', kuchen: 'hand', hopfen: 'back', bier: 'front', wolle: 'back', stoff: 'shoulder', kleidung: 'hand', honig: 'hand', met: 'hand', kerzen: 'hand', lehm: 'front', kruege: 'front', ziegel: 'front', flachs: 'back', sehne: 'hand', schwert: 'shoulder', schild: 'front', bogen: 'shoulder', pfeile: 'hand', stamm: 'shoulder', bretter: 'shoulder', kampfstock: 'shoulder', getreide: 'back', mehl: 'back', schwein: 'front', stein: 'front', eisenerz: 'front', kohle: 'front', golderz: 'front', wasser: 'hand', fisch: 'hand', schinken: 'hand', brot: 'hand', eisenbarren: 'front', muenzen: 'hand', werkzeug: 'hand' };
 function placeCarry(w, item, style) {
   const c = w.carry; while (c.children.length) c.remove(c.children[0]);
   if (!item) { c.visible = false; return; }
@@ -5284,6 +5294,10 @@ const TYPES = {
   fischer: { name: 'Fischer', icon: '🎣', cost: { bretter: 3 }, r: 1.6, desc: 'Am Ufer von Fluss oder See. Fängt Fische – Essen für die Bergwerke.' },
   bruecke: { name: 'Brücke', icon: '🌉', cost: { bretter: 8, stein: 4 }, r: 1, desc: 'Über den Fluss. Siedler können dann ans andere Ufer.' },
   schmelze: { name: 'Eisenschmelze', icon: '🔥', cost: { bretter: 3, stein: 5 }, r: 2.1, desc: '1 Eisenerz + 1 Kohle → 1 Eisenbarren' },
+  raeucherei: { name: 'Räucherei', icon: '🐟', cost: { bretter: 3, stein: 2 }, r: 2.1, desc: '1 Fisch + 1 Baumstamm → 2 Räucherfisch' },
+  kuhstall: { name: 'Kuhstall', icon: '🐄', cost: { bretter: 4, stein: 1 }, r: 2.4, desc: '1 Getreide + 1 Wasser → 2 Milch' },
+  kaeserei: { name: 'Käserei', icon: '🧀', cost: { bretter: 3, stein: 2 }, r: 2.0, desc: '2 Milch → 1 Käse' },
+  konditorei: { name: 'Konditorei', icon: '🥧', cost: { bretter: 3, stein: 3 }, r: 2.0, desc: '1 Mehl + 1 Milch + 1 Honig → 2 Kuchen' },
   hopfenbauer: { name: 'Hopfenbauer', icon: '🌱', cost: { bretter: 3 }, r: 2.1, desc: 'Baut Hopfen an → Hopfen (für Bier)' },
   brauerei: { name: 'Brauerei', icon: '🍺', cost: { bretter: 4, stein: 2 }, r: 2.2, desc: 'Getreide + Hopfen + Wasser → 2 Bier · Honig + Wasser → Met' },
   wirtshaus: { name: 'Wirtshaus', icon: '🍻', cost: { bretter: 5, stein: 3 }, r: 2.3, desc: 'Schenkt Bier aus – versorgt Wohnhäuser im Umkreis von 25 Schritten' },
@@ -5726,6 +5740,28 @@ function buildModel(type) {
     for (let i = 0; i < 4; i++) { const f = makeItem('fisch'); f.scale.setScalar(0.8); f.rotation.set(0, Math.PI / 2, Math.PI / 2); f.position.set(-0.3 + i * 0.2, 0.92, 0); rack.add(f); }
     const net = mesh(new THREE.PlaneGeometry(1.0, 0.8, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6a5a40, wireframe: true }), -1.3, 0.65, 0.4); net.rotation.y = Math.PI / 2; g.add(net); for (const z of [0, 0.8]) B(g, 0.05, 1.1, 0.05, OW.brown, -1.3, 0.55, z);
     const boat = new THREE.Group(); boat.position.set(0.3, 0.25, 1.4); boat.rotation.set(Math.PI, 0.2, 0); g.add(boat); const hull = mesh(new THREE.SphereGeometry(0.4, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), M(0x6a4428), 0, 0, 0); hull.scale.set(2.0, 0.6, 0.8); boat.add(hull);
+  } else if (type === 'raeucherei') {
+    g = H({ w: 2.0, d: 1.7, frontWin: [1] });
+    const sm = new THREE.Group(); sm.position.set(1.75, 0, 0.3); g.add(sm); B(sm, 0.9, 1.3, 0.8, OW.sand2, 0, 0.65, 0); for (let k = 0; k < 8; k++) B(sm, 0.28, 0.12, 0.02, k % 2 ? OW.sand : OW.sand3, (k % 3 - 1) * 0.28, 0.2 + Math.floor(k / 3) * 0.4, 0.41); B(sm, 0.5, 0.6, 0.04, OW.wood, 0, 0.5, 0.42); sm.add(mesh(new THREE.ConeGeometry(0.62, 0.45, 4).rotateY(Math.PI / 4), OW.slate, 0, 1.52, 0)); B(sm, 0.22, 0.5, 0.22, OW.sand3, 0.15, 1.75, -0.1); fx.workSmoke = new V3(1.9, 2.1, 0.2);
+    const rk = new THREE.Group(); rk.position.set(-1.45, 0, 1.25); g.add(rk); for (const sx of [-1, 1]) B(rk, 0.06, 1.2, 0.06, OW.brown, sx * 0.4, 0.6, 0); B(rk, 0.9, 0.05, 0.05, OW.brown, 0, 1.15, 0); for (let k = 0; k < 4; k++) { const f = makeItem('raeucherfisch'); f.rotation.z = Math.PI / 2; f.scale.setScalar(0.8); f.position.set(-0.27 + k * 0.18, 0.95, 0); rk.add(f); }
+    logPile(g, 0.0, 1.35, 2, 0);
+  } else if (type === 'kuhstall') {
+    g = H({ w: 2.4, d: 1.8, frontWin: [0], roof: OW.shing }); B(g, 0.9, 0.9, 0.05, OW.wood, 0.5, 0.45, 0.92);
+    const pen = new THREE.Group(); pen.position.set(0.4, 0, 3.0); g.add(pen); const S = 1.5;
+    for (let i = -3; i <= 3; i++) for (const [px, pz] of [[i * S / 3, -S * 0.7], [i * S / 3, S * 0.7], [-S, i * S * 0.7 / 3], [S, i * S * 0.7 / 3]]) B(pen, 0.07, 0.65, 0.07, OW.wood, px, 0.32, pz);
+    for (const y of [0.3, 0.58]) { B(pen, 2 * S, 0.05, 0.05, OW.wood, 0, y, -S * 0.7); B(pen, 2 * S, 0.05, 0.05, OW.wood, 0, y, S * 0.7); B(pen, 0.05, 0.05, 1.4 * S, OW.wood, -S, y, 0); B(pen, 0.05, 0.05, 1.4 * S, OW.wood, S, y, 0); }
+    for (let k = 0; k < 2; k++) { const cw = new THREE.Group(); cw.position.set(-0.6 + k * 1.1, 0, k ? 0.3 : -0.25); cw.rotation.y = k ? 2.4 : 0.4; pen.add(cw); const wm = M(0xf4f0e8), bm = M(0x2a2420); cw.add(mesh(box(0.9, 0.45, 0.42), wm, 0, 0.62, 0)); cw.add(mesh(box(0.35, 0.2, 0.43), bm, -0.1, 0.72, 0)); cw.add(mesh(box(0.3, 0.3, 0.28), wm, 0.55, 0.72, 0)); cw.add(mesh(box(0.12, 0.12, 0.2), M(0xe0a0a0), 0.72, 0.64, 0)); for (const sx of [-1, 1]) cw.add(mesh(new THREE.ConeGeometry(0.03, 0.12, 4), M(0xe8e0c8), 0.55, 0.92, sx * 0.1)); for (const lx of [-0.32, 0.32]) for (const lz of [-0.15, 0.15]) cw.add(mesh(box(0.09, 0.4, 0.09), wm, lx, 0.2, lz)); cw.add(mesh(new THREE.SphereGeometry(0.08, 6, 4), M(0xf0b0b0), -0.2, 0.36, 0)); }
+    B(pen, 0.9, 0.25, 0.3, OW.wood, 0.7, 0.13, -0.8); for (let i = 0; i < 2; i++) { const m = makeItem('milch'); m.position.set(-1.5 + i * 0.3, 0.17, 1.2); g.add(m); }
+  } else if (type === 'kaeserei') {
+    g = H({ w: 2.0, d: 1.7, frontWin: [0, 2], flowers: true });
+    const pr = new THREE.Group(); pr.position.set(1.75, 0, 0.75); g.add(pr); B(pr, 0.7, 0.55, 0.5, OW.wood, 0, 0.28, 0); for (const sx of [-1, 1]) B(pr, 0.07, 1.0, 0.07, OW.brown, sx * 0.3, 0.8, 0); B(pr, 0.7, 0.08, 0.1, OW.brown, 0, 1.28, 0); const sc = mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6, 6), OW.iron, 0, 0.98, 0); pr.add(sc); pr.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12), OW.wood, 0, 0.66, 0)); const kk = makeItem('kaese'); kk.position.set(0, 0.6, 0); pr.add(kk);
+    const sh = new THREE.Group(); sh.position.set(-1.4, 0, 1.25); g.add(sh); for (const y of [0.35, 0.75]) B(sh, 0.9, 0.04, 0.35, OW.wood, 0, y, 0); for (const sx of [-1, 1]) B(sh, 0.05, 0.9, 0.35, OW.brown, sx * 0.43, 0.45, 0); for (let k = 0; k < 4; k++) { const c = makeItem('kaese'); c.scale.setScalar(0.85); c.position.set(-0.22 + (k % 2) * 0.44, 0.43 + Math.floor(k / 2) * 0.4, 0); sh.add(c); }
+    signBoard(g, 1.05, 1.15, 0.9, () => { const m = makeItem('kaese'); m.rotation.x = Math.PI / 2; m.scale.setScalar(0.8); return m; });
+  } else if (type === 'konditorei') {
+    g = H({ w: 2.0, d: 1.7, frontWin: [0, 2], flowers: true, plaster: OW.plasterP });
+    const tb = new THREE.Group(); tb.position.set(1.75, 0, 0.75); g.add(tb); B(tb, 0.9, 0.06, 0.55, OW.wood, 0, 0.78, 0); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(tb, 0.06, 0.78, 0.06, OW.brown, sx * 0.4, 0.39, sz * 0.22); B(tb, 0.8, 0.01, 0.5, M(0xf4f0e8), 0, 0.82, 0); const kc = makeItem('kuchen'); kc.position.set(-0.15, 0.83, 0); tb.add(kc); tb.add(mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.1, 10), M(0xd8c8a0), 0.25, 0.87, 0.05));
+    const st = new THREE.Group(); st.position.set(-1.4, 0, 1.25); g.add(st); B(st, 0.8, 0.06, 0.45, OW.wood, 0, 0.7, 0); for (const sx of [-1, 1]) B(st, 0.06, 0.7, 0.4, OW.brown, sx * 0.37, 0.35, 0); for (let k = 0; k < 2; k++) { const c = makeItem('kuchen'); c.scale.setScalar(0.85); c.position.set(-0.18 + k * 0.36, 0.74, 0); st.add(c); } for (let k = 0; k < 4; k++) B(st, 0.2, 0.04, 0.5, k % 2 ? M(0xd06080) : M(0xffffff), -0.3 + k * 0.2, 1.25, 0, 0.3, 0, 0); for (const sx of [-1, 1]) B(st, 0.04, 0.55, 0.04, OW.brown, sx * 0.38, 1.0, 0.2);
+    signBoard(g, 1.05, 1.15, 0.9, () => { const m = makeItem('kuchen'); m.rotation.x = Math.PI / 2; m.scale.setScalar(0.7); return m; });
   } else if (type === 'hopfenbauer') {
     g = H({ w: 2.0, d: 1.7, frontWin: [1] });
     const fld = new THREE.Group(); fld.position.set(0.3, 0, 3.0); g.add(fld); fld.add(mesh(box(3.0, 0.08, 1.6), mat.field, 0, 0.04, 0));
@@ -5949,6 +5985,7 @@ const LOOK = { // Kleidung & Kopfbedeckung je Beruf
   wagner: { c: 0x6a5a3a, hat: 'cap', hc: 0x3a2a1a, apron: 0x8a6a45 },
   flachsbauer: { c: 0x5a7aa0, hat: 'straw' }, seilerei: { c: 0x9a8a6a, hat: 'cap', hc: 0x5a4a3a }, waffenschmied: { c: 0x4a3a2a, hat: 'none', apron: 0x3a2618 }, kaserne: { c: 0x7a3a2a, hat: 'helmet' },
   schwertkaempfer: { c: WAPPEN_C, hat: 'helmet' }, bogenschuetze: { c: 0x3f6b3a, hat: 'cap', hc: 0x2a4a2a },
+  raeucherei: { c: 0x6a5a4a, hat: 'cap', hc: 0x3a2a1a, apron: 0x4a3a2a }, kuhstall: { c: 0x8a6a3a, hat: 'straw' }, kaeserei: { c: 0xf0ead8, hat: 'cap', hc: 0xffffff, apron: 0xf0d880 }, konditorei: { c: 0xf4e0e8, hat: 'chef', apron: 0xffffff },
   hopfenbauer: { c: 0x5a8a3a, hat: 'straw' }, brauerei: { c: 0x8a6a3a, hat: 'cap', hc: 0x5a3a1a, apron: 0x4a3020 }, wirtshaus: { c: 0x7a3a2a, hat: 'none', apron: 0xf0ead8 }, schaefer: { c: 0x7a6a4a, hat: 'straw' }, weberei: { c: 0x5a7ab0, hat: 'scarf', hc: 0xd8c070 }, schneider: { c: 0x6a4a8a, hat: 'cap', hc: 0x3a2a5a }, imker: { c: 0xe8e0c8, hat: 'straw' }, lehmgrube: { c: 0x8a6a4a, hat: 'cap', hc: 0x5a4030 }, toepfer: { c: 0xa86a3a, hat: 'none', apron: 0x8a5a3a }, koehler: { c: 0x3a3530, hat: 'cap', hc: 0x222222 }, haendler: { c: 0x8a2a6a, hat: 'cap', hc: 0xd0a020 },
   traeger: { c: 0x8a5a2a, hat: 'cap', hc: 0x5a3e22 }, waechter: { c: 0x2f4fa0, hat: 'helmet' },
 };
@@ -6145,7 +6182,7 @@ function stat(kind, item, n) { statLog.push([simT, kind, item, n]); if (statLog.
 
 // ---------- Träger ----------
 const carriers = [];
-const RECIPE_IN = { brauerei: { getreide: 1, hopfen: 1, wasser: 1 }, wirtshaus: { bier: 2 }, weberei: { wolle: 1 }, schneider: { stoff: 1 }, toepfer: { lehm: 1 }, koehler: { stamm: 2 }, saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 }, seilerei: { flachs: 1 }, wagner: { bretter: 2, eisenbarren: 1 } };
+const RECIPE_IN = { raeucherei: { fisch: 1, stamm: 1 }, kuhstall: { getreide: 1, wasser: 1 }, kaeserei: { milch: 2 }, konditorei: { mehl: 1, milch: 1, honig: 1 }, brauerei: { getreide: 1, hopfen: 1, wasser: 1 }, wirtshaus: { bier: 2 }, weberei: { wolle: 1 }, schneider: { stoff: 1 }, toepfer: { lehm: 1 }, koehler: { stamm: 2 }, saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 }, seilerei: { flachs: 1 }, wagner: { bretter: 2, eisenbarren: 1 } };
 const isActive = b => b.progress >= 1 && !b.removed && !b.paused && (b.worker || b.needsWorker);
 function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
   if (b.type === 'wohnhaus') return houseWants(b);
@@ -6160,7 +6197,7 @@ function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
   for (const [k, v] of Object.entries(r)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v * 2) res.push([k, v * 2 - have]); }
   return res;
 }
-const matchesWant = (want, item) => want === item || (want === '*food' && FOODS.includes(item));
+const matchesWant = (want, item) => want === item || (want === '*food' && FOODS.includes(item)) || (want === '*fine' && FINE.includes(item));
 function bestConsumer(item, x, z, except) {
   let best = null, bk = 1e9;
   for (const b of buildings) { if (b === except) continue; for (const [wi] of wantsOf(b)) if (matchesWant(wi, item)) { const k = b.prio * 400 + Math.hypot(b.x - x, b.z - z); if (k < bk) { bk = k; best = b; } } }
@@ -6363,20 +6400,22 @@ function renderMil() {
 const CHAIN_IO = {
   holzfaeller: [[], ['stamm']], foerster: [[], []], saegewerk: [['stamm'], ['bretter']], steinmetz: [[], ['stein']],
   bauernhof: [[], ['getreide']], muehle: [['getreide'], ['mehl']], brunnen: [[], ['wasser']], baeckerei: [['mehl', 'wasser'], ['brot']],
-  fischer: [[], ['fisch']], schweinezucht: [['getreide', 'wasser'], ['schwein']], metzger: [['schwein'], ['schinken']],
+  fischer: [[], ['fisch']], schweinezucht: [['getreide', 'wasser'], ['schwein']], metzger: [['schwein'], ['schinken', 'wurst']],
   steinmine: [['brot|fisch|schinken'], ['stein']], kohlemine: [['brot|fisch|schinken'], ['kohle']], eisenmine: [['brot|fisch|schinken'], ['eisenerz']], goldmine: [['brot|fisch|schinken'], ['golderz']],
   schmelze: [['eisenerz', 'kohle'], ['eisenbarren']], schmied: [['eisenbarren'], ['werkzeug']], muenzpraege: [['golderz', 'kohle'], ['muenzen']],
   wagner: [['bretter', 'eisenbarren'], ['karren']], waffenschnitzer: [['bretter'], ['kampfstock']],
   flachsbauer: [[], ['flachs']], seilerei: [['flachs'], ['sehne']],
   waffenschmied: [['eisenbarren', 'kohle', 'bretter', 'sehne'], ['schwert', 'schild', 'bogen', 'pfeile']],
   kaserne: [['schwert', 'schild', 'bogen', 'pfeile', 'muenzen'], ['⚔️ Kämpfer']],
+  raeucherei: [['fisch', 'stamm'], ['raeucherfisch']], kuhstall: [['getreide', 'wasser'], ['milch']], kaeserei: [['milch'], ['kaese']], konditorei: [['mehl', 'milch', 'honig'], ['kuchen']],
   hopfenbauer: [[], ['hopfen']], brauerei: [['getreide', 'hopfen', 'wasser', 'honig'], ['bier', 'met']], wirtshaus: [['bier'], ['🍻 Ausschank']], schaefer: [[], ['wolle']], weberei: [['wolle'], ['stoff']], schneider: [['stoff'], ['kleidung']],
   imker: [[], ['honig', 'kerzen']], lehmgrube: [[], ['lehm']], toepfer: [['lehm'], ['kruege', 'ziegel']], koehler: [['stamm'], ['kohle']],
-  wohnhaus: [['brot|fisch|schinken', 'wasser', 'bier', 'kleidung', 'met', 'kruege', 'kerzen', 'ziegel'], ['muenzen', '👥 Träger']],
+  wohnhaus: [['brot|fisch|schinken', 'raeucherfisch|wurst', 'kaese', 'kuchen', 'wasser', 'bier', 'kleidung', 'met', 'kruege', 'kerzen', 'ziegel'], ['muenzen', '👥 Träger']],
 };
 const CHAINS = [
   ['🪵 Baustoffe', ['foerster', 'holzfaeller', 'saegewerk', 'steinmetz', 'steinmine']],
   ['🍞 Nahrung', ['bauernhof', 'brunnen', 'muehle', 'baeckerei', 'fischer', 'schweinezucht', 'metzger']],
+  ['🧀 Feine Kost', ['raeucherei', 'kuhstall', 'kaeserei', 'konditorei']],
   ['⛏️ Bergbau & Metall', ['kohlemine', 'eisenmine', 'schmelze', 'schmied', 'wagner']],
   ['🪙 Gold', ['goldmine', 'muenzpraege']],
   ['🍺 Bier & Met', ['hopfenbauer', 'imker', 'brauerei', 'wirtshaus']],
@@ -6474,21 +6513,22 @@ function mineModel(outer, type, fx) {
   if (fx.smokeAt) fx.smokeAt.multiplyScalar(0.95);
 }
 // ---------- Wohnen, Bedürfnisse, Steuern, Markt ----------
+const FINE = ['raeucherfisch', 'wurst'];
 const HOUSE_LV = [
   { name: 'Hütte', needs: ['*food', 'wasser'], tax: 0, people: 1 },
-  { name: 'Fachwerkhaus', needs: ['*food', 'wasser', 'bier', 'kleidung'], tax: 1, people: 2 },
-  { name: 'Bürgerhaus', needs: ['*food', 'wasser', 'bier', 'kleidung', 'met', 'kruege', 'kerzen'], tax: 3, people: 3 },
+  { name: 'Fachwerkhaus', needs: ['*fine', 'kaese', 'wasser', 'bier', 'kleidung'], tax: 1, people: 2 },
+  { name: 'Bürgerhaus', needs: ['*fine', 'kaese', 'kuchen', 'wasser', 'bier', 'kleidung', 'met', 'kruege', 'kerzen'], tax: 3, people: 3 },
 ];
-const needName = k => k === '*food' ? 'Essen (Brot, Fisch oder Schinken)' : k === 'bier' ? 'Bier (vom Wirtshaus)' : ITEMS[k].name;
-const needIcon = k => k === '*food' ? '🍞' : k === 'bier' ? '🍺' : ITEMS[k].icon;
+const needName = k => k === '*fine' ? 'Räucherfisch oder Wurst' : k === '*food' ? 'Essen (Brot, Fisch oder Schinken)' : k === 'bier' ? 'Bier (vom Wirtshaus)' : ITEMS[k].name;
+const needIcon = k => k === '*fine' ? '🌭' : k === '*food' ? '🍞' : k === 'bier' ? '🍺' : ITEMS[k].icon;
 function nearPub(b) { return buildings.filter(p => p.type === 'wirtshaus' && p.progress >= 1 && !p.removed && !p.paused && p.worker && (p.in.bier || 0) > 0 && Math.hypot(p.x - b.x, p.z - b.z) < 25).sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z))[0]; }
-function needOk(b, k) { if (k === '*food') return FOODS.some(f => (b.in[f] || 0) > 0); if (k === 'bier') return !!nearPub(b); return (b.in[k] || 0) > 0; }
+function needOk(b, k) { if (k === '*food') return FOODS.some(f => (b.in[f] || 0) > 0); if (k === '*fine') return FINE.some(f => (b.in[f] || 0) > 0); if (k === 'bier') return !!nearPub(b); return (b.in[k] || 0) > 0; }
 function houseWants(b) {
   if (b.progress < 1 || b.removed) return [];
   const res = [], L = HOUSE_LV[b.lvl || 0];
-  for (const k of L.needs) { if (k === 'bier') continue; if (k === '*food') { const have = FOODS.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*food', 2 - have]); continue; } const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < 2) res.push([k, 2 - have]); }
+  for (const k of L.needs) { if (k === 'bier') continue; if (k === '*fine') { const have = FINE.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*fine', 2 - have]); continue; } if (k === '*food') { const have = FOODS.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*food', 2 - have]); continue; } const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < 2) res.push([k, 2 - have]); }
   if ((b.lvl || 0) === 1 && (b.sat || 0) >= 1) { const z = (b.in.ziegel || 0) + (b.inc.ziegel || 0); if (z < 2) res.push(['ziegel', 2 - z]); }
-  if ((b.lvl || 0) < 2) { const nx = HOUSE_LV[(b.lvl || 0) + 1]; for (const k of nx.needs) if (!L.needs.includes(k) && k !== 'bier') { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < 1) res.push([k, 1 - have]); } }
+  if ((b.lvl || 0) < 2) { const nx = HOUSE_LV[(b.lvl || 0) + 1]; for (const k of nx.needs) if (!L.needs.includes(k) && k !== 'bier' && k[0] !== '*') { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < 1) res.push([k, 1 - have]); } }
   return res;
 }
 function setHouseLevel(b, lv) {
@@ -6501,12 +6541,12 @@ function houseStep(b, dt) {
   b.ht = (b.ht || 0) + dt; if (b.ht < 90 * TF) return; b.ht = 0;
   const L = HOUSE_LV[b.lvl || 0], miss = L.needs.filter(k => !needOk(b, k));
   // verbrauchen, was da ist
-  for (const k of L.needs) { if (k === '*food') { const f = FOODS.filter(f => (b.in[f] || 0) > 0)[0]; if (f) { b.in[f]--; stat('use', f, 1); } } else if (k === 'bier') { const p = nearPub(b); if (p) { p.in.bier--; stat('use', 'bier', 1); } } else if ((b.in[k] || 0) > 0) { b.in[k]--; stat('use', k, 1); } }
+  for (const k of L.needs) { if (k === '*food' || k === '*fine') { const f = (k === '*food' ? FOODS : FINE).filter(f => (b.in[f] || 0) > 0)[0]; if (f) { b.in[f]--; stat('use', f, 1); } } else if (k === 'bier') { const p = nearPub(b); if (p) { p.in.bier--; stat('use', 'bier', 1); } } else if ((b.in[k] || 0) > 0) { b.in[k]--; stat('use', k, 1); } }
   if (!miss.length) {
     b.sat = Math.min(3, (b.sat || 0) + 1); b.bad = 0;
     if (L.tax) { stock.muenzen += L.tax; stat('prod', 'muenzen', L.tax); refreshPiles(); }
     if ((b.lvl || 0) === 0 && b.sat >= 2) { setHouseLevel(b, 1); b.sat = 0; toast('🏠 Eine Hütte ist zum Fachwerkhaus aufgestiegen!', b); }
-    else if (b.lvl === 1 && b.sat >= 2 && (b.in.ziegel || 0) >= 2 && ['met', 'kruege', 'kerzen'].every(k => (b.in[k] || 0) > 0)) { b.in.ziegel -= 2; setHouseLevel(b, 2); b.sat = 0; toast('🏛️ Ein Fachwerkhaus ist zum Bürgerhaus aufgestiegen!', b); }
+    else if (b.lvl === 1 && b.sat >= 2 && (b.in.ziegel || 0) >= 2 && ['met', 'kruege', 'kerzen', 'kuchen'].every(k => (b.in[k] || 0) > 0)) { b.in.ziegel -= 2; setHouseLevel(b, 2); b.sat = 0; toast('🏛️ Ein Fachwerkhaus ist zum Bürgerhaus aufgestiegen!', b); }
     b.status = `${HOUSE_LV[b.lvl].name} – zufrieden 😊`;
   } else {
     b.sat = 0; b.bad = (b.bad || 0) + 1;
@@ -6514,7 +6554,7 @@ function houseStep(b, dt) {
     if (b.bad >= 3 && b.lvl > 0) { setHouseLevel(b, b.lvl - 1); b.bad = 0; toast(`😟 Ein Haus ist abgestiegen – es fehlte ${miss.map(needName).join(', ')}`, b); }
   }
 }
-const VAL = { stamm: 1, stein: 1, getreide: 1, wasser: 1, lehm: 1, flachs: 1, hopfen: 1, wolle: 1, bretter: 2, mehl: 2, eisenerz: 2, kohle: 2, fisch: 2, schwein: 2, honig: 2, sehne: 2, golderz: 3, brot: 3, schinken: 3, stoff: 3, bier: 3, kruege: 3, ziegel: 3, kerzen: 3, eisenbarren: 4, kleidung: 4, met: 4, kampfstock: 4, muenzen: 5, werkzeug: 6, pfeile: 5, schild: 7, bogen: 7, schwert: 8, karren: 10 };
+const VAL = { milch: 2, raeucherfisch: 3, wurst: 3, kaese: 4, kuchen: 4, stamm: 1, stein: 1, getreide: 1, wasser: 1, lehm: 1, flachs: 1, hopfen: 1, wolle: 1, bretter: 2, mehl: 2, eisenerz: 2, kohle: 2, fisch: 2, schwein: 2, honig: 2, sehne: 2, golderz: 3, brot: 3, schinken: 3, stoff: 3, bier: 3, kruege: 3, ziegel: 3, kerzen: 3, eisenbarren: 4, kleidung: 4, met: 4, kampfstock: 4, muenzen: 5, werkzeug: 6, pfeile: 5, schild: 7, bogen: 7, schwert: 8, karren: 10 };
 let TRADER = { t: 0, here: false };
 function tradeCost(give, take) { return Math.max(1, Math.ceil((VAL[take] || 3) * 1.5 / (VAL[give] || 1))); }
 function marketStep(dt) {
@@ -6642,11 +6682,12 @@ function planNext(b) {
     work(w, 3, 'pull', () => { setCarry(w, 'wasser'); b.status = 'Bringt Wasser nach Hause'; });
     deliver(w, 'wasser', 1); moveTo(w, b.door);
   } else {
+    if (T === 'metzger') b.alt = (stock.wurst || 0) < (stock.schinken || 0) ? 'wurst' : 'schinken';
     if (T === 'imker') b.alt = (stock.kerzen || 0) < (stock.honig || 0) ? 'kerzen' : 'honig';
     if (T === 'toepfer') b.alt = (stock.ziegel || 0) < (stock.kruege || 0) ? 'ziegel' : 'kruege';
     if (T === 'brauerei') b.alt = (b.in.honig || 0) >= 1 && (b.in.wasser || 0) >= 1 && ((stock.met || 0) <= (stock.bier || 0) || !hasIn(b, { getreide: 1, hopfen: 1, wasser: 1 })) ? 'met' : 'bier';
     if (T === 'wirtshaus') { if (b.paused) return idle('Angehalten', 2); return idle((b.in.bier || 0) > 0 ? `Schenkt Bier aus 🍺 (${b.in.bier} Fässer)` : 'Wartet auf Bier', 3); }
-    const rec = { hopfenbauer: [{}, 'hopfen', 1, 6, 'Erntet Hopfen'], schaefer: [{}, 'wolle', 1, 6, 'Schert ein Schaf'], weberei: [{ wolle: 1 }, 'stoff', 1, 6, 'Webt Stoff'], schneider: [{ stoff: 1 }, 'kleidung', 1, 6, 'Näht Kleidung'],
+    const rec = { raeucherei: [{ fisch: 1, stamm: 1 }, 'raeucherfisch', 2, 7, 'Räuchert Fisch'], kuhstall: [{ getreide: 1, wasser: 1 }, 'milch', 2, 6, 'Melkt die Kühe'], kaeserei: [{ milch: 2 }, 'kaese', 1, 7, 'Presst Käse'], konditorei: [{ mehl: 1, milch: 1, honig: 1 }, 'kuchen', 2, 7, 'Backt Kuchen'], hopfenbauer: [{}, 'hopfen', 1, 6, 'Erntet Hopfen'], schaefer: [{}, 'wolle', 1, 6, 'Schert ein Schaf'], weberei: [{ wolle: 1 }, 'stoff', 1, 6, 'Webt Stoff'], schneider: [{ stoff: 1 }, 'kleidung', 1, 6, 'Näht Kleidung'],
       imker: [{}, b.alt || 'honig', 1, 7, b.alt === 'kerzen' ? 'Zieht Kerzen aus Wachs' : 'Erntet Honig'], lehmgrube: [{}, 'lehm', 1, 5, 'Sticht Lehm'], toepfer: [{ lehm: 1 }, b.alt || 'kruege', 1, 6, b.alt === 'ziegel' ? 'Brennt Dachziegel' : 'Dreht Krüge'],
       koehler: [{ stamm: 2 }, 'kohle', 1, 9, 'Brennt Holzkohle im Meiler'], brauerei: b.alt === 'met' ? [{ honig: 1, wasser: 1 }, 'met', 1, 6, 'Setzt Met an'] : [{ getreide: 1, hopfen: 1, wasser: 1 }, 'bier', 2, 6, 'Braut Bier'],
       saegewerk: [{ stamm: 1 }, 'bretter', 2, 4, 'Sägt Bretter'], muehle: [{ getreide: 1 }, 'mehl', 1, 4, 'Mahlt Mehl'], baeckerei: [{ mehl: 1, wasser: 1 }, 'brot', 2, 5, 'Backt Brot'],
@@ -6654,7 +6695,7 @@ function planNext(b) {
       schmelze: [{ eisenerz: 1, kohle: 1 }, 'eisenbarren', 1, 6, 'Schmilzt Eisen'],
       waffenschnitzer: [{ bretter: 1 }, 'kampfstock', 1, 5, 'Schnitzt einen Kampfstock'],
       goldmine: [{ brot: 1 }, 'golderz', 1, 6, 'Baut Gold ab'], muenzpraege: [{ golderz: 1, kohle: 1 }, 'muenzen', 1, 6, 'Prägt Münzen'],
-      metzger: [{ schwein: 1 }, 'schinken', 2, 5, 'Macht Schinken'],
+      metzger: [{ schwein: 1 }, b.alt || 'schinken', 2, 5, b.alt === 'wurst' ? 'Macht Wurst' : 'Macht Schinken'],
       wagner: [{ bretter: 2, eisenbarren: 1 }, 'karren', 1, 9, 'Baut einen Karren'],
       flachsbauer: [{}, 'flachs', 1, 6, 'Erntet Flachs'], seilerei: [{ flachs: 1 }, 'sehne', 1, 5, 'Dreht Sehnen'],
       schmied: [{ eisenbarren: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
@@ -6680,7 +6721,7 @@ function planNext(b) {
 }
 // Arbeitsplätze vor dem Haus: [stehen x, z, schaut zu x, z, Bewegung, Ware in der Hand]
 const WS_REC = { schwert: [{ eisenbarren: 1, kohle: 1 }, 1, 7], schild: [{ bretter: 1, eisenbarren: 1 }, 1, 6], bogen: [{ bretter: 2, sehne: 1 }, 1, 6], pfeile: [{ bretter: 1, eisenbarren: 1 }, 5, 5] };
-const WORKSPOT = { hopfenbauer: [1.2, 2.2, 1.2, 3.0, 'dig', null], brauerei: [1.85, 1.3, 1.85, 0.6, 'push', null], schaefer: [1.6, 2.0, 1.6, 2.8, 'carve', 'wolle'], weberei: [1.75, 1.7, 1.75, 0.9, 'push', null], schneider: [1.7, 1.6, 1.7, 0.9, 'carve', 'stoff'], imker: [1.4, 1.9, 1.4, 2.6, 'carve', null], lehmgrube: [1.3, 2.3, 1.3, 3.0, 'dig', null], toepfer: [1.75, 1.6, 1.75, 0.9, 'carve', 'lehm'], koehler: [1.6, 2.1, 1.6, 2.9, 'dig', 'stamm'], flachsbauer: [1.6, 1.8, 1.6, 3.0, 'dig', null], seilerei: [1.7, 1.5, 1.7, 0.9, 'carve', 'flachs'], schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.95, 1.6, 1.95, 1.0, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
+const WORKSPOT = { raeucherei: [1.75, 1.5, 1.75, 0.8, 'carve', 'fisch'], kuhstall: [1.4, 2.1, 1.4, 2.9, 'carve', null], kaeserei: [1.75, 1.5, 1.75, 0.8, 'push', null], konditorei: [1.75, 1.5, 1.75, 0.8, 'push', 'mehl'], hopfenbauer: [1.2, 2.2, 1.2, 3.0, 'dig', null], brauerei: [1.85, 1.3, 1.85, 0.6, 'push', null], schaefer: [1.6, 2.0, 1.6, 2.8, 'carve', 'wolle'], weberei: [1.75, 1.7, 1.75, 0.9, 'push', null], schneider: [1.7, 1.6, 1.7, 0.9, 'carve', 'stoff'], imker: [1.4, 1.9, 1.4, 2.6, 'carve', null], lehmgrube: [1.3, 2.3, 1.3, 3.0, 'dig', null], toepfer: [1.75, 1.6, 1.75, 0.9, 'carve', 'lehm'], koehler: [1.6, 2.1, 1.6, 2.9, 'dig', 'stamm'], flachsbauer: [1.6, 1.8, 1.6, 3.0, 'dig', null], seilerei: [1.7, 1.5, 1.7, 0.9, 'carve', 'flachs'], schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.95, 1.6, 1.95, 1.0, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
   saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.85, 1.3, -1.85, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.85, 1.5, 1.85, 0.9, 'carve', 'kampfstock'], wagner: [1.75, 1.6, 1.75, 0.9, 'hammer', 'bretter'] };
 function holdFront(w, item) { w.holding = !!item; placeCarry(w, item, 'work'); }
 function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - w.g.position.z); }
@@ -6705,7 +6746,7 @@ function puff(p) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.25, 
 // ---------- UI ----------
 
 const HUD_PIN = ['bretter', 'stein', 'werkzeug', 'muenzen'];
-const HUD_GROUPS = [['🪵', 'Baustoffe', ['stamm', 'bretter', 'stein']], ['🍞', 'Essen', ['brot', 'fisch', 'schinken']], ['🌾', 'Landwirtschaft', ['getreide', 'mehl', 'wasser', 'schwein']], ['⛏️', 'Metall', ['eisenerz', 'kohle', 'eisenbarren', 'werkzeug', 'karren']], ['🪙', 'Gold', ['golderz', 'muenzen']], ['🧺', 'Handwerk', ['hopfen', 'bier', 'honig', 'met', 'kerzen', 'wolle', 'stoff', 'kleidung', 'lehm', 'kruege', 'ziegel']], ['⚔️', 'Waffen', ['flachs', 'sehne', 'kampfstock', 'schwert', 'schild', 'bogen', 'pfeile']]];
+const HUD_GROUPS = [['🪵', 'Baustoffe', ['stamm', 'bretter', 'stein']], ['🍞', 'Essen', ['brot', 'fisch', 'schinken', 'raeucherfisch', 'wurst', 'kaese', 'kuchen']], ['🌾', 'Landwirtschaft', ['getreide', 'mehl', 'wasser', 'schwein', 'milch']], ['⛏️', 'Metall', ['eisenerz', 'kohle', 'eisenbarren', 'werkzeug', 'karren']], ['🪙', 'Gold', ['golderz', 'muenzen']], ['🧺', 'Handwerk', ['hopfen', 'bier', 'honig', 'met', 'kerzen', 'wolle', 'stoff', 'kleidung', 'lehm', 'kruege', 'ziegel']], ['⚔️', 'Waffen', ['flachs', 'sehne', 'kampfstock', 'schwert', 'schild', 'bogen', 'pfeile']]];
 { const known = HUD_GROUPS.flatMap(g => g[2]); const rest = Object.keys(ITEMS).filter(k => !known.includes(k)); if (rest.length) HUD_GROUPS.push(['📦', 'Sonstiges', rest]); HUD_GROUPS.forEach(g => g[2] = g[2].filter(k => ITEMS[k])); }
 let hudHist = [], hudOpen = null, hudLowFood = false;
 function trendOf(k) { const old = hudHist[0]; if (!old || simT - old.t < 5) return ''; const d = stock[k] - (old.s[k] || 0); return d > 0 ? '<i class="up">▲</i>' : d < 0 ? '<i class="dn">▼</i>' : ''; }
@@ -6743,7 +6784,7 @@ function genBuildIcons() {
 genBuildIcons();
 const CATS = [
   { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'foerster', 'saegewerk', 'steinmetz'] },
-  { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger'] },
+  { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger', 'raeucherei', 'kuhstall', 'kaeserei', 'konditorei'] },
   { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
   { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'flachsbauer', 'seilerei', 'waffenschmied', 'kaserne', 'wachturm', 'burg'] },
@@ -6813,7 +6854,7 @@ function selectB(b) {
 }
 // ---------- Berufs-Schilder über den Gebäuden ----------
 const labelBox = document.createElement('div'); labelBox.id = 'labels'; document.body.appendChild(labelBox);
-const JOB = { hopfenbauer: 'Hopfenbauer', brauerei: 'Brauer', wirtshaus: 'Wirt', schaefer: 'Schäfer', weberei: 'Weber', schneider: 'Schneider', imker: 'Imker', lehmgrube: 'Lehmstecher', toepfer: 'Töpfer', koehler: 'Köhler', wohnhaus: 'Wohnhaus', markt: 'Markt', flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', foerster: 'Förster', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Steinbrecher', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
+const JOB = { raeucherei: 'Räucherer', kuhstall: 'Kuhhirt', kaeserei: 'Käser', konditorei: 'Konditor', hopfenbauer: 'Hopfenbauer', brauerei: 'Brauer', wirtshaus: 'Wirt', schaefer: 'Schäfer', weberei: 'Weber', schneider: 'Schneider', imker: 'Imker', lehmgrube: 'Lehmstecher', toepfer: 'Töpfer', koehler: 'Köhler', wohnhaus: 'Wohnhaus', markt: 'Markt', flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', foerster: 'Förster', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Steinbrecher', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
 const _lv = new V3();
 function updatePauseIcons() {
   for (const b of buildings) {
@@ -6851,7 +6892,7 @@ function renderInfo() {
   if (b.type === 'wagner') { const busy = b.working && b.worker && b.worker.queue[0] && b.worker.queue[0].wait; const pr = busy ? Math.min(1, (b.worker.queue[0].el || 0) / b.worker.queue[0].wait) : 0; extra = `Offene Aufträge: <b>${b.orders || 0}</b> · Karren im Lager: ${stock.karren} · Karren unterwegs: ${carriers.filter(c => c.cart).length}<div style="height:8px;background:#0005;border-radius:4px;margin-top:4px"><div style="height:8px;width:${pr * 100}%;background:#e0ac48;border-radius:4px"></div></div>`; }
   if (b.type === 'schweinezucht') extra = 'Schweine: ' + b.fx.pigs.map(p => Math.round(p.growth * 100) + ' %').join(' · ');
   if (b.type === 'wachturm' || b.type === 'burg') extra = `Besatzung ${(b.garrison || []).length}/${capOf(b)} · Gebiet: Radius ${b.type === 'burg' ? 40 : 22}<br>` + (b.garrison || []).map(soldierHTML).join('<br>');
-  if (b.type === 'wohnhaus' && b.progress >= 1) { const L = HOUSE_LV[b.lvl || 0], nx = HOUSE_LV[(b.lvl || 0) + 1]; extra = `<b>${['🛖', '🏠', '🏛️'][b.lvl || 0]} ${L.name}</b> · ${L.people} Träger · Steuern: ${L.tax} 🪙 je Runde<br>Bedarf: ${L.needs.map(k => `${needOk(b, k) ? '✅' : '❌'} ${needIcon(k)} ${needName(k)}`).join('<br>')}<br>Zufriedenheit: ${'⭐'.repeat(b.sat || 0) || '–'}` + (nx ? `<br><small>Aufstieg zum ${nx.name}: 2 Runden voll versorgt${b.lvl === 1 ? ', dazu 2 Dachziegel + Met, Krüge, Kerzen' : ''}</small>` : ''); }
+  if (b.type === 'wohnhaus' && b.progress >= 1) { const L = HOUSE_LV[b.lvl || 0], nx = HOUSE_LV[(b.lvl || 0) + 1]; extra = `<b>${['🛖', '🏠', '🏛️'][b.lvl || 0]} ${L.name}</b> · ${L.people} Träger · Steuern: ${L.tax} 🪙 je Runde<br>Bedarf: ${L.needs.map(k => `${needOk(b, k) ? '✅' : '❌'} ${needIcon(k)} ${needName(k)}`).join('<br>')}<br>Zufriedenheit: ${'⭐'.repeat(b.sat || 0) || '–'}` + (nx ? `<br><small>Aufstieg zum ${nx.name}: 2 Runden voll versorgt${b.lvl === 1 ? ', dazu 2 Dachziegel + Met, Krüge, Kerzen, Kuchen' : b.lvl === 0 ? ' (danach braucht es Räucherfisch oder Wurst, Käse, Bier, Kleidung)' : ''}</small>` : ''); }
   if (b.type === 'markt') { extra = TRADER.here ? '🧑‍💼 <b>Der Händler ist da!</b> Wähle unten, was du tauschen willst.' : '⏳ Der Händler ist unterwegs. Sobald er da ist, kannst du hier tauschen.'; }
   if (b.type === 'wirtshaus') extra = `Bier im Fass: ${b.in.bier || 0} · versorgt ${buildings.filter(h => h.type === 'wohnhaus' && h.progress >= 1 && !h.removed && Math.hypot(h.x - b.x, h.z - b.z) < 25).length} Wohnhäuser im Umkreis`;
   if (b.type === 'kaserne') extra = `Kämpfer hier: ${(b.garrison || []).length}<br>` + (b.garrison || []).map(soldierHTML).join('<br>');
