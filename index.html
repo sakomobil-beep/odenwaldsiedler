@@ -89,8 +89,27 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 .picon{position:fixed;left:0;top:0;z-index:2;pointer-events:none;background:rgba(36,24,14,.85);border:2px solid #e05030;border-radius:50%;padding:4px;box-shadow:0 3px 8px rgba(0,0,0,.45);transform-origin:50% 100%;line-height:0}
 .picon .hand{transform-origin:12px 13.5px;animation:pclk 2s steps(8) infinite}@keyframes pclk{to{transform:rotate(360deg)}}
 #chainwin{max-height:78vh;overflow:auto;width:min(620px,94vw)}#chainwin .chg{margin:8px 0}#chainwin .chr{display:flex;align-items:center;gap:6px;padding:4px 6px;margin:3px 0;border-radius:6px;background:rgba(255,255,255,.06);cursor:pointer;font-size:13px}#chainwin .chr.ok{border-left:4px solid #5c5}#chainwin .chr.warn{border-left:4px solid #eb4}#chainwin .chr.none{border-left:4px solid #d44;opacity:.75}#chainwin .cin{min-width:110px;display:flex;flex-wrap:wrap;gap:2px}#chainwin .cb{flex:1}#chainwin .cb small{display:block;opacity:.75}#chainwin .ci{display:inline-flex;flex-direction:column;align-items:center;line-height:1}#chainwin .ci small{font-size:10px;opacity:.8}#chainwin .car{opacity:.6}
+
+#top{background:linear-gradient(#6b4a2c,#4a3220)!important;border:2px solid #a07a48!important;box-shadow:0 3px 10px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,230,180,.25)!important;padding:4px 8px!important;gap:8px!important;flex-wrap:nowrap}
+#res{flex-wrap:nowrap!important;align-items:center;gap:6px!important;font-size:15px!important;min-width:0}
+#res .pins{display:flex;gap:4px;padding-right:6px;border-right:1px solid rgba(255,220,160,.25)}
+#res .rs{background:rgba(250,235,200,.12)!important;position:relative}#res .rs i{font-style:normal;font-size:9px;margin-left:1px}#res .rs i.up{color:#7f7}#res .rs i.dn{color:#f77}
+#res .ic{width:24px!important;height:24px!important}
+#res .grp{position:relative;cursor:pointer}#res .gh{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:8px;background:rgba(250,235,200,.14);border:1px solid rgba(255,220,160,.2);white-space:nowrap}
+#res .gh small{font-size:11px;opacity:.75}#res .grp.open .gh,#res .grp:hover .gh{background:#d9a23a;color:#2b1e13}
+#res .gdrop{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:30;background:#f3e6c8;color:#3a2614;border:2px solid #a07a48;border-radius:10px;padding:8px;box-shadow:0 6px 18px rgba(0,0,0,.4);min-width:200px;flex-wrap:wrap;gap:4px}
+#res .grp.open .gdrop,#res .grp:hover .gdrop{display:flex}#res .gdrop .gt{width:100%;font-weight:bold;border-bottom:1px solid #c9a978;margin-bottom:3px}#res .gdrop .rs{background:rgba(120,80,30,.12)!important}
+#res .grp.low .gh{background:#c0392b;color:#fff;animation:blink 1s infinite}@keyframes blink{50%{opacity:.45}}
+.hbox{display:flex;align-items:center;gap:6px;padding:2px 8px;border-radius:8px;background:rgba(0,0,0,.18);white-space:nowrap;font-size:14px}.hbox small{opacity:.7;margin-left:3px}
+#clock small{display:block;font-size:10px;line-height:1}#clock{flex-direction:row}
+#spd{gap:2px;padding:2px}#spd button{background:transparent;border:0;border-radius:6px;padding:3px 7px;font-size:15px;color:inherit;cursor:pointer}#spd button.on{background:#d9a23a;color:#2b1e13}
+.tbg{display:flex;gap:0;background:rgba(0,0,0,.18);border-radius:10px;padding:2px}.tbg .tb{margin-left:0!important;background:transparent!important;border:0!important}.tbg .tb.on{background:#d9a23a!important}
+#bellbtn{position:relative}#bellcnt{display:none;position:absolute;top:-5px;right:-5px;background:#c0392b;color:#fff;border-radius:9px;font-size:10px;padding:1px 5px;font-weight:bold}
+#notewin{max-height:70vh;overflow:auto;width:min(460px,94vw)}#notewin .note{padding:5px 7px;margin:3px 0;border-radius:6px;background:rgba(255,255,255,.06);font-size:13px}#notewin .note.go{cursor:pointer}#notewin .note.go:hover{background:rgba(217,162,58,.35)}
+@media (max-width:1100px){#res .gh small,#clock small,.hbox small{display:none}#res .pins .rs:nth-child(n+3){display:none}}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><button id="chainbtn" class="tb" title="Produktionsketten">🔗</button><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
+<div id="top" class="panel"><div id="res"></div><div id="popinfo" class="hbox"></div><div id="clock" class="hbox"></div><div id="spd" class="hbox"><button data-sp="0" title="Pause (Leertaste)">⏸</button><button data-sp="1" class="on" title="Normal (1)">▶</button><button data-sp="2" title="Schnell (2)">⏩</button><button data-sp="4" title="Sehr schnell (3)">⏭</button></div><div class="tbg"><button id="statbtn" class="tb" title="Statistik (T)">📊</button><button id="chainbtn" class="tb" title="Produktionsketten (K)">🔗</button><button id="milbtn" class="tb" title="Militär (M)">⚔️</button></div><div class="tbg"><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus (L)">🏷️</button><button id="sndbtn" class="tb" title="Ton an/aus (V)">🔊</button></div><button id="bellbtn" class="tb" title="Meldungen (N)">🔔<span id="bellcnt"></span></button><button id="menubtn" class="tb" title="Menü (Esc)">☰</button><button id="speed" style="display:none">1×</button></div>
+<div id="notewin" class="panel pop"><button id="closenote" class="x">✕</button><div id="notebody"></div></div><button id="chainbtn" class="tb" title="Produktionsketten">🔗</button><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
 <div id="chainwin" class="panel pop"><button id="closechain" class="x">✕</button><div id="chainbody"></div></div>
 <div id="milwin" class="panel pop"><button id="closemil" class="x">✕</button><div id="milbody"></div></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
@@ -5857,9 +5876,9 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
 function finishBuilding(b) {
   b.g.scale.set(1, 1, 1); if (b.scaffold) scene.remove(b.scaffold);
   if (b.type === 'lager') return;
-  if (b.type === 'bruecke') { markBridge(b); b.status = 'Fertig – Siedler können den Fluss überqueren'; toast('Die Brücke ist fertig!'); return; }
-  if (b.type === 'burg') { b.needsGuard = true; b.status = 'Wartet auf einen Wächter oder Kämpfer'; toast('Burg ist fertig!'); return; }
-  if (b.type === 'wachturm') { b.needsGuard = true; b.status = 'Wartet auf Kampfstock 🏏'; toast('Wachturm ist fertig!'); return; }
+  if (b.type === 'bruecke') { markBridge(b); b.status = 'Fertig – Siedler können den Fluss überqueren'; toast('Die Brücke ist fertig!', b); return; }
+  if (b.type === 'burg') { b.needsGuard = true; b.status = 'Wartet auf einen Wächter oder Kämpfer'; toast('Burg ist fertig!', b); return; }
+  if (b.type === 'wachturm') { b.needsGuard = true; b.status = 'Wartet auf Kampfstock 🏏'; toast('Wachturm ist fertig!', b); return; }
   b.needsWorker = true; b.status = 'Wartet auf Werkzeug 🔨';
   toast(`${TYPES[b.type].name} ist fertig!`);
 }
@@ -6371,8 +6390,23 @@ function puff(p) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.25, 
 
 // ---------- UI ----------
 
+const HUD_PIN = ['bretter', 'stein', 'werkzeug', 'muenzen'];
+const HUD_GROUPS = [['🪵', 'Baustoffe', ['stamm', 'bretter', 'stein']], ['🍞', 'Nahrung', ['getreide', 'mehl', 'wasser', 'brot', 'fisch', 'schwein', 'schinken']], ['⛏️', 'Metall', ['eisenerz', 'kohle', 'eisenbarren', 'werkzeug', 'karren']], ['🪙', 'Gold', ['golderz', 'muenzen']], ['⚔️', 'Waffen', ['flachs', 'sehne', 'kampfstock', 'schwert', 'schild', 'bogen', 'pfeile']]];
+{ const known = HUD_GROUPS.flatMap(g => g[2]); const rest = Object.keys(ITEMS).filter(k => !known.includes(k)); if (rest.length) HUD_GROUPS.push(['📦', 'Sonstiges', rest]); HUD_GROUPS.forEach(g => g[2] = g[2].filter(k => ITEMS[k])); }
+let hudHist = [], hudOpen = null, hudLowFood = false;
+function trendOf(k) { const old = hudHist[0]; if (!old || simT - old.t < 5) return ''; const d = stock[k] - (old.s[k] || 0); return d > 0 ? '<i class="up">▲</i>' : d < 0 ? '<i class="dn">▼</i>' : ''; }
+function hudChip(k) { const it = ITEMS[k]; return `<span class="rs${stock[k] ? '' : ' zero'}" title="${it.name}: ${stock[k]}">${it.icon}<b>${stock[k]}</b>${trendOf(k)}</span>`; }
 function updateHUD() {
-  $('res').innerHTML = Object.entries(ITEMS).map(([k, it]) => `<span class="rs${stock[k] ? '' : ' zero'}" title="${it.name}: ${stock[k]}">${it.icon}<b>${stock[k]}</b></span>`).join('');
+  if (!hudHist.length || simT - hudHist[hudHist.length - 1].t >= 5) { hudHist.push({ t: simT, s: { ...stock } }); while (hudHist.length > 1 && simT - hudHist[1].t >= 30) hudHist.shift(); }
+  const mines = buildings.some(b => TYPES[b.type] && TYPES[b.type].mine && b.progress >= 1 && !b.removed), food = FOODS.reduce((a, f) => a + (stock[f] || 0), 0);
+  hudLowFood = mines && food === 0;
+  let h = `<div class="pins">${HUD_PIN.filter(k => ITEMS[k]).map(hudChip).join('')}</div>`;
+  h += HUD_GROUPS.map(([ic, name, ks], i) => { const sum = ks.reduce((a, k) => a + (stock[k] || 0), 0), low = (i === 1 && hudLowFood); return `<div class="grp${hudOpen === i ? ' open' : ''}${low ? ' low' : ''}" data-g="${i}" title="${name}${low ? ' – kein Essen, Minen stehen still!' : ''}"><span class="gh">${ic}<b>${sum}</b><small>${name}</small></span><div class="gdrop"><div class="gt">${ic} ${name}</div>${ks.map(hudChip).join('')}</div></div>`; }).join('');
+  if (h !== updateHUD.last) { updateHUD.last = h; $('res').innerHTML = h; $('res').querySelectorAll('.grp').forEach(x => { x.onclick = e => { e.stopPropagation(); hudOpen = hudOpen === +x.dataset.g ? null : +x.dataset.g; updateHUD(); }; }); }
+  const pop = workers.filter(w => !w.removed).length, car = carriers.filter(c => !c.removed).length, free = Object.values(POOL).reduce((a, n) => a + n, 0);
+  $('popinfo').innerHTML = `<span title="Arbeiter / Träger / wartend im Lager">👥 <b>${pop}</b><small>/${car}/${free}</small></span><span title="Kämpfer">⚔️ <b>${typeof SOLD !== 'undefined' ? SOLD.length : 0}</b></span>`;
+  const day = 1 + Math.floor((simT + 200) / 600), m = ((simT + 200) % 600) / 600 * 1440, hh = Math.floor(m / 60);
+  $('clock').innerHTML = `${hh >= 6 && hh < 20 ? '☀️' : '🌙'} <b>${String(hh).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}</b><small>Tag ${day}</small>`;
   document.querySelectorAll('#sub button[data-t]').forEach(btn => btn.classList.toggle('no', !canAfford(TYPES[btn.dataset.t].cost)));
 }
 const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).join(' ');
@@ -6504,8 +6538,26 @@ function renderInfo() {
   p_info.innerHTML = `<b>${T.icon} ${T.name}</b><br><small>${T.desc}</small><br>${b.type !== 'lager' ? '➜ ' + b.status + '<br>' : ''}${extra}`;
 }
 const p_info = $('infotext'); $('closeinfo').onclick = () => selectB(null);
-let speed = 1; $('speed').onclick = e => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; e.target.textContent = speed + '×'; };
-let toastT = 0; function toast(m) { const t = $('toast'); t.innerHTML = m; t.style.opacity = 1; toastT = 2.5; }
+let speed = 1;
+function setSpeed(v) { speed = v; $('speed').textContent = v + '×'; document.querySelectorAll('#spd button').forEach(b => b.classList.toggle('on', +b.dataset.sp === v)); }
+document.querySelectorAll('#spd button').forEach(b => b.onclick = () => setSpeed(+b.dataset.sp));
+$('bellbtn').onclick = () => { const m = $('notewin'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; notesUnread = 0; renderNotes(); }; $('closenote').onclick = () => $('notewin').style.display = 'none';
+document.addEventListener('click', () => { if (hudOpen !== null) { hudOpen = null; updateHUD(); } });
+let speedBefore = 1;
+addEventListener('keydown', e => { if (INMENU || paused || e.target.tagName === 'INPUT' || e.ctrlKey || e.altKey) return; const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); if (speed) { speedBefore = speed; setSpeed(0); } else setSpeed(speedBefore || 1); }
+  else if (k === '1') setSpeed(1); else if (k === '2') setSpeed(2); else if (k === '3') setSpeed(4);
+  else if (k === 'k') $('chainbtn').click(); else if (k === 'm') $('milbtn').click(); else if (k === 't') $('statbtn').click(); else if (k === 'l') $('lblbtn').click(); else if (k === 'n') $('bellbtn').click(); else if (k === 'v') $('sndbtn').click(); });
+let toastT = 0; function toast(m, at) { const t = $('toast'); t.innerHTML = m; t.style.opacity = 1; toastT = 2.5; addNote(m, at); }
+const NOTES = []; let notesUnread = 0;
+function addNote(m, at) { if (/^Ton |Schilder|gespeichert/i.test(m)) return; NOTES.unshift({ m, at: at || null, t: simT }); if (NOTES.length > 40) NOTES.pop(); notesUnread++; renderNotes(); }
+function renderNotes() { const c = $('bellcnt'); if (!c) return; c.textContent = notesUnread > 9 ? '9+' : notesUnread; c.style.display = notesUnread ? 'block' : 'none'; const box = $('notebody'); if (!box || $('notewin').style.display !== 'block') return;
+  box.innerHTML = `<h3>🔔 Meldungen</h3>` + (NOTES.length ? NOTES.map((n, i) => `<div class="note${n.at ? ' go' : ''}" data-n="${i}"><small>Tag ${1 + Math.floor((n.t + 200) / 600)}</small> ${n.m}${n.at ? ' <i>📍</i>' : ''}</div>`).join('') : '<i>Keine Meldungen</i>') + (NOTES.length ? '<div class="row"><button id="noteclr">Alle löschen</button></div>' : '');
+  box.querySelectorAll('.note.go').forEach(x => x.onclick = () => { const n = NOTES[+x.dataset.n]; target.set(n.at.x, target.y, n.at.z); });
+  const cl = $('noteclr'); if (cl) cl.onclick = () => { NOTES.length = 0; renderNotes(); }; }
+const noteSeen = new Map();
+function checkProblems() { for (const b of buildings) { if (b.removed || b.progress < 1 || b.paused || !b.status) continue; const bad = /^Wartet auf (?!Auftrag)|Ausgang voll/.test(b.status); if (!bad) { b.probT = 0; continue; } b.probT = (b.probT || 0) + 1; if (b.probT === 30 && noteSeen.get(b) !== b.status) { noteSeen.set(b, b.status); addNote(`${TYPES[b.type].icon} ${TYPES[b.type].name}: ${b.status}`, b); } }
+  if (hudLowFood && !checkProblems.food) { checkProblems.food = true; addNote('🍞 Kein Essen mehr – die Minen stehen still!'); } if (!hudLowFood) checkProblems.food = false; }
 
 // ---------- Kamera & Eingabe ----------
 let yaw = 0.6, pitch = 0.85, dist = innerWidth < innerHeight ? 55 : 40;
@@ -6972,7 +7024,7 @@ const clock = new THREE.Clock(); let infoT = 0, simT = 0, carT = 0;
   if (BOOT && BOOT.mode === 'load') { try { applySave(JSON.parse(localStorage.getItem('odws_save_' + BOOT.id))); ok = true; setTimeout(() => toast('Spielstand geladen – weiter geht\'s!'), 300); } catch (e) { console.error(e); toast('Spielstand konnte nicht geladen werden'); } }
   if (!ok && !INMENU) { addTerritory(0, 0, 32); placeBuilding('lager', 0, 0, 0, true); for (const k of ['bretter', 'stein', 'stamm', 'werkzeug', 'kampfstock']) stock[k] = Math.round(stock[k] * W.start); }
   if (INMENU) { reveal(0, 0, MAP * 1.6); document.body.classList.add('inmenu'); dist = 95; pitch = 0.55; showMain(); }
-  speed = SET.speed; $('speed').textContent = speed + '×';
+  setSpeed(SET.speed || 1);
   refreshPiles(); applyLiveSettings();
   $('loading').style.display = 'none';
 }
@@ -7083,7 +7135,7 @@ function animate() {
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
-  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); }
+  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); checkProblems(); }
   autoT += real; if (SET.autosave && autoT > SET.autosave && !INMENU) { autoT = 0; saveGame(null, true); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
