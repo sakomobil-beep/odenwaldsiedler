@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Odenwald-Siedler – Demo</title>
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Valewright – Baue. Wirtschafte. Herrsche.</title>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:Georgia,serif;-webkit-user-select:none;user-select:none}
 canvas{display:block;touch-action:none}
@@ -124,7 +124,7 @@ body.inmenu #tut{display:none!important}
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div><div id="infobtns"></div></div>
 <div id="toast"></div>
 <div id="loading"><div><div class="spin"></div>Welt wird erzeugt …</div></div>
-<div id="mainmenu"><div class="mmbox"><div class="title">Odenwald-Siedler<small>Ein Aufbauspiel im Odenwald</small></div><div id="mainbtns"></div></div></div>
+<div id="mainmenu"><div class="mmbox"><div class="title">Valewright<small>Baue. Wirtschafte. Herrsche.</small></div><div id="mainbtns"></div></div></div>
 <div id="pausemenu"><div class="pmbox panel"><div class="subhead">⏸ Pause</div><div id="pausebtns"></div></div></div>
 <div id="screen" class="panel"></div>
 <canvas id="mini" width="200" height="200"></canvas>
@@ -4508,7 +4508,7 @@ three/build/three.module.js:
    *)
 */
 </script><script>
-// ===================== Odenwald-Siedler – Spieldemo =====================
+// ===================== Valewright – Spieldemo =====================
 const $ = id => document.getElementById(id);
 const V3 = THREE.Vector3;
 // ---------- Einstellungen & Start-Konfiguration ----------
@@ -7787,7 +7787,7 @@ function applyLiveSettings() {
 }
 function showAbout() {
   openScreen(`<div class="subhead">ℹ️ Über das Spiel</div>
-    <p><b>Odenwald-Siedler</b> (Arbeitstitel) – ein Aufbauspiel im Odenwald. Baue Warenketten auf, versorge deine Bergwerke, erweitere dein Gebiet mit Wachtürmen.</p>
+    <p><b>Valewright</b> – Baue. Wirtschafte. Herrsche. Ein Aufbauspiel im Odenwald. Baue Warenketten auf, versorge deine Bergwerke, erweitere dein Gebiet mit Wachtürmen.</p>
     <h4>Steuerung am PC</h4><p>Linke Maustaste ziehen: Karte verschieben · Rechte Maustaste ziehen: drehen · Mausrad: zoomen<br>Gebäude: Kategorie wählen → Gebäude → Platz anklicken → ✔ Bauen (Enter)<br>R: Gebäude drehen · Esc: abbrechen bzw. Pausenmenü</p>
     <h4>Steuerung am Handy</h4><p>Ein Finger: verschieben · Zwei Finger: zoomen und drehen · Antippen: Gebäude auswählen</p>
     <h4>Tipps</h4><p>Zuerst Holzfäller, Sägewerk und Steinmetz bauen. Jeder Arbeiter braucht ein Werkzeug, Wächter einen Kampfstock. Bergwerke brauchen Brot, Fisch oder Schinken.</p>`, () => { closeScreen(); if (INMENU) showMain(); });
