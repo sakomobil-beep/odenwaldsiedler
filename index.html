@@ -6457,7 +6457,7 @@ const ringMat = new THREE.MeshBasicMaterial({ color: 0x55ff55, transparent: true
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 32).rotateX(-Math.PI / 2), ringMat); ring.visible = false; scene.add(ring);
 function startPlacing(t, keepMove) {
   const mf = moveFrom; cancelPlacing(); if (keepMove) moveFrom = mf; placing = t; ghost = buildModel(t).g;
-  ghost.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; o.castShadow = false; } });
+  ghost.traverse(o => { if (o.isMesh) { const ghostMat = m => { const c = m.clone(); c.transparent = true; c.opacity = 0.55; return c; }; o.material = Array.isArray(o.material) ? o.material.map(ghostMat) : ghostMat(o.material); o.castShadow = false; } });
   scene.add(ghost); ghost.visible = false; ring.scale.setScalar(TYPES[t].r + 0.4);
   $('place').style.display = 'flex'; $('menu').style.display = 'none'; $('sub').style.display = 'none'; selectB(null);
   $('placeinfo').textContent = t === 'strasse' ? 'Straße: Startpunkt anklicken, dann Endpunkt anklicken, dann ✔ Bauen. Danach geht es vom Endpunkt aus weiter. Esc/✕ = fertig.' : `${moveFrom ? 'Umsetzen – ' : ''}${TYPES[t].name}: ${TYPES[t].desc} – Klicke auf einen grünen Platz, dann ✔ Bauen. Neu klicken = anderer Platz, Rechtsklick/✕ = abbrechen.`;
