@@ -5021,9 +5021,13 @@ MOUNTAINS.forEach((m, mi) => { for (let j = 0; j < 3; j++) {
   const g = new THREE.Group(), cm = M(depCol[kind]); for (let k = 0; k < 5; k++) { const c = mesh(new THREE.OctahedronGeometry(0.3 + hash(k, x) * 0.3, 0), cm, (hash(k, 1) - 0.5) * 2, 0.2, (hash(k, 2) - 0.5) * 2); c.scale.y = 1.6; c.rotation.set(hash(k, 3), hash(k, 4) * 6, 0); g.add(c); }
   g.position.set(x, height(x, z), z); scene.add(g); deposits.push({ kind, x, z, g, found: false, extra: true });
 } });
-for (const d of deposits) { const sg = new THREE.Group(); sg.position.set(1.4, 0, 1.2); d.g.add(sg); sg.add(mesh(box(0.08, 1.3, 0.08), M(0x5a3e22), 0, 0.65, 0)); sg.add(mesh(box(0.55, 0.38, 0.05), M(depCol[d.kind]), 0, 1.2, 0.05)); sg.add(mesh(box(0.6, 0.06, 0.06), M(0x5a3e22), 0, 1.42, 0.05)); d.g.visible = false; }
-function markEmpty(p) { const g = new THREE.Group(); g.position.set(p.x, height(p.x, p.z), p.z); g.add(mesh(box(0.06, 0.8, 0.06), M(0x5a3e22), 0, 0.4, 0)); g.add(mesh(box(0.35, 0.25, 0.04), M(0xd8d0c0), 0, 0.75, 0.03)); for (const r of [-0.7, 0.7]) { const x = mesh(box(0.28, 0.04, 0.02), M(0xb03020), 0, 0.75, 0.06); x.rotation.z = r; g.add(x); } scene.add(g); setTimeout(() => scene.remove(g), 90000); }
-function revealDeposit(d, quiet) { d.found = true; d.g.visible = isExplored(d.x, d.z); if (!quiet) toast(`⛏️ Der Rutengänger hat ${{ stein: 'Stein', eisenerz: 'Eisenerz', kohle: 'Kohle', gold: 'Gold' }[d.kind]} gefunden!`, d); }
+for (const d of deposits) d.g.visible = false;
+function markEmpty(p) { const g = new THREE.Group(); g.position.set(p.x, height(p.x, p.z), p.z); { const sp = symSprite(x => { x.strokeStyle = '#b03020'; x.lineWidth = 14; x.beginPath(); x.moveTo(38, 38); x.lineTo(90, 90); x.moveTo(90, 38); x.lineTo(38, 90); x.stroke(); }); sp.scale.setScalar(0.9); sp.position.y = 1.5; g.add(sp); } g.add(mesh(box(0.06, 0.8, 0.06), M(0x5a3e22), 0, 0.4, 0)); g.add(mesh(box(0.35, 0.25, 0.04), M(0xd8d0c0), 0, 0.75, 0.03)); for (const r of [-0.7, 0.7]) { const x = mesh(box(0.28, 0.04, 0.02), M(0xb03020), 0, 0.75, 0.06); x.rotation.z = r; g.add(x); } scene.add(g); setTimeout(() => scene.remove(g), 90000); }
+function symSprite(draw) { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.beginPath(); x.arc(64, 64, 58, 0, 7); x.fillStyle = '#f3e6c8'; x.fill(); x.lineWidth = 8; x.strokeStyle = '#5a3e22'; x.stroke(); draw(x); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Mesh(new THREE.CircleGeometry(0.5, 28), new THREE.MeshBasicMaterial({ map: t, toneMapped: false })); sp.material.map = t; SYMS.push(sp); return sp; }
+const SYMS = [], _symQ = new THREE.Quaternion();
+function depSymbol(d) { if (d.sym) return; const key = { gold: 'golderz' }[d.kind] || d.kind, img = new Image(); const sp = symSprite(() => { }); sp.scale.setScalar(1.6); sp.position.set(0, 3.0, 0); d.g.add(sp); d.sym = sp; const pole = mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.3, 5), M(0x5a3e22), 0, 1.15, 0); d.g.add(pole);
+  img.onload = () => { const c = sp.material.map.image, x = c.getContext('2d'); x.drawImage(img, 20, 18, 88, 88); sp.material.map.needsUpdate = true; }; img.src = (ITEMS[key] && ITEMS[key].img) || ''; }
+function revealDeposit(d, quiet) { d.found = true; depSymbol(d); d.g.visible = isExplored(d.x, d.z); if (!quiet) toast(`⛏️ Der Rutengänger hat ${{ stein: 'Stein', eisenerz: 'Eisenerz', kohle: 'Kohle', gold: 'Gold' }[d.kind]} gefunden!`, d); }
 // ---------- Felsbrocken am Bergfuß ----------
 var boulders = [];
 const boulderIM = new THREE.InstancedMesh(gradGeo(new THREE.DodecahedronGeometry(0.5, 0), 0.7, 1.15, 0.1), new THREE.MeshStandardMaterial({ color: 0x8f877c, vertexColors: true, flatShading: true }), 2500);
@@ -7677,6 +7681,7 @@ function animate() {
   if (INMENU) yaw += real * 0.05;
   if (ghost && placing && placing !== 'bruecke') { ghostShown += (ghostRot - ghostShown) * Math.min(1, real * 12); ghost.rotation.y = ghostShown; }
   tutTick();
+  for (const sp of SYMS) { sp.parent && sp.parent.parent ? sp.quaternion.copy(sp.parent.getWorldQuaternion(_symQ).invert().multiply(camera.quaternion)) : 0; }
   if (ghost && ghost.userData.arrow) { const a = ghost.userData.arrow; a.position.z = (TYPES[placing] ? TYPES[placing].r : 2) + 0.5 + Math.sin(clock.elapsedTime * 4) * 0.12; }
   if (SET.edge && !INMENU && mouseIn && !pointers.size) { const m = 14, k = dist * 0.9 * real; const fw = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), rt = new V3(Math.cos(yaw), 0, -Math.sin(yaw)); if (mouseX < m) target.addScaledVector(rt, -k); if (mouseX > innerWidth - m) target.addScaledVector(rt, k); if (mouseY < m) target.addScaledVector(fw, k); if (mouseY > innerHeight - m) target.addScaledVector(fw, -k); target.x = THREE.MathUtils.clamp(target.x, -MAP + 10, MAP - 10); target.z = THREE.MathUtils.clamp(target.z, -MAP + 10, MAP - 10); }
   waterMat.uniforms.uTime.value = t;
