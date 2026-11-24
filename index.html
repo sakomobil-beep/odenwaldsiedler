@@ -5589,7 +5589,15 @@ function buildModel(type) {
     g = owRathaus(); fx.piles = {}; let i = 0;
     for (const k of Object.keys(ITEMS)) { const pg = new THREE.Group(); pg.position.set(-1.9 + (i % 5) * 0.95, 0.36, -1.3 + Math.floor(i / 5) * 0.95); g.add(pg); fx.piles[k] = pg; i++; }
     crate(g, 2.6, 2.1, 1.1, 0.3); barrel(g, -2.6, 2.1); barrel(g, -2.95, 1.8, 0.9);
-  } else if (type === 'holzfaeller' || type === 'foerster') {
+  } else if (type === 'foerster') {
+    g = H({ w: 1.8, d: 1.9, h1: 1.1, h2: 0.85, roof: OW.gS, dormer: false, frontWin: [0, 1], chimney: false });
+    const fir = (x, z, sc) => { const t = new THREE.Group(); t.position.set(x, 0, z); t.add(mesh(new THREE.CylinderGeometry(0.04 * sc, 0.05 * sc, 0.3 * sc, 6), OW.wood, 0, 0.15 * sc, 0)); t.add(mesh(new THREE.ConeGeometry(0.28 * sc, 0.7 * sc, 7), OW.gS, 0, 0.6 * sc, 0)); g.add(t); };
+    B(g, 1.6, 0.12, 0.9, OW.brown, -1.85, 0.06, 0.6); for (let i = 0; i < 6; i++) fir(-2.4 + (i % 3) * 0.55, 0.4 + Math.floor(i / 3) * 0.45, 0.5 + (i % 3) * 0.12);
+    fir(1.6, -0.6, 1.6); fir(1.75, 0.5, 1.1);
+    const can = new THREE.Group(); can.position.set(0.95, 0, 1.25); g.add(can); can.add(mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.24, 9), OW.blueg, 0, 0.12, 0)); B(can, 0.04, 0.04, 0.3, OW.blueg, 0, 0.2, 0.18, 0.7);
+    const sp = makeItem('werkzeug'); sp.position.set(-0.95, 0.45, 1.05); sp.rotation.set(0.2, 0, -0.25); g.add(sp);
+    signBoard(g, 0.8, 1.05, 1.0, () => { const s = new THREE.Group(); s.add(mesh(box(0.3, 0.22, 0.03), OW.wood)); s.add(mesh(new THREE.ConeGeometry(0.08, 0.17, 6), OW.gS, 0, 0.01, 0.04)); return s; });
+  } else if (type === 'holzfaeller') {
     g = H({ w: 2.0, d: 1.7, h1: 1.0, h2: 1.0, roof: OW.slate, dormer: false, frontWin: [1] });
     logPile(g, -1.75, 0, 4, Math.PI / 2); const blk = mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.45, 9), [OW.wood, mat.plank, mat.plank], 1.55, 0.22, 0.9); g.add(blk);
     const axe = makeItem('werkzeug'); axe.position.set(1.55, 0.52, 0.9); axe.rotation.set(0, 0.3, 1.1); g.add(axe);
@@ -5771,7 +5779,7 @@ function buildModel(type) {
   } else {
     const old = buildModelOld(type); g = old.g; Object.assign(fx, old.fx);
     if (type === 'brunnen') { g.traverse(o => { if (o.isMesh && o.material === mat.stone) o.material = OW.sand; if (o.isMesh && o.material === mat.roof) o.material = OW.tile; if (o.isMesh && o.material === mat.beam) o.material = OW.brown; }); const crank = new THREE.Group(); crank.position.set(0, 1.65, 0); g.add(crank); crank.add(mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.7, 8).rotateZ(Math.PI / 2), M(0x8a6038))); B(crank, 0.04, 0.3, 0.04, OW.iron, 0.9, -0.12, 0); B(crank, 0.04, 0.04, 0.2, OW.iron, 0.9, -0.27, 0.1); barrel(g, 1.0, 0.7, 0.75); }
-    if (TYPES[type] && TYPES[type].mine) { g.traverse(o => { if (o.isMesh && o.material === mat.trunk) o.material = OW.brown; }); sandArch(g, 0, 1.55, 0.88, 0.8); const lamp = new THREE.Group(); lamp.position.set(0.95, 1.45, 1.0); g.add(lamp); B(lamp, 0.12, 0.16, 0.12, OW.lamp || DM.lamp, 0, 0, 0); const hf = new THREE.Group(); hf.position.set(-1.9, 0, 1.2); g.add(hf);
+    if (TYPES[type] && TYPES[type].mine) { g.traverse(o => { if (o.isMesh && o.material === mat.trunk) o.material = OW.brown; }); sandArch(g, 0, 1.55, 0.88, 0.8); { const outK = { steinmine: 'stein', kohlemine: 'kohle', eisenmine: 'eisenerz', goldmine: 'golderz' }[type]; const em = { steinmine: 0x9a9a9a, kohlemine: 0x222222, eisenmine: 0x9a4a2a, goldmine: 0xe0b040 }[type]; if (em) { const fl = new THREE.Group(); fl.position.set(1.9, 0, 0.4); g.add(fl); B(fl, 0.06, 1.6, 0.06, OW.brown, 0, 0.8, 0); B(fl, 0.5, 0.32, 0.03, M(em), 0.27, 1.42, 0); } if (outK) { const pile = new THREE.Group(); pile.position.set(0.8, 0, 1.9); g.add(pile); for (let i = 0; i < 4; i++) { const it = makeItem(outK); it.position.set((i % 2) * 0.35 - 0.17, 0.12 + Math.floor(i / 2) * 0.2, 0); pile.add(it); } } } const lamp = new THREE.Group(); lamp.position.set(0.95, 1.45, 1.0); g.add(lamp); B(lamp, 0.12, 0.16, 0.12, OW.lamp || DM.lamp, 0, 0, 0); const hf = new THREE.Group(); hf.position.set(-1.9, 0, 1.2); g.add(hf);
       for (const sx of [-1, 1]) { const l = B(hf, 0.14, 3.2, 0.14, OW.brown, sx * 0.55, 1.55, 0); l.rotation.z = -sx * 0.12; const st = B(hf, 0.1, 2.4, 0.1, OW.brown, sx * 0.4, 1.1, 0.9); st.rotation.x = -0.4; }
       for (const y of [0.9, 1.8]) B(hf, 1.2 - y * 0.12, 0.08, 0.08, OW.brown, 0, y, 0);
       for (const s2 of [-1, 1]) { const x = B(hf, 0.06, 1.0, 0.06, OW.brown, 0, 1.35, 0); x.rotation.z = s2 * 0.7; }
