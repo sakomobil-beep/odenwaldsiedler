@@ -4604,6 +4604,7 @@ function makeWorld(cfg) {
 }
 function useWorld(w) { SEED = w.seed; RIVP = w.rivp; RIVX = w.rivx; HILLA = w.hilla; MAPV = w.map; MOUNTAINS = w.mountains; LAKES = w.lakes; }
 const W = makeWorld(CFG); useWorld(W);
+const TF = { gemuetlich: 1.4, normal: 1, schnell: 0.5 }[CFG.tempo] || 1, WORKF = 2.5 * TF;
 const MAP = W.map; // Karte reicht von -MAP bis +MAP
 function mountain(x, z) {
   let h = 0;
@@ -5201,9 +5202,9 @@ const TYPES = {
   muehle: { name: 'Mühle', icon: '🌬️', cost: { bretter: 5, stein: 3 }, r: 2, desc: '1 Getreide → 1 Mehl' },
   brunnen: { name: 'Brunnen', icon: '🪣', cost: { bretter: 1, stein: 3 }, r: 1.3, desc: 'Schöpft Wasser.' },
   baeckerei: { name: 'Bäckerei', icon: '🍞', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Mehl + 1 Wasser → 2 Brot' },
-  steinmine: { name: 'Steinbergwerk', icon: '⛰️', cost: { bretter: 4 }, r: 1.6, mine: 'stein', desc: 'Im Gebirge am grauen Vorkommen. 1 Brot, Fisch oder Schinken → 2 Steine' },
-  eisenmine: { name: 'Eisenmine', icon: '🟤', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'eisenerz', desc: 'Im Gebirge am roten Vorkommen. 1 Brot, Fisch oder Schinken → 2 Eisenerz' },
-  kohlemine: { name: 'Kohlemine', icon: '⚫', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'kohle', desc: 'Im Gebirge am schwarzen Vorkommen. 1 Brot, Fisch oder Schinken → 2 Kohle' },
+  steinmine: { name: 'Steinbergwerk', icon: '⛰️', cost: { bretter: 4 }, r: 1.6, mine: 'stein', desc: 'Im Gebirge am grauen Vorkommen. 1 Brot, Fisch oder Schinken → 1 Stein' },
+  eisenmine: { name: 'Eisenmine', icon: '🟤', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'eisenerz', desc: 'Im Gebirge am roten Vorkommen. 1 Brot, Fisch oder Schinken → 1 Eisenerz' },
+  kohlemine: { name: 'Kohlemine', icon: '⚫', cost: { bretter: 4, stein: 1 }, r: 1.6, mine: 'kohle', desc: 'Im Gebirge am schwarzen Vorkommen. 1 Brot, Fisch oder Schinken → 1 Kohle' },
   schweinezucht: { name: 'Schweinezucht', icon: '🐖', cost: { bretter: 5, stein: 1 }, r: 2.9, desc: 'Füttert Ferkel mit Getreide + Wasser, bis sie groß sind → Schwein' },
   metzger: { name: 'Metzger', icon: '🍖', cost: { bretter: 4, stein: 2 }, r: 2.1, desc: '1 Schwein → 2 Schinken (Essen für die Bergwerke)' },
   fischer: { name: 'Fischer', icon: '🎣', cost: { bretter: 3 }, r: 1.6, desc: 'Am Ufer von Fluss oder See. Fängt Fische – Essen für die Bergwerke.' },
@@ -5212,7 +5213,7 @@ const TYPES = {
   wagner: { name: 'Wagner', icon: '🛒', cost: { bretter: 5, stein: 2 }, r: 2.3, desc: 'Baut auf Auftrag Karren (2 Bretter + 1 Eisenbarren). Träger mit Karren tragen 4 Waren auf einmal.' },
   waffenschnitzer: { name: 'Waffenschnitzer', icon: '🏏', cost: { bretter: 3, stein: 1 }, r: 2.1, desc: '1 Brett → 1 Kampfstock' },
   wachturm: { name: 'Wachturm', icon: '🗼', cost: { bretter: 5, stein: 4 }, r: 1.6, desc: 'Ein Wächter mit Kampfstock zieht ein und erweitert dein Gebiet.' },
-  goldmine: { name: 'Goldmine', icon: '🟡', cost: { bretter: 5, stein: 2 }, r: 1.6, mine: 'gold', desc: 'Im Gebirge am gelben Vorkommen. 1 Brot, Fisch oder Schinken → 2 Golderz' },
+  goldmine: { name: 'Goldmine', icon: '🟡', cost: { bretter: 5, stein: 2 }, r: 1.6, mine: 'gold', desc: 'Im Gebirge am gelben Vorkommen. 1 Brot, Fisch oder Schinken → 1 Golderz' },
   muenzpraege: { name: 'Münzprägerei', icon: '🪙', cost: { bretter: 4, stein: 5 }, r: 2.2, desc: '1 Golderz + 1 Kohle → 1 Münze (für Handel und bessere Wächter)' },
   schmied: { name: 'Werkzeugschmied', icon: '🔨', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Eisenbarren → 1 Werkzeug' },
 };
@@ -6008,7 +6009,7 @@ function siteStep(b, dt) {
     const p = new V3(b.x + Math.sin(a) * r, 0, b.z + Math.cos(a) * r);
     moveTo(w, p); w.queue.push({ fn: () => faceTo(w, b) }); work(w, 2.5 + Math.random() * 2, b.progress < 0.12 ? 'dig' : 'hammer', null);
   }
-  if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) b.progress = Math.min(1, b.progress + dt / (10 + TYPES[b.type].r * 3));
+  if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) b.progress = Math.min(1, b.progress + dt / ((30 + TYPES[b.type].r * 9) * TF));
   const p = b.progress;
   b.status = b.builderAt ? (PHASES.find(([t]) => p < t) || PHASES[3])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
   // sichtbarer Aufbau: unterhalb der Ebene sichtbar, oben abgeschnitten
@@ -6020,7 +6021,7 @@ function siteStep(b, dt) {
 
 // ---------- Arbeits-Abläufe ----------
 function moveTo(w, p) { w.queue.push({ to: new V3(p.x, 0, p.z) }); }
-function work(w, t, anim, onDone) { w.queue.push({ wait: t, anim, fn: onDone }); }
+function work(w, t, anim, onDone) { w.queue.push({ wait: t * WORKF, anim, fn: onDone }); }
 function doFn(w, f) { w.queue.push({ fn: f }); }
 const near = (p, r = 1.4) => { const d = new V3(p.x - lagerDoor().x, 0, p.z - lagerDoor().z); return p; };
 function approach(target, from, dist) { const d = new V3(from.x - target.x, 0, from.z - target.z); if (d.length() < 0.01) d.set(1, 0, 0); d.setLength(dist); return new V3(target.x + d.x, 0, target.z + d.z); }
@@ -6109,10 +6110,10 @@ function planNext(b) {
     deliver(w, 'wasser', 1); moveTo(w, b.door);
   } else {
     const rec = { saegewerk: [{ stamm: 1 }, 'bretter', 2, 4, 'Sägt Bretter'], muehle: [{ getreide: 1 }, 'mehl', 1, 4, 'Mahlt Mehl'], baeckerei: [{ mehl: 1, wasser: 1 }, 'brot', 2, 5, 'Backt Brot'],
-      steinmine: [{ brot: 1 }, 'stein', 2, 6, 'Arbeitet im Stollen'], eisenmine: [{ brot: 1 }, 'eisenerz', 2, 6, 'Baut Eisenerz ab'], kohlemine: [{ brot: 1 }, 'kohle', 2, 6, 'Baut Kohle ab'],
+      steinmine: [{ brot: 1 }, 'stein', 1, 6, 'Arbeitet im Stollen'], eisenmine: [{ brot: 1 }, 'eisenerz', 1, 6, 'Baut Eisenerz ab'], kohlemine: [{ brot: 1 }, 'kohle', 1, 6, 'Baut Kohle ab'],
       schmelze: [{ eisenerz: 1, kohle: 1 }, 'eisenbarren', 1, 6, 'Schmilzt Eisen'],
       waffenschnitzer: [{ bretter: 1 }, 'kampfstock', 1, 5, 'Schnitzt einen Kampfstock'],
-      goldmine: [{ brot: 1 }, 'golderz', 2, 6, 'Baut Gold ab'], muenzpraege: [{ golderz: 1, kohle: 1 }, 'muenzen', 1, 6, 'Prägt Münzen'],
+      goldmine: [{ brot: 1 }, 'golderz', 1, 6, 'Baut Gold ab'], muenzpraege: [{ golderz: 1, kohle: 1 }, 'muenzen', 1, 6, 'Prägt Münzen'],
       metzger: [{ schwein: 1 }, 'schinken', 2, 5, 'Macht Schinken'],
       wagner: [{ bretter: 2, eisenbarren: 1 }, 'karren', 1, 9, 'Baut einen Karren'],
       schmied: [{ eisenbarren: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
@@ -6610,9 +6611,9 @@ let autoT = 0;
 // ---------- Menüs ----------
 const fmtDate = t => new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
 const fmtTime = s => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return h ? `${h} Std. ${m} Min.` : `${m} Min.`; };
-const LBL = { size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' } };
-const LBLN = { size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial' };
-let NEWCFG = Object.assign({ size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
+const LBL = { size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, tempo: { gemuetlich: 'Gemütlich', normal: 'Normal', schnell: 'Schnell' } };
+const LBLN = { size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial', tempo: '⏳ Spieltempo' };
+let NEWCFG = Object.assign({ size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
 function openScreen(html, back) { const s = $('screen'); s.innerHTML = `<button class="x" id="scrback">✕</button>` + html; s.style.display = 'block'; $('scrback').onclick = back || closeScreen; return s; }
 function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('mainmenu').style.display = 'flex'; else if (paused) showPause(); }
 function showMain() {
@@ -6793,19 +6794,19 @@ function step(dt) {
     if (!walking && w.carrying && w.arm2 && !(w.queue[0] && w.queue[0].anim)) { const cs = w.carryStyle; if (cs === 'shoulder') { w.arm.rotation.x = -2.9; w.arm.rotation.z = 0.25; } else if (cs === 'back') { w.arm.rotation.x = w.arm2.rotation.x = -2.6; } else if (cs === 'front') { w.arm.rotation.x = w.arm2.rotation.x = -1.15; } else if (cs === 'hand') w.arm.rotation.x = -0.15; }
   }
   // Felder wachsen (~35 s)
-  for (const b of buildings) for (const p of b.plots) if (p.state === 'wächst') { p.growth = Math.min(1, p.growth + dt / 35); if (p.growth >= 1) p.state = 'reif'; updatePlot(p); }
+  for (const b of buildings) for (const p of b.plots) if (p.state === 'wächst') { p.growth = Math.min(1, p.growth + dt / (75 * TF)); if (p.growth >= 1) p.state = 'reif'; updatePlot(p); }
   // Bäume: fallen & wachsen (~60 s)
   let tDirty = false;
   for (let i = trees.length - 1; i >= 0; i--) {
     const t = trees[i];
     if (t.falling) { if (t.falling < 0.75 && t.falling + dt >= 0.75) play('crash', t.x, t.z, 1);
       t.falling += dt; t.fallA = Math.min(Math.PI / 2, t.falling * t.falling * 2.2); if (t.falling > 1.8) t.shrink = Math.max(0.01, 1 - (t.falling - 1.8) / 0.8); if (t.falling > 2.6) { removeTree(t); addStump(t.x, t.z, t.size); continue; } updTree(t); tDirty = true; }
-    else if (t.growth < 1) { t.growth = Math.min(1, t.growth + dt / 60); updTree(t); tDirty = true; }
+    else if (t.growth < 1) { t.growth = Math.min(1, t.growth + dt / (210 * TF)); updTree(t); tDirty = true; }
   }
   if (tDirty) treesDirty();
   // Fische: wachsen nach, springen
   for (const f of fishSpots) {
-    if (f.amount < f.max) { f.regen += dt; if (f.regen > 30) { f.regen = 0; f.amount++; } }
+    if (f.amount < f.max) { f.regen += dt; if (f.regen > 90 * TF) { f.regen = 0; f.amount++; } }
     const k = f.amount / f.max; f.rings.forEach((r, i) => { const ph = (simT * 0.5 + i * 0.5) % 1; r.scale.setScalar(0.4 + ph * 1.6 * (0.3 + k)); r.material.opacity = 0.45 * (1 - ph) * (k > 0 ? 1 : 0); });
     f.jump -= dt; if (f.jump < 0 && f.amount > 0) { f.jump = 3 + Math.random() * 6; f.jt = 0; f.fish.visible = true; f.ja = Math.random() * 6; }
     if (f.fish.visible) { f.jt += dt; const u = f.jt / 0.8; f.fish.position.set(Math.cos(f.ja) * (u - 0.5) * 1.2, Math.sin(u * Math.PI) * 0.9, Math.sin(f.ja) * (u - 0.5) * 1.2); f.fish.rotation.set(0, -f.ja, (0.5 - u) * 2); if (u >= 1) f.fish.visible = false; }
