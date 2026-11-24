@@ -8151,6 +8151,16 @@ const MISSIONS = [
       { icon: '🏰', t: 'Haupthaus des Grafen erobert', v: () => (simT > 30 && !AIS.length) ? 1 : 0, n: 1 },
     ],
     win: 'Das Banner des Grafen ist gefallen! Das Tal gehört nun ganz dir – und dein Name wird in den Dörfern des Odenwalds mit Respekt genannt.' },
+  { id: 3, name: 'Gold aus den Bergen', icon: '💰',
+    story: 'Der Graf von Rabeneck hat seine Niederlage nicht vergessen. Er hat sich mit dem reichen Fürsten von Hohenstein-Mümling verbündet – gemeinsam wollen sie dich aus dem Tal vertreiben.<br><br>In den Bergen glänzt Golderz. Prägt deine Siedlung eigene Münzen, wächst sie zu einer stolzen Stadt mit Fachwerkhäusern. Stelle ein starkes Heer auf und besiege beide Gegner.',
+    cfg: { modus: 'kampf', ki: '2', kistufe: 'mittel', unlock: 'normal', size: 'gross', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 2611 },
+    goals: [
+      { icon: '💰', t: '50 Münzen auf Lager', v: () => stock.muenzen || 0, n: 50 },
+      { icon: '🏠', t: 'Erstes zufriedenes Fachwerkhaus', v: () => UNL >= 3 ? 1 : 0, n: 1 },
+      { icon: '⚔️', t: '20 Soldaten ausgebildet', v: () => SOLD.length, n: 20 },
+      { icon: '🏰', t: 'Beide Gegner besiegt', v: () => (simT > 30 && !AIS.length) ? 1 : 0, n: 1 },
+    ],
+    win: 'Rabeneck und Hohenstein-Mümling haben sich ergeben. Mit vollen Schatzkammern und starken Mauern ist deine Siedlung zur mächtigsten Stadt im Odenwald geworden.' },
 ];
 const MIS_DONE = (() => { try { return JSON.parse(localStorage.getItem('odws_mis') || '{}'); } catch (e) { return {}; } })();
 function showMissions() {
