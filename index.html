@@ -5979,7 +5979,20 @@ function startSite(b) {
   // Baugrube / Fundamentfläche
   const r = Math.max(1.2, T.r);
   b.site = new THREE.Group(); b.site.position.set(b.x, height(b.x, b.z), b.z); b.site.rotation.y = b.rot; scene.add(b.site);
-  b.site.add(mesh(new THREE.CylinderGeometry(r + 0.4, r + 0.5, 0.06, 18), M(0x7a5a3a), 0, 0.02, 0));
+  // Fundament: Sandsteinquader, die Stück für Stück gesetzt werden
+  const lb = new THREE.Box3().setFromObject(g), fw = Math.max(1, (lb.max.x - lb.min.x) * 0.92), fd = Math.max(1, (lb.max.z - lb.min.z) * 0.92);
+  const inv = new THREE.Matrix4().makeRotationY(-b.rot), cc = new V3(); lb.getCenter(cc); cc.sub(g.position).applyMatrix4(inv); const ex = new V3(lb.max.x - lb.min.x, 0, lb.max.z - lb.min.z).applyMatrix4(inv);
+  const FW = Math.min(Math.abs(ex.x), T.r * 2.2) * 0.9, FD = Math.min(Math.abs(ex.z), T.r * 2.2) * 0.9;
+  b.found = []; const nx = Math.max(2, Math.round(FW / 0.5)), nz = Math.max(2, Math.round(FD / 0.5));
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) { const edge = i === 0 || j === 0 || i === nx - 1 || j === nz - 1; const st = mesh(box(FW / nx * 0.96, edge ? 0.26 : 0.18, FD / nz * 0.96), (i + j) % 2 ? OW.sand : OW.sand3, -FW / 2 + (i + 0.5) * FW / nx, edge ? 0.13 : 0.09, -FD / 2 + (j + 0.5) * FD / nz); st.visible = false; st.userData.order = (edge ? 0 : 1) + Math.random() * 0.5; b.site.add(st); b.found.push(st); }
+  b.found.sort((a, c) => a.userData.order - c.userData.order);
+  // Holzgerippe (Ständer & Rähm), das vor den Wänden steht
+  b.frame = new THREE.Group(); b.site.add(b.frame); const FH = Math.min(2.2, (b.siteY1 - b.siteY0) * 0.55);
+  for (let i = 0; i <= 3; i++) for (const sz of [-1, 1]) b.frame.add(mesh(box(0.12, FH, 0.12), OW.brown, -FW / 2 + i * FW / 3, 0.26 + FH / 2, sz * FD / 2));
+  for (const sx of [-1, 1]) b.frame.add(mesh(box(0.12, FH, 0.12), OW.brown, sx * FW / 2, 0.26 + FH / 2, 0));
+  for (const sz of [-1, 1]) b.frame.add(mesh(box(FW + 0.1, 0.12, 0.12), OW.brown, 0, 0.26 + FH, sz * FD / 2));
+  for (const sx of [-1, 1]) b.frame.add(mesh(box(0.12, 0.12, FD + 0.1), OW.brown, sx * FW / 2, 0.26 + FH, 0));
+  b.frame.children.forEach((m, i) => { m.visible = false; m.userData.i = i; });
   // Gerüst: Stangen, Querriegel, Laufbretter – wächst mit
   b.scaf = new THREE.Group(); b.site.add(b.scaf);
   const H = Math.max(2, b.siteY1 - b.siteY0 + 0.3), poles = [];
@@ -5997,7 +6010,7 @@ function endSite(b) {
   if (b.site) scene.remove(b.site); b.site = null;
   if (b.builder) { const w = b.builder; w.queue.length = 0; w.home = null; moveTo(w, lagerDoor(b.x, b.z)); w.queue.push({ fn: () => { w.removed = true; scene.remove(w.g); } }); b.builder = null; }
 }
-const PHASES = [[0.12, 'Fundament wird gelegt'], [0.4, 'Balken werden aufgestellt'], [0.75, 'Wände werden gemauert'], [1.01, 'Dach wird gedeckt']];
+const PHASES = [[0.15, 'Fundament wird gelegt'], [0.35, 'Holzgerüst wird aufgestellt'], [0.75, 'Wände werden hochgezogen'], [1.01, 'Dach wird gedeckt']];
 function siteStep(b, dt) {
   if (b.needsBuilder && !b.builder) {
     const w = makeWorker('bauarbeiter'); const l = nearestLager(b.x, b.z); w.g.position.copy(l.door); w.home = null; workers.push(w); b.builder = w; b.needsBuilder = false;
@@ -6007,13 +6020,15 @@ function siteStep(b, dt) {
   if (b.builderAt && w && !w.queue.length) { // um die Baustelle herumgehen und arbeiten
     const r = TYPES[b.type].r + 0.75, a = (b.spot = ((b.spot || 0) + 1 + Math.floor(Math.random() * 2)) % 6) / 6 * Math.PI * 2 + b.rot;
     const p = new V3(b.x + Math.sin(a) * r, 0, b.z + Math.cos(a) * r);
-    moveTo(w, p); w.queue.push({ fn: () => faceTo(w, b) }); work(w, 2.5 + Math.random() * 2, b.progress < 0.12 ? 'dig' : 'hammer', null);
+    moveTo(w, p); w.queue.push({ fn: () => faceTo(w, b) }); work(w, 1 + Math.random() * 0.8, b.progress < 0.15 ? 'dig' : 'hammer', null);
   }
   if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) b.progress = Math.min(1, b.progress + dt / ((30 + TYPES[b.type].r * 9) * TF));
   const p = b.progress;
   b.status = b.builderAt ? (PHASES.find(([t]) => p < t) || PHASES[3])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
   // sichtbarer Aufbau: unterhalb der Ebene sichtbar, oben abgeschnitten
-  if (b.clip) { const k = p < 0.12 ? p / 0.12 * 0.08 : 0.08 + (p - 0.12) / 0.88 * 0.92; b.clip.constant = b.siteY0 + (b.siteY1 - b.siteY0) * k + 0.01; }
+  if (b.found) { const nf = Math.ceil(b.found.length * Math.min(1, p / 0.15)); b.found.forEach((st, i) => st.visible = i < nf && p < 0.5); }
+  if (b.frame) { const fp = (p - 0.15) / 0.2, n = b.frame.children.length; b.frame.children.forEach((m, i) => m.visible = p < 0.6 && fp * n > i); }
+  if (b.clip) { const k = p < 0.35 ? -0.02 : (p - 0.35) / 0.65; b.clip.constant = b.siteY0 + (b.siteY1 - b.siteY0) * k + 0.01; }
   if (b.scaf) { b.scaf.scale.y = Math.max(0.05, Math.min(1, p * 1.25)); b.scafLevels.forEach((lv, i) => lv.visible = p > 0.25 + i * 0.22); if (p > 0.93) b.scaf.visible = Math.random() > (p - 0.93) * 12; }
   if (b.matPile) { const left = Math.ceil(b.matPile.length * (1 - p)); b.matPile.forEach((m, i) => m.visible = i < left); }
   if (p >= 1) { b.builderAt = false; endSite(b); finishBuilding(b); }
