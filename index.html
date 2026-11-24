@@ -5298,7 +5298,7 @@ const TYPES = {
   raeucherei: { name: 'Räucherei', icon: '🐟', cost: { bretter: 3, stein: 2 }, r: 2.1, desc: '1 Fisch + 1 Baumstamm → 2 Räucherfisch' },
   kuhstall: { name: 'Kuhstall', icon: '🐄', cost: { bretter: 4, stein: 1 }, r: 2.4, desc: '1 Getreide + 1 Wasser → 2 Milch' },
   kaeserei: { name: 'Käserei', icon: '🧀', cost: { bretter: 3, stein: 2 }, r: 2.0, desc: '2 Milch → 1 Käse' },
-  konditorei: { name: 'Konditorei', icon: '🥧', cost: { bretter: 3, stein: 3 }, r: 2.0, desc: '1 Mehl + 1 Milch + 1 Honig → 2 Kuchen' },
+  konditorei: { name: 'Konditorei', icon: '🥧', cost: { bretter: 3, stein: 3 , muenzen: 2}, r: 2.0, desc: '1 Mehl + 1 Milch + 1 Honig → 2 Kuchen' },
   hopfenbauer: { name: 'Hopfenbauer', icon: '🌱', cost: { bretter: 3 }, r: 2.1, desc: 'Baut Hopfen an → Hopfen (für Bier)' },
   brauerei: { name: 'Brauerei', icon: '🍺', cost: { bretter: 4, stein: 2 }, r: 2.2, desc: 'Getreide + Hopfen + Wasser → 2 Bier · Honig + Wasser → Met' },
   wirtshaus: { name: 'Wirtshaus', icon: '🍻', cost: { bretter: 5, stein: 3 }, r: 2.3, desc: 'Schenkt Bier aus – versorgt Wohnhäuser im Umkreis von 25 Schritten' },
@@ -5313,15 +5313,15 @@ const TYPES = {
   markt: { name: 'Marktplatz', icon: '🏪', cost: { bretter: 6, stein: 4 }, r: 2.6, desc: 'Ein Händler kommt regelmäßig vorbei und tauscht deine Überschüsse' },
   flachsbauer: { name: 'Flachsbauer', icon: '🌿', cost: { bretter: 3 }, r: 2.0, desc: 'Baut Flachs an → Flachs' },
   seilerei: { name: 'Seilerei', icon: '🧵', cost: { bretter: 3, stein: 1 }, r: 2.0, desc: '1 Flachs → 1 Sehne (für Bögen)' },
-  waffenschmied: { name: 'Waffenschmied', icon: '🗡️', cost: { bretter: 4, stein: 4 }, r: 2.3, desc: 'Auf Auftrag: Schwert, Schild' },
-  bogenbauer: { name: 'Bogenbauer', icon: '🏹', cost: { bretter: 3, stein: 1 }, r: 2.1, desc: '2 Bretter + 1 Sehne → 1 Bogen · 1 Brett + 1 Eisenbarren → 5 Pfeile (Vorrat bis 6 Bögen und 30 Pfeile)' },
-  kaserne: { name: 'Kaserne', icon: '🏰', cost: { bretter: 8, stein: 8 }, r: 3.0, desc: 'Bildet Schwertkämpfer und Bogenschützen aus, befördert mit Münzen' },
-  burg: { name: 'Burg', icon: '🏯', cost: { bretter: 14, stein: 20, eisenbarren: 2 }, r: 3.2, desc: 'Großes Gebiet (Radius 40), Platz für 6 Kämpfer' },
+  waffenschmied: { name: 'Waffenschmied', icon: '🗡️', cost: { bretter: 4, stein: 4 , muenzen: 3}, r: 2.3, desc: 'Auf Auftrag: Schwert, Schild' },
+  bogenbauer: { name: 'Bogenbauer', icon: '🏹', cost: { bretter: 3, stein: 1 , muenzen: 2}, r: 2.1, desc: '2 Bretter + 1 Sehne → 1 Bogen · 1 Brett + 1 Eisenbarren → 5 Pfeile (Vorrat bis 6 Bögen und 30 Pfeile)' },
+  kaserne: { name: 'Kaserne', icon: '🏰', cost: { bretter: 8, stein: 8 , ziegel: 4}, r: 3.0, desc: 'Bildet Schwertkämpfer und Bogenschützen aus, befördert mit Münzen' },
+  burg: { name: 'Burg', icon: '🏯', cost: { bretter: 14, stein: 20, eisenbarren: 2 , ziegel: 6}, r: 3.2, desc: 'Großes Gebiet (Radius 40), Platz für 6 Kämpfer' },
   wagner: { name: 'Wagner', icon: '🛒', cost: { bretter: 5, stein: 2 }, r: 2.3, desc: 'Baut auf Auftrag Karren (2 Bretter + 1 Eisenbarren). Träger mit Karren tragen 4 Waren auf einmal.' },
   waffenschnitzer: { name: 'Waffenschnitzer', icon: '🏏', cost: { bretter: 3, stein: 1 }, r: 2.1, desc: '1 Brett → 1 Kampfstock' },
   wachturm: { name: 'Wachturm', icon: '🗼', cost: { bretter: 5, stein: 4 }, r: 1.6, desc: 'Ein Wächter mit Kampfstock zieht ein und erweitert dein Gebiet.' },
   goldmine: { name: 'Goldmine', icon: '🟡', cost: { bretter: 5, stein: 2 }, r: 1.6, mine: 'gold', desc: 'Im Gebirge am gelben Vorkommen. 1 Brot, Fisch oder Schinken → 1 Golderz' },
-  muenzpraege: { name: 'Münzprägerei', icon: '🪙', cost: { bretter: 4, stein: 5 }, r: 2.2, desc: '1 Golderz + 1 Kohle → 1 Münze (für Handel und bessere Wächter)' },
+  muenzpraege: { name: 'Münzprägerei', icon: '🪙', cost: { bretter: 4, stein: 5 , muenzen: 2}, r: 2.2, desc: '1 Golderz + 1 Kohle → 1 Münze (für Handel und bessere Wächter)' },
   schmied: { name: 'Werkzeugschmied', icon: '🔨', cost: { bretter: 4, stein: 3 }, r: 2.3, desc: '1 Eisenbarren → 1 Werkzeug' },
 };
 function buildModelOld(type) {
@@ -6344,7 +6344,7 @@ function siteStep(b, dt) {
   if (lv && b.progress > 0) { b.flat.k = 1; updateFlat(b.flat); }
   else if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) {
     if (lv) { b.flat.k = Math.min(1, b.flat.k + dt / (12 * TF)); updateFlat(b.flat); if (b.outPile) b.outPile.position.y = height(b.outPile.position.x, b.outPile.position.z); if (b.flat.k >= 1) grassDirty = true; }
-    else b.progress = Math.min(1, b.progress + dt / ((30 + TYPES[b.type].r * 9) * TF));
+    else b.progress = Math.min(1, b.progress + dt * (b.fast ? 2 : 1) / ((30 + TYPES[b.type].r * 9) * TF));
   }
   if (b.scaf) b.scaf.visible = !(b.flat && b.flat.k < 1);
   const p = b.progress;
@@ -6569,6 +6569,8 @@ function houseStep(b, dt) {
     if (b.bad >= 3 && b.lvl > 0) { setHouseLevel(b, b.lvl - 1); b.bad = 0; toast(`😟 Ein Haus ist abgestiegen – es fehlte ${miss.map(needName).join(', ')}`, b); }
   }
 }
+function upgradeBuilding(b) { if (b.up) return; if ((stock.ziegel || 0) < 2 || (stock.bretter || 0) < 2) return toast('Für den Ausbau brauchst du 2 Dachziegel und 2 Bretter'); stock.ziegel -= 2; stock.bretter -= 2; stat('use', 'ziegel', 2); stat('use', 'bretter', 2); b.up = 1; addUpBadge(b); refreshPiles(); toast(`⬆️ ${TYPES[b.type].name} ausgebaut – arbeitet jetzt 20 % schneller`, b); }
+function addUpBadge(b) { if (b.upBadge) return; const bx = new THREE.Box3().setFromObject(b.g), top = bx.max.y - b.g.position.y; const p = new THREE.Group(); p.position.set(0, top + 0.05, 0); b.g.add(p); p.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.8, 5), OW.iron, 0, 0.4, 0)); const fl = mesh(new THREE.ConeGeometry(0.22, 0.5, 3).rotateZ(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd9a23a, metalness: 0.5, roughness: 0.4 }), 0.26, 0.68, 0); p.add(fl); b.upBadge = p; b.fx.flag = b.fx.flag || fl; }
 const VAL = { milch: 2, raeucherfisch: 3, wurst: 3, kaese: 4, kuchen: 4, stamm: 1, stein: 1, getreide: 1, wasser: 1, lehm: 1, flachs: 1, hopfen: 1, wolle: 1, bretter: 2, mehl: 2, eisenerz: 2, kohle: 2, fisch: 2, schwein: 2, honig: 2, sehne: 2, golderz: 3, brot: 3, schinken: 3, stoff: 3, bier: 3, kruege: 3, ziegel: 3, kerzen: 3, eisenbarren: 4, kleidung: 4, met: 4, kampfstock: 4, muenzen: 5, werkzeug: 6, pfeile: 5, schild: 7, bogen: 7, schwert: 8, karren: 10 };
 let TRADER = { t: 0, here: false };
 function tradeCost(give, take) { return Math.max(1, Math.ceil((VAL[take] || 3) * 1.5 / (VAL[give] || 1))); }
@@ -6582,7 +6584,7 @@ function marketStep(dt) {
 function economyStep(dt) { for (const b of buildings) if (b.type === 'wohnhaus' && b.progress >= 1 && !b.removed) houseStep(b, dt); marketStep(dt); }
 // ---------- Arbeits-Abläufe ----------
 function moveTo(w, p) { w.queue.push({ to: new V3(p.x, 0, p.z) }); }
-function work(w, t, anim, onDone) { w.queue.push({ wait: t * WORKF, anim, fn: onDone }); }
+function work(w, t, anim, onDone) { w.queue.push({ wait: t * WORKF * (w.home && w.home.up ? 0.8 : 1), anim, fn: onDone }); }
 function doFn(w, f) { w.queue.push({ fn: f }); }
 const near = (p, r = 1.4) => { const d = new V3(p.x - lagerDoor().x, 0, p.z - lagerDoor().z); return p; };
 function approach(target, from, dist) { const d = new V3(from.x - target.x, 0, from.z - target.z); if (d.length() < 0.01) d.set(1, 0, 0); d.setLength(dist); return new V3(target.x + d.x, 0, target.z + d.z); }
@@ -6780,7 +6782,7 @@ function updateHUD() {
   $('popinfo').innerHTML = `<span title="Arbeiter / Träger / wartend im Lager">👥 <b>${pop}</b><small>/${car}/${free}</small></span><span title="Kämpfer">⚔️ <b>${typeof SOLD !== 'undefined' ? SOLD.length : 0}</b></span>`;
   const day = 1 + Math.floor((simT + 200) / 600), m = ((simT + 200) % 600) / 600 * 1440, hh = Math.floor(m / 60);
   $('clock').innerHTML = `${hh >= 6 && hh < 20 ? '☀️' : '🌙'} <b>${String(hh).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}</b><small>Tag ${day}</small>`;
-  document.querySelectorAll('#sub button[data-t]').forEach(btn => btn.classList.toggle('no', !canAfford(TYPES[btn.dataset.t].cost)));
+  document.querySelectorAll('#sub button[data-t]').forEach(btn => btn.classList.toggle('no', !canAfford(costOf(btn.dataset.t))));
 }
 const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).join(' ');
 // Gebäude-Vorschaubilder für das Baumenü (aus den echten 3D-Modellen)
@@ -6813,8 +6815,8 @@ const CATS = [
 let openCat = -1;
 // ---------- Freischalten über Wohnhäuser ----------
 const UNLOCK = {
-  hopfenbauer: 1, brauerei: 1, wirtshaus: 1, schaefer: 1, weberei: 1, schneider: 1, raeucherei: 1, kuhstall: 1, kaeserei: 1, koehler: 1, markt: 1, goldmine: 1, muenzpraege: 1,
-  imker: 2, konditorei: 2, lehmgrube: 2, toepfer: 2, flachsbauer: 2, seilerei: 2, bogenbauer: 2, waffenschmied: 2, kaserne: 2,
+  hopfenbauer: 1, brauerei: 1, wirtshaus: 1, schaefer: 1, weberei: 1, schneider: 1, raeucherei: 1, kuhstall: 1, kaeserei: 1, koehler: 1, markt: 1, goldmine: 1, muenzpraege: 1, lehmgrube: 1, toepfer: 1,
+  imker: 2, konditorei: 2, flachsbauer: 2, seilerei: 2, bogenbauer: 2, waffenschmied: 2, kaserne: 2,
   burg: 3,
 };
 const TIER_TXT = ['', 'dem ersten Fachwerkhaus 🏠', '4 Fachwerkhäusern 🏠🏠🏠🏠', 'dem ersten Bürgerhaus 🏛️'];
@@ -6824,17 +6826,18 @@ function tierNow() { const H = buildings.filter(b => b.type === 'wohnhaus' && b.
 function checkUnlock(silent) { const t = tierNow(); if (t <= UNL) return; const old = UNL; UNL = t; const neu = Object.keys(UNLOCK).filter(k => UNLOCK[k] > old && UNLOCK[k] <= t); if (!silent && neu.length) { toast(`🔓 Neue Gebäude freigeschaltet: ${neu.map(k => TYPES[k].icon + ' ' + TYPES[k].name).join(', ')}`); try { sfx && sfx('done'); } catch (e) { } } renderSub(); renderCats(); }
 function renderCats() { $('menu').innerHTML = CATS.map((c, i) => { const n = c.types.filter(isUnlocked).length; return `<button class="cat${openCat === i ? ' on' : ''}" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${n}${n < c.types.length ? ' von ' + c.types.length : ''} Gebäude</small></button>`; }).join(''); if (typeof bindCats === 'function') bindCats(); }
 renderCats();
+function costOf(t) { const c = { ...TYPES[t].cost }; if (t === 'lager' && buildings.some(b => b.type === 'lager' && !b.removed) && isUnlocked('toepfer')) c.ziegel = 3; return c; }
 function renderSub() {
   const sub = $('sub');
   document.querySelectorAll('#menu .cat').forEach(b => b.classList.toggle('on', +b.dataset.c === openCat));
   if (openCat < 0) { sub.style.display = 'none'; return; }
   const chips = c => Object.entries(c).map(([k, v]) => `<span class="chip${stock[k] < v ? ' miss' : ''}">${ITEMS[k].icon}${v}</span>`).join('');
-  sub.innerHTML = `<div class="subhead">${CATS[openCat].icon} ${CATS[openCat].name}</div><div class="cards">` + CATS[openCat].types.map(k => { const T = TYPES[k], lk = !isUnlocked(k); return `<button data-t="${k}" class="card${lk ? ' locked' : ''}" title="${lk ? 'Gesperrt – wird freigeschaltet mit ' + TIER_TXT[UNLOCK[k]] : T.desc}">${lk ? `<span class="lock">🔒<small>ab ${TIER_TXT[UNLOCK[k]]}</small></span>` : ''}<div class="thumb">${BIMG[k] ? `<img src="${BIMG[k]}">` : `<i>${T.icon}</i>`}</div><b>${T.name}</b><div class="chips">${chips(T.cost) || '<span class="chip">kostenlos</span>'}</div><small>${T.desc}</small></button>`; }).join('') + '</div>';
+  sub.innerHTML = `<div class="subhead">${CATS[openCat].icon} ${CATS[openCat].name}</div><div class="cards">` + CATS[openCat].types.map(k => { const T = TYPES[k], lk = !isUnlocked(k); return `<button data-t="${k}" class="card${lk ? ' locked' : ''}" title="${lk ? 'Gesperrt – wird freigeschaltet mit ' + TIER_TXT[UNLOCK[k]] : T.desc}">${lk ? `<span class="lock">🔒<small>ab ${TIER_TXT[UNLOCK[k]]}</small></span>` : ''}<div class="thumb">${BIMG[k] ? `<img src="${BIMG[k]}">` : `<i>${T.icon}</i>`}</div><b>${T.name}</b><div class="chips">${chips(costOf(k)) || '<span class="chip">kostenlos</span>'}</div><small>${T.desc}</small></button>`; }).join('') + '</div>';
   sub.style.display = 'block';
   sub.querySelectorAll('button[data-t]').forEach(btn => btn.onclick = () => {
     const t = btn.dataset.t;
     if (!isUnlocked(t)) return toast(`🔒 ${TYPES[t].name} wird freigeschaltet mit ${TIER_TXT[UNLOCK[t]]}`);
-    if (!canAfford(TYPES[t].cost)) return toast('Nicht genug Material: ' + costStr(TYPES[t].cost));
+    if (!canAfford(costOf(t))) return toast('Nicht genug Material: ' + costStr(costOf(t)));
     openCat = -1; renderSub(); startPlacing(t);
   });
   updateHUD();
@@ -6875,8 +6878,8 @@ function doBuild() {
   const mf = moveFrom; if (mf) { mf.removed = true; }
   const why = placeReason(placing, x, z); if (mf) mf.removed = false; if (why) return toast('Hier geht es nicht: ' + why);
   if (mf) { demolish(mf, true); }
-  if (!canAfford(TYPES[placing].cost)) return toast('Nicht genug Material');
-  for (const [k, v] of Object.entries(TYPES[placing].cost)) { stock[k] -= v; stat('use', k, v); }
+  const cst = costOf(placing); if (!canAfford(cst)) return toast('Nicht genug Material');
+  for (const [k, v] of Object.entries(cst)) { stock[k] -= v; stat('use', k, v); }
   const t = placing; placeBuilding(placing, x, z, placing === 'bruecke' ? bridgeRot(z) : ghostRot); refreshPiles(); cancelPlacing(); toast(TYPES[t].name + ' wird gebaut');
 }
 function selectB(b) {
@@ -7190,10 +7193,22 @@ function renderInfoBtns() {
     <div class="row"><button data-act="pause">${b.paused ? '▶ Weiterarbeiten' : '⏸ Anhalten'}</button></div>`;
   if (b.type === 'waffenschmied') { b.wo = b.wo || {}; h += Object.keys(WS_REC).map(p => `<div class="row"><span style="min-width:110px">${ITEMS[p].icon} ${ITEMS[p].name}</span><button data-wo="${p}" data-n="-1">−</button><b style="min-width:22px;text-align:center">${b.wo[p] || 0}</b><button data-wo="${p}" data-n="1">+</button><button data-wo="${p}" data-n="5">+5</button></div>`).join(''); }
   if (b.type === 'kaserne') { const rowK = (k, l) => `<div class="row"><span style="min-width:150px">${l}</span><button data-kz="${k}" data-n="-1">−</button><b style="min-width:22px;text-align:center">${b[k] || 0}</b><button data-kz="${k}" data-n="1">+</button></div>`; h += rowK('trS', '⚔️ Schwertkämpfer') + rowK('trB', '🏹 Bogenschützen') + rowK('promo', '🪙 Beförderungen') + `<div class="row"><button data-send="1">🚩 Besten Kämpfer zu Turm/Burg schicken</button></div>`; }
+  if (b.progress < 1 && !b.removed && b.type !== 'bruecke') h += b.fast ? '<div class="row"><small>⚡ Bau wird beschleunigt</small></div>' : '<div class="row"><button id="bfast">⚡ Bau beschleunigen (2 🪙)</button></div>';
+  if (b.progress >= 1 && b.worker && !['wohnhaus', 'markt', 'lager', 'wachturm', 'burg', 'kaserne'].includes(b.type) && isUnlocked('toepfer')) h += b.up ? '<div class="row"><small>⬆️ Ausgebaut – 20 % schneller</small></div>' : '<div class="row"><button id="bup">⬆️ Ausbauen: 20 % schneller (2 🧱 + 2 Bretter)</button></div>';
+  if (b.type === 'lager' && b === buildings[0]) h += '<div class="row"><button id="bhire">👷 Siedler anwerben – bringt sein Werkzeug mit (3 🪙)</button></div>';
+  if (b.type === 'markt' && TRADER.here) { const all = Object.keys(ITEMS).filter(k => VAL[k] && k !== 'muenzen'); b.tb = b.tb || 'werkzeug'; b.ts = b.ts || 'stamm'; const buyP = VAL[b.tb] * 2, sellP = Math.max(1, Math.floor(VAL[b.ts] / 2));
+    h += `<div class="row"><b>🪙 Kaufen</b> <select id="tbuy">${all.map(k => `<option value="${k}" ${b.tb === k ? 'selected' : ''}>${ITEMS[k].name}</option>`).join('')}</select> für ${buyP} 🪙 <button id="dobuy" ${stock.muenzen >= buyP ? '' : 'disabled'}>Kaufen</button></div>`;
+    h += `<div class="row"><b>🪙 Verkaufen</b> <select id="tsell">${all.map(k => `<option value="${k}" ${b.ts === k ? 'selected' : ''}>${ITEMS[k].name} (${stock[k]})</option>`).join('')}</select> → ${sellP} 🪙 <button id="dosell" ${stock[b.ts] > 0 ? '' : 'disabled'}>Verkaufen</button></div>`; }
   if (b.type === 'markt' && TRADER.here) { const opts = sel => Object.keys(ITEMS).filter(k => VAL[k]).map(k => `<option value="${k}" ${sel === k ? 'selected' : ''}>${ITEMS[k].name} (${stock[k]})</option>`).join(''); b.tg = b.tg || 'stamm'; b.tt = b.tt || 'werkzeug'; const c = tradeCost(b.tg, b.tt); h += `<div class="row">Gebe <select id="tgive">${opts(b.tg)}</select></div><div class="row">Nehme <select id="ttake">${opts(b.tt)}</select></div><div class="row">Preis: <b>${c}× ${ITEMS[b.tg].name}</b> → 1× ${ITEMS[b.tt].name} <button id="tdo" ${stock[b.tg] >= c && b.tg !== b.tt ? '' : 'disabled'}>Tauschen</button></div>`; }
   if (b.type === 'wagner') h += `<div class="row"><span>🛒 Aufträge:</span><button data-ord="-1">−</button><b style="min-width:24px;text-align:center">${b.orders || 0}</b><button data-ord="1">+</button><button data-ord="5">+5</button></div>`;
   if (b !== buildings[0]) h += `<div class="row"><button data-act="del" class="${confirmDel ? 'warn' : ''}">${confirmDel ? '❗ Wirklich abreißen?' : '🗑 Abreißen'}</button></div>`;
   box.innerHTML = h;
+  if ($('bfast')) $('bfast').onclick = () => { if (stock.muenzen < 2) return toast('Dafür brauchst du 2 Münzen'); stock.muenzen -= 2; stat('use', 'muenzen', 2); b.fast = true; refreshPiles(); toast('⚡ Der Bauarbeiter legt sich ins Zeug!'); renderInfoBtns(); };
+  if ($('bup')) $('bup').onclick = () => { upgradeBuilding(b); renderInfoBtns(); };
+  if ($('bhire')) $('bhire').onclick = () => { if (stock.muenzen < 3) return toast('Dafür brauchst du 3 Münzen'); stock.muenzen -= 3; stock.werkzeug++; stat('use', 'muenzen', 3); refreshPiles(); toast('👷 Ein Siedler mit eigenem Werkzeug wurde angeworben'); renderInfoBtns(); };
+  if ($('tbuy')) { $('tbuy').onchange = e => { b.tb = e.target.value; renderInfoBtns(); }; $('tsell').onchange = e => { b.ts = e.target.value; renderInfoBtns(); };
+    $('dobuy').onclick = () => { const p = VAL[b.tb] * 2; if (!TRADER.here || stock.muenzen < p) return; stock.muenzen -= p; stock[b.tb]++; stat('use', 'muenzen', p); stat('prod', b.tb, 1); refreshPiles(); toast(`Gekauft: 1× ${ITEMS[b.tb].name} für ${p} 🪙`); renderInfoBtns(); };
+    $('dosell').onclick = () => { const p = Math.max(1, Math.floor(VAL[b.ts] / 2)); if (!TRADER.here || stock[b.ts] < 1) return; stock[b.ts]--; stock.muenzen += p; stat('use', b.ts, 1); stat('prod', 'muenzen', p); refreshPiles(); toast(`Verkauft: 1× ${ITEMS[b.ts].name} für ${p} 🪙`); renderInfoBtns(); }; }
   if ($('tgive')) { $('tgive').onchange = e => { b.tg = e.target.value; renderInfoBtns(); }; $('ttake').onchange = e => { b.tt = e.target.value; renderInfoBtns(); }; $('tdo').onclick = () => { const c = tradeCost(b.tg, b.tt); if (!TRADER.here || stock[b.tg] < c) return; stock[b.tg] -= c; stock[b.tt]++; stat('use', b.tg, c); stat('prod', b.tt, 1); refreshPiles(); toast(`Getauscht: ${c}× ${ITEMS[b.tg].name} → 1× ${ITEMS[b.tt].name}`); renderInfoBtns(); }; }
   box.querySelectorAll('[data-wo]').forEach(x => x.onclick = () => { b.wo[x.dataset.wo] = Math.max(0, (b.wo[x.dataset.wo] || 0) + +x.dataset.n); renderInfoBtns(); });
   box.querySelectorAll('[data-kz]').forEach(x => x.onclick = () => { b[x.dataset.kz] = Math.max(0, (b[x.dataset.kz] || 0) + +x.dataset.n); renderInfoBtns(); });
@@ -7241,7 +7256,7 @@ function serialize() {
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
-    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, orders: b.orders || 0, lvl: b.lvl || 0, sat: b.sat || 0, wo: b.wo, trS: b.trS, trB: b.trB, promo: b.promo, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
+    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, orders: b.orders || 0, up: b.up || 0, fast: !!b.fast, lvl: b.lvl || 0, sat: b.sat || 0, wo: b.wo, trS: b.trS, trB: b.trB, promo: b.promo, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
   };
 }
 function thumb() {
@@ -7271,7 +7286,7 @@ function applySave(d) {
   placeBuilding.noPlots = true;
   for (const s of d.buildings) {
     const b = placeBuilding(s.type, s.x, s.z, s.rot, s.progress >= 1);
-    b.progress = s.progress; b.orders = s.orders || 0; b.sat = s.sat || 0; if (b.type === 'wohnhaus' && s.lvl) setHouseLevel(b, s.lvl); else b.lvl = s.lvl || 0; b.wo = s.wo || {}; b.trS = s.trS || 0; b.trB = s.trB || 0; b.promo = s.promo || 0; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
+    b.progress = s.progress; b.orders = s.orders || 0; b.sat = s.sat || 0; b.fast = !!s.fast; if (s.up) { b.up = 1; addUpBadge(b); } if (b.type === 'wohnhaus' && s.lvl) setHouseLevel(b, s.lvl); else b.lvl = s.lvl || 0; b.wo = s.wo || {}; b.trS = s.trS || 0; b.trB = s.trB || 0; b.promo = s.promo || 0; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
     for (const [x, z, st, gr] of s.plots || []) { const p = createPlot(b, x, z); p.state = st; p.growth = gr; updatePlot(p); }
     if (s.pigs && b.fx.pigs) s.pigs.forEach((g, i) => { if (b.fx.pigs[i]) b.fx.pigs[i].growth = b.fx.pigs[i].shown = g; });
     if (b.progress < 1) { b.pendingSite = true; continue; }
