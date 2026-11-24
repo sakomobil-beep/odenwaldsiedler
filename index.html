@@ -8134,11 +8134,11 @@ const MISSIONS = [
     story: 'Ein junger Siedlertrupp erreicht ein stilles Tal im Odenwald. Der Graf hat dir das Land anvertraut – zeig ihm, dass hier eine blühende Siedlung entstehen kann.<br><br>Keine Gegner, kein Zeitdruck. Lerne die Warenketten kennen und bau dein Dorf in Ruhe auf.',
     cfg: { modus: 'frieden', ki: '0', kistufe: 'leicht', unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 4711 },
     goals: [
-      { icon: '🟫', t: '30 Bretter auf Lager', v: () => stock.bretter || 0, n: 30 },
-      { icon: '🍞', t: '20 Brot auf Lager', v: () => stock.brot || 0, n: 20 },
-      { icon: '🔨', t: '10 Werkzeuge auf Lager', v: () => stock.werkzeug || 0, n: 10 },
+      { icon: '🟫', t: '150 Bretter auf Lager', v: () => stock.bretter || 0, n: 150 },
+      { icon: '🍞', t: '30 Brot auf Lager', v: () => stock.brot || 0, n: 30 },
+      { icon: '🔨', t: '25 Werkzeuge auf Lager', v: () => stock.werkzeug || 0, n: 25 },
       { icon: '🗼', t: '2 Wachtürme fertig gebaut', v: () => buildings.filter(b => !b.removed && b.type === 'wachturm' && b.progress >= 1).length, n: 2 },
-      { icon: '👥', t: '25 Siedler im Dorf', v: () => workers.filter(w => !w.removed && !w.ai).length + carriers.length, n: 25 },
+      { icon: '👥', t: '30 Siedler im Dorf', v: () => workers.filter(w => !w.removed && !w.ai).length + carriers.length, n: 30 },
     ],
     win: 'Der Graf ist beeindruckt! Aus ein paar Zelten ist ein lebendiges Fachwerkdorf geworden – Valewright hat seine ersten Baumeister.' },
 ];
@@ -8151,7 +8151,7 @@ function showMissions() {
 }
 const MIS = CFG.mission ? MISSIONS.find(m => m.id === CFG.mission) : null;
 const misPanel = document.createElement('div'); misPanel.id = 'mispanel';
-misPanel.style.cssText = 'position:fixed;right:14px;top:120px;width:250px;background:rgba(42,29,18,.92);border:2px solid #c9a24a;border-radius:12px;padding:10px 12px;color:#f4e6c8;z-index:25;font-size:13px;display:none;cursor:pointer';
+misPanel.style.cssText = 'position:fixed;right:14px;top:172px;width:250px;background:rgba(42,29,18,.92);border:2px solid #c9a24a;border-radius:12px;padding:10px 12px;color:#f4e6c8;z-index:25;font-size:13px;display:none;cursor:pointer';
 document.body.appendChild(misPanel);
 let misMin = false; misPanel.onclick = () => { misMin = !misMin; renderMission(); };
 function renderMission() {
