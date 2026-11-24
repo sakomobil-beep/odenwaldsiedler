@@ -5312,7 +5312,8 @@ const TYPES = {
   markt: { name: 'Marktplatz', icon: '🏪', cost: { bretter: 6, stein: 4 }, r: 2.6, desc: 'Ein Händler kommt regelmäßig vorbei und tauscht deine Überschüsse' },
   flachsbauer: { name: 'Flachsbauer', icon: '🌿', cost: { bretter: 3 }, r: 2.0, desc: 'Baut Flachs an → Flachs' },
   seilerei: { name: 'Seilerei', icon: '🧵', cost: { bretter: 3, stein: 1 }, r: 2.0, desc: '1 Flachs → 1 Sehne (für Bögen)' },
-  waffenschmied: { name: 'Waffenschmied', icon: '🗡️', cost: { bretter: 4, stein: 4 }, r: 2.3, desc: 'Auf Auftrag: Schwert, Schild, Bogen, Pfeile' },
+  waffenschmied: { name: 'Waffenschmied', icon: '🗡️', cost: { bretter: 4, stein: 4 }, r: 2.3, desc: 'Auf Auftrag: Schwert, Schild, Pfeile' },
+  bogenbauer: { name: 'Bogenbauer', icon: '🏹', cost: { bretter: 3, stein: 1 }, r: 2.1, desc: '2 Bretter + 1 Sehne → 1 Bogen (macht bis zu 6 Bögen auf Vorrat)' },
   kaserne: { name: 'Kaserne', icon: '🏰', cost: { bretter: 8, stein: 8 }, r: 3.0, desc: 'Bildet Schwertkämpfer und Bogenschützen aus, befördert mit Münzen' },
   burg: { name: 'Burg', icon: '🏯', cost: { bretter: 14, stein: 20, eisenbarren: 2 }, r: 3.2, desc: 'Großes Gebiet (Radius 40), Platz für 6 Kämpfer' },
   wagner: { name: 'Wagner', icon: '🛒', cost: { bretter: 5, stein: 2 }, r: 2.3, desc: 'Baut auf Auftrag Karren (2 Bretter + 1 Eisenbarren). Träger mit Karren tragen 4 Waren auf einmal.' },
@@ -5743,6 +5744,14 @@ function buildModel(type) {
     for (let i = 0; i < 4; i++) { const f = makeItem('fisch'); f.scale.setScalar(0.8); f.rotation.set(0, Math.PI / 2, Math.PI / 2); f.position.set(-0.3 + i * 0.2, 0.92, 0); rack.add(f); }
     const net = mesh(new THREE.PlaneGeometry(1.0, 0.8, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6a5a40, wireframe: true }), -1.3, 0.65, 0.4); net.rotation.y = Math.PI / 2; g.add(net); for (const z of [0, 0.8]) B(g, 0.05, 1.1, 0.05, OW.brown, -1.3, 0.55, z);
     const boat = new THREE.Group(); boat.position.set(0.3, 0.25, 1.4); boat.rotation.set(Math.PI, 0.2, 0); g.add(boat); const hull = mesh(new THREE.SphereGeometry(0.4, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), M(0x6a4428), 0, 0, 0); hull.scale.set(2.0, 0.6, 0.8); boat.add(hull);
+  } else if (type === 'bogenbauer') {
+    g = H({ w: 2.0, d: 1.7, frontWin: [0, 2] }); shedRoof(g, 1.1, 0.9, 1.45, 1.75, 0.55, OW.shing);
+    const wb = new THREE.Group(); wb.position.set(1.75, 0, 0.75); g.add(wb); B(wb, 1.0, 0.07, 0.45, OW.wood, 0, 0.72, 0); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(wb, 0.06, 0.72, 0.06, OW.brown, sx * 0.45, 0.36, sz * 0.18);
+    const jig = new THREE.Group(); jig.position.set(0, 0.76, 0); wb.add(jig); for (const x of [-0.35, 0, 0.35]) B(jig, 0.05, 0.12, 0.05, OW.brown, x, 0.06, x === 0 ? -0.1 : 0.05); const st = makeItem('bogen'); st.rotation.set(Math.PI / 2, 0, Math.PI / 2); st.position.set(0, 0.1, 0); jig.add(st);
+    const rk = new THREE.Group(); rk.position.set(-1.45, 0, 1.2); g.add(rk); for (const sx of [-1, 1]) B(rk, 0.06, 1.3, 0.06, OW.brown, sx * 0.4, 0.65, 0); B(rk, 0.9, 0.05, 0.05, OW.brown, 0, 1.25, 0); for (let k = 0; k < 3; k++) { const bw = makeItem('bogen'); bw.position.set(-0.25 + k * 0.25, 0.8, 0.05); rk.add(bw); }
+    for (let k = 0; k < 4; k++) B(g, 0.05, 1.2, 0.05, OW.wood, 0.75 + k * 0.08, 0.6, 1.15, 0.15 - k * 0.05, 0, -0.2);
+    const tg = new THREE.Group(); tg.position.set(0.6, 0, 3.0); g.add(tg); for (const sx of [-1, 1]) B(tg, 0.05, 0.9, 0.05, OW.brown, sx * 0.2, 0.45, -0.05); [0xffffff, 0xc0392b, 0xffffff, 0xc0392b].forEach((c, k) => tg.add(mesh(new THREE.CylinderGeometry(0.3 - k * 0.07, 0.3 - k * 0.07, 0.03 + k * 0.004, 14).rotateX(Math.PI / 2), M(c), 0, 0.75, k * 0.004)));
+    signBoard(g, 1.05, 1.15, 0.9, () => { const m = makeItem('bogen'); m.scale.setScalar(0.45); return m; });
   } else if (type === 'raeucherei') {
     g = H({ w: 2.0, d: 1.7, frontWin: [1] });
     const sm = new THREE.Group(); sm.position.set(1.75, 0, 0.3); g.add(sm); B(sm, 0.9, 1.3, 0.8, OW.sand2, 0, 0.65, 0); for (let k = 0; k < 8; k++) B(sm, 0.28, 0.12, 0.02, k % 2 ? OW.sand : OW.sand3, (k % 3 - 1) * 0.28, 0.2 + Math.floor(k / 3) * 0.4, 0.41); B(sm, 0.5, 0.6, 0.04, OW.wood, 0, 0.5, 0.42); sm.add(mesh(new THREE.ConeGeometry(0.62, 0.45, 4).rotateY(Math.PI / 4), OW.slate, 0, 1.52, 0)); B(sm, 0.22, 0.5, 0.22, OW.sand3, 0.15, 1.75, -0.1); fx.workSmoke = new V3(1.9, 2.1, 0.2);
@@ -5988,6 +5997,7 @@ const LOOK = { // Kleidung & Kopfbedeckung je Beruf
   wagner: { c: 0x6a5a3a, hat: 'cap', hc: 0x3a2a1a, apron: 0x8a6a45 },
   flachsbauer: { c: 0x5a7aa0, hat: 'straw' }, seilerei: { c: 0x9a8a6a, hat: 'cap', hc: 0x5a4a3a }, waffenschmied: { c: 0x4a3a2a, hat: 'none', apron: 0x3a2618 }, kaserne: { c: 0x7a3a2a, hat: 'helmet' },
   schwertkaempfer: { c: WAPPEN_C, hat: 'helmet' }, bogenschuetze: { c: 0x3f6b3a, hat: 'cap', hc: 0x2a4a2a },
+  bogenbauer: { c: 0x3f6b3a, hat: 'cap', hc: 0x2a4a2a, apron: 0x8a6a45 },
   raeucherei: { c: 0x6a5a4a, hat: 'cap', hc: 0x3a2a1a, apron: 0x4a3a2a }, kuhstall: { c: 0x8a6a3a, hat: 'straw' }, kaeserei: { c: 0xf0ead8, hat: 'cap', hc: 0xffffff, apron: 0xf0d880 }, konditorei: { c: 0xf4e0e8, hat: 'chef', apron: 0xffffff },
   hopfenbauer: { c: 0x5a8a3a, hat: 'straw' }, brauerei: { c: 0x8a6a3a, hat: 'cap', hc: 0x5a3a1a, apron: 0x4a3020 }, wirtshaus: { c: 0x7a3a2a, hat: 'none', apron: 0xf0ead8 }, schaefer: { c: 0x7a6a4a, hat: 'straw' }, weberei: { c: 0x5a7ab0, hat: 'scarf', hc: 0xd8c070 }, schneider: { c: 0x6a4a8a, hat: 'cap', hc: 0x3a2a5a }, imker: { c: 0xe8e0c8, hat: 'straw' }, lehmgrube: { c: 0x8a6a4a, hat: 'cap', hc: 0x5a4030 }, toepfer: { c: 0xa86a3a, hat: 'none', apron: 0x8a5a3a }, koehler: { c: 0x3a3530, hat: 'cap', hc: 0x222222 }, haendler: { c: 0x8a2a6a, hat: 'cap', hc: 0xd0a020 },
   traeger: { c: 0x8a5a2a, hat: 'cap', hc: 0x5a3e22 }, waechter: { c: 0x2f4fa0, hat: 'helmet' },
@@ -6185,14 +6195,14 @@ function stat(kind, item, n) { statLog.push([simT, kind, item, n]); if (statLog.
 
 // ---------- Träger ----------
 const carriers = [];
-const RECIPE_IN = { raeucherei: { fisch: 1, stamm: 1 }, kuhstall: { getreide: 1, wasser: 1 }, kaeserei: { milch: 2 }, konditorei: { mehl: 1, milch: 1, honig: 1 }, brauerei: { getreide: 1, hopfen: 1, wasser: 1 }, wirtshaus: { bier: 2 }, weberei: { wolle: 1 }, schneider: { stoff: 1 }, toepfer: { lehm: 1 }, koehler: { stamm: 2 }, saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 }, seilerei: { flachs: 1 }, wagner: { bretter: 2, eisenbarren: 1 } };
+const RECIPE_IN = { bogenbauer: { bretter: 2, sehne: 1 }, raeucherei: { fisch: 1, stamm: 1 }, kuhstall: { getreide: 1, wasser: 1 }, kaeserei: { milch: 2 }, konditorei: { mehl: 1, milch: 1, honig: 1 }, brauerei: { getreide: 1, hopfen: 1, wasser: 1 }, wirtshaus: { bier: 2 }, weberei: { wolle: 1 }, schneider: { stoff: 1 }, toepfer: { lehm: 1 }, koehler: { stamm: 2 }, saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 }, seilerei: { flachs: 1 }, wagner: { bretter: 2, eisenbarren: 1 } };
 const isActive = b => b.progress >= 1 && !b.removed && !b.paused && (b.worker || b.needsWorker);
 function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
   if (b.type === 'wohnhaus') return houseWants(b);
   if (!isActive(b)) return [];
   const res = [];
   if (TYPES[b.type].mine) { const have = FOODS.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*food', 2 - have]); return res; }
-  if (b.type === 'waffenschmied') { const need = {}; for (const [p, n] of Object.entries(b.wo || {})) if (n > 0) for (const [k, v] of Object.entries(WS_REC[p][0])) need[k] = Math.max(need[k] || 0, v * 2); for (const [k, v] of Object.entries(need)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v) res.push([k, v - have]); } return res; }
+  if (b.type === 'waffenschmied') { const need = {}; for (const [p, n] of Object.entries(b.wo || {})) if (n > 0 && WS_REC[p]) for (const [k, v] of Object.entries(WS_REC[p][0])) need[k] = Math.max(need[k] || 0, v * 2); for (const [k, v] of Object.entries(need)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v) res.push([k, v - have]); } return res; }
   if (b.type === 'kaserne') { const need = {}; if (b.trS > 0) { need.schwert = 1; need.schild = 1; } if (b.trB > 0) { need.bogen = 1; need.pfeile = 5; } if (b.promo > 0) need.muenzen = 1; for (const [k, v] of Object.entries(need)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v) res.push([k, v - have]); } return res; }
   if (b.type === 'brauerei') { const h = (b.in.honig || 0) + (b.inc.honig || 0); if (h < 2) res.push(['honig', 2 - h]); }
   const r = RECIPE_IN[b.type]; if (!r) return res;
@@ -6408,7 +6418,8 @@ const CHAIN_IO = {
   schmelze: [['eisenerz', 'kohle'], ['eisenbarren']], schmied: [['eisenbarren'], ['werkzeug']], muenzpraege: [['golderz', 'kohle'], ['muenzen']],
   wagner: [['bretter', 'eisenbarren'], ['karren']], waffenschnitzer: [['bretter'], ['kampfstock']],
   flachsbauer: [[], ['flachs']], seilerei: [['flachs'], ['sehne']],
-  waffenschmied: [['eisenbarren', 'kohle', 'bretter', 'sehne'], ['schwert', 'schild', 'bogen', 'pfeile']],
+  waffenschmied: [['eisenbarren', 'kohle', 'bretter'], ['schwert', 'schild', 'pfeile']],
+  bogenbauer: [['bretter', 'sehne'], ['bogen']],
   kaserne: [['schwert', 'schild', 'bogen', 'pfeile', 'muenzen'], ['⚔️ Kämpfer']],
   raeucherei: [['fisch', 'stamm'], ['raeucherfisch']], kuhstall: [['getreide', 'wasser'], ['milch']], kaeserei: [['milch'], ['kaese']], konditorei: [['mehl', 'milch', 'honig'], ['kuchen']],
   hopfenbauer: [[], ['hopfen']], brauerei: [['getreide', 'hopfen', 'wasser', 'honig'], ['bier', 'met']], wirtshaus: [['bier'], ['🍻 Ausschank']], schaefer: [[], ['wolle']], weberei: [['wolle'], ['stoff']], schneider: [['stoff'], ['kleidung']],
@@ -6690,7 +6701,8 @@ function planNext(b) {
     if (T === 'toepfer') b.alt = (stock.ziegel || 0) < (stock.kruege || 0) ? 'ziegel' : 'kruege';
     if (T === 'brauerei') b.alt = (b.in.honig || 0) >= 1 && (b.in.wasser || 0) >= 1 && ((stock.met || 0) <= (stock.bier || 0) || !hasIn(b, { getreide: 1, hopfen: 1, wasser: 1 })) ? 'met' : 'bier';
     if (T === 'wirtshaus') { if (b.paused) return idle('Angehalten', 2); return idle((b.in.bier || 0) > 0 ? `Schenkt Bier aus 🍺 (${b.in.bier} Fässer)` : 'Wartet auf Bier', 3); }
-    const rec = { raeucherei: [{ fisch: 1, stamm: 1 }, 'raeucherfisch', 2, 7, 'Räuchert Fisch'], kuhstall: [{ getreide: 1, wasser: 1 }, 'milch', 2, 6, 'Melkt die Kühe'], kaeserei: [{ milch: 2 }, 'kaese', 1, 7, 'Presst Käse'], konditorei: [{ mehl: 1, milch: 1, honig: 1 }, 'kuchen', 2, 7, 'Backt Kuchen'], hopfenbauer: [{}, 'hopfen', 1, 6, 'Erntet Hopfen'], schaefer: [{}, 'wolle', 1, 6, 'Schert ein Schaf'], weberei: [{ wolle: 1 }, 'stoff', 1, 6, 'Webt Stoff'], schneider: [{ stoff: 1 }, 'kleidung', 1, 6, 'Näht Kleidung'],
+    if (T === 'bogenbauer' && (stock.bogen || 0) >= 6) return idle('Genug Bögen auf Vorrat (6)', 3);
+    const rec = { bogenbauer: [{ bretter: 2, sehne: 1 }, 'bogen', 1, 7, 'Biegt einen Bogen'], raeucherei: [{ fisch: 1, stamm: 1 }, 'raeucherfisch', 2, 7, 'Räuchert Fisch'], kuhstall: [{ getreide: 1, wasser: 1 }, 'milch', 2, 6, 'Melkt die Kühe'], kaeserei: [{ milch: 2 }, 'kaese', 1, 7, 'Presst Käse'], konditorei: [{ mehl: 1, milch: 1, honig: 1 }, 'kuchen', 2, 7, 'Backt Kuchen'], hopfenbauer: [{}, 'hopfen', 1, 6, 'Erntet Hopfen'], schaefer: [{}, 'wolle', 1, 6, 'Schert ein Schaf'], weberei: [{ wolle: 1 }, 'stoff', 1, 6, 'Webt Stoff'], schneider: [{ stoff: 1 }, 'kleidung', 1, 6, 'Näht Kleidung'],
       imker: [{}, b.alt || 'honig', 1, 7, b.alt === 'kerzen' ? 'Zieht Kerzen aus Wachs' : 'Erntet Honig'], lehmgrube: [{}, 'lehm', 1, 5, 'Sticht Lehm'], toepfer: [{ lehm: 1 }, b.alt || 'kruege', 1, 6, b.alt === 'ziegel' ? 'Brennt Dachziegel' : 'Dreht Krüge'],
       koehler: [{ stamm: 2 }, 'kohle', 1, 9, 'Brennt Holzkohle im Meiler'], brauerei: b.alt === 'met' ? [{ honig: 1, wasser: 1 }, 'met', 1, 6, 'Setzt Met an'] : [{ getreide: 1, hopfen: 1, wasser: 1 }, 'bier', 2, 6, 'Braut Bier'],
       saegewerk: [{ stamm: 1 }, 'bretter', 2, 4, 'Sägt Bretter'], muehle: [{ getreide: 1 }, 'mehl', 1, 4, 'Mahlt Mehl'], baeckerei: [{ mehl: 1, wasser: 1 }, 'brot', 2, 5, 'Backt Brot'],
@@ -6723,8 +6735,8 @@ function planNext(b) {
   }
 }
 // Arbeitsplätze vor dem Haus: [stehen x, z, schaut zu x, z, Bewegung, Ware in der Hand]
-const WS_REC = { schwert: [{ eisenbarren: 1, kohle: 1 }, 1, 7], schild: [{ bretter: 1, eisenbarren: 1 }, 1, 6], bogen: [{ bretter: 2, sehne: 1 }, 1, 6], pfeile: [{ bretter: 1, eisenbarren: 1 }, 5, 5] };
-const WORKSPOT = { raeucherei: [1.75, 1.5, 1.75, 0.8, 'carve', 'fisch'], kuhstall: [1.4, 2.1, 1.4, 2.9, 'carve', null], kaeserei: [1.75, 1.5, 1.75, 0.8, 'push', null], konditorei: [1.75, 1.5, 1.75, 0.8, 'push', 'mehl'], hopfenbauer: [1.2, 2.2, 1.2, 3.0, 'dig', null], brauerei: [1.85, 1.3, 1.85, 0.6, 'push', null], schaefer: [1.6, 2.0, 1.6, 2.8, 'carve', 'wolle'], weberei: [1.75, 1.7, 1.75, 0.9, 'push', null], schneider: [1.7, 1.6, 1.7, 0.9, 'carve', 'stoff'], imker: [1.4, 1.9, 1.4, 2.6, 'carve', null], lehmgrube: [1.3, 2.3, 1.3, 3.0, 'dig', null], toepfer: [1.75, 1.6, 1.75, 0.9, 'carve', 'lehm'], koehler: [1.6, 2.1, 1.6, 2.9, 'dig', 'stamm'], flachsbauer: [1.6, 1.8, 1.6, 3.0, 'dig', null], seilerei: [1.7, 1.5, 1.7, 0.9, 'carve', 'flachs'], schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.95, 1.6, 1.95, 1.0, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
+const WS_REC = { schwert: [{ eisenbarren: 1, kohle: 1 }, 1, 7], schild: [{ bretter: 1, eisenbarren: 1 }, 1, 6], pfeile: [{ bretter: 1, eisenbarren: 1 }, 5, 5] };
+const WORKSPOT = { bogenbauer: [1.75, 1.55, 1.75, 0.8, 'carve', 'bretter'], raeucherei: [1.75, 1.5, 1.75, 0.8, 'carve', 'fisch'], kuhstall: [1.4, 2.1, 1.4, 2.9, 'carve', null], kaeserei: [1.75, 1.5, 1.75, 0.8, 'push', null], konditorei: [1.75, 1.5, 1.75, 0.8, 'push', 'mehl'], hopfenbauer: [1.2, 2.2, 1.2, 3.0, 'dig', null], brauerei: [1.85, 1.3, 1.85, 0.6, 'push', null], schaefer: [1.6, 2.0, 1.6, 2.8, 'carve', 'wolle'], weberei: [1.75, 1.7, 1.75, 0.9, 'push', null], schneider: [1.7, 1.6, 1.7, 0.9, 'carve', 'stoff'], imker: [1.4, 1.9, 1.4, 2.6, 'carve', null], lehmgrube: [1.3, 2.3, 1.3, 3.0, 'dig', null], toepfer: [1.75, 1.6, 1.75, 0.9, 'carve', 'lehm'], koehler: [1.6, 2.1, 1.6, 2.9, 'dig', 'stamm'], flachsbauer: [1.6, 1.8, 1.6, 3.0, 'dig', null], seilerei: [1.7, 1.5, 1.7, 0.9, 'carve', 'flachs'], schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.95, 1.6, 1.95, 1.0, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
   saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.85, 1.3, -1.85, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.85, 1.5, 1.85, 0.9, 'carve', 'kampfstock'], wagner: [1.75, 1.6, 1.75, 0.9, 'hammer', 'bretter'] };
 function holdFront(w, item) { w.holding = !!item; placeCarry(w, item, 'work'); }
 function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - w.g.position.z); }
@@ -6790,7 +6802,7 @@ const CATS = [
   { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger', 'raeucherei', 'kuhstall', 'kaeserei', 'konditorei'] },
   { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
-  { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'flachsbauer', 'seilerei', 'waffenschmied', 'kaserne', 'wachturm', 'burg'] },
+  { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'flachsbauer', 'seilerei', 'bogenbauer', 'waffenschmied', 'kaserne', 'wachturm', 'burg'] },
   { name: 'Handwerk', icon: '🧺', types: ['hopfenbauer', 'brauerei', 'schaefer', 'weberei', 'schneider', 'imker', 'lehmgrube', 'toepfer', 'koehler'] },
   { name: 'Wohnen & Handel', icon: '🏡', types: ['wohnhaus', 'wirtshaus', 'markt'] },
   { name: 'Wege & Lager', icon: '🛤️', types: ['bruecke', 'lager', 'wagner'] },
@@ -6857,7 +6869,7 @@ function selectB(b) {
 }
 // ---------- Berufs-Schilder über den Gebäuden ----------
 const labelBox = document.createElement('div'); labelBox.id = 'labels'; document.body.appendChild(labelBox);
-const JOB = { raeucherei: 'Räucherer', kuhstall: 'Kuhhirt', kaeserei: 'Käser', konditorei: 'Konditor', hopfenbauer: 'Hopfenbauer', brauerei: 'Brauer', wirtshaus: 'Wirt', schaefer: 'Schäfer', weberei: 'Weber', schneider: 'Schneider', imker: 'Imker', lehmgrube: 'Lehmstecher', toepfer: 'Töpfer', koehler: 'Köhler', wohnhaus: 'Wohnhaus', markt: 'Markt', flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', foerster: 'Förster', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Steinbrecher', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
+const JOB = { bogenbauer: 'Bogenbauer', raeucherei: 'Räucherer', kuhstall: 'Kuhhirt', kaeserei: 'Käser', konditorei: 'Konditor', hopfenbauer: 'Hopfenbauer', brauerei: 'Brauer', wirtshaus: 'Wirt', schaefer: 'Schäfer', weberei: 'Weber', schneider: 'Schneider', imker: 'Imker', lehmgrube: 'Lehmstecher', toepfer: 'Töpfer', koehler: 'Köhler', wohnhaus: 'Wohnhaus', markt: 'Markt', flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', foerster: 'Förster', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Steinbrecher', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
 const _lv = new V3();
 function updatePauseIcons() {
   for (const b of buildings) {
