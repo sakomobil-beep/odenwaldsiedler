@@ -7697,7 +7697,7 @@ function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('main
 function showMain() {
   const last = [...IDX].sort((a, b) => b.t - a.t)[0];
   $('mainbtns').innerHTML = (last ? `<button data-m="cont">▶ Weiterspielen<small>${last.name} · ${fmtDate(last.t)}</small></button>` : '') +
-    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="mis">📜 Kampagne<small>Das Erbe des Tals</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
+    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="mis">📜 Kampagne<small>Die Chronik von Valewright</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
   $('mainbtns').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const m = b.dataset.m; if (m !== 'cont') $('mainmenu').style.display = 'none';
     if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'mis') showMissions(); if (m === 'tut') bootTo({ mode: 'new', cfg: { classic: true, tutorial: true, unlock: 'normal', tempo: 'normal' } }); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); });
   $('mainmenu').style.display = 'flex';
@@ -8154,7 +8154,7 @@ const MISSIONS = [
 ];
 const MIS_DONE = (() => { try { return JSON.parse(localStorage.getItem('odws_mis') || '{}'); } catch (e) { return {}; } })();
 function showMissions() {
-  let h = '<h2>📜 Kampagne: Das Erbe des Tals</h2><p style="opacity:.85">Erlebe den Aufstieg deiner Siedlung – Kapitel für Kapitel.</p>';
+  let h = '<h2>📜 Die Chronik von Valewright</h2><p style="font-size:18px;color:#e9c46a;margin:-6px 0 6px">Buch I: Das Erbe des Tals</p><p style="opacity:.85">Erlebe den Aufstieg deiner Siedlung – Kapitel für Kapitel.</p>';
   for (const m of MISSIONS) { const locked = m.id > 1 && !MIS_DONE[m.id - 1];
     h += `<div style="background:rgba(0,0,0,.25);border:1px solid #c9a24a;border-radius:12px;padding:14px 16px;margin:12px 0;${locked ? 'opacity:.55' : ''}"><div style="font-size:20px"><b>${m.icon} Kapitel ${m.id}: ${m.name}</b> ${MIS_DONE[m.id] ? '<span style="color:#9fd08a">✔ geschafft</span>' : ''}</div>` +
       (locked ? `<p>🔒 Schließe zuerst Kapitel ${m.id - 1} ab.</p></div>` : `<p>${m.story}</p><div style="margin:6px 0 10px"><b>Ziele:</b><br>${m.goals.map(g => g.icon + ' ' + g.t).join('<br>')}</div><button data-mis="${m.id}" style="padding:8px 18px">▶ Kapitel starten</button></div>`); }
