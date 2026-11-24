@@ -110,9 +110,13 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 #sub .card.locked{opacity:.5;filter:grayscale(.85);position:relative}#sub .card.locked:hover{transform:none}#sub .card .lock{position:absolute;top:6px;left:6px;right:6px;z-index:2;background:rgba(30,20,12,.82);border-radius:8px;padding:3px 5px;font-size:15px;line-height:1.1;text-align:center}#sub .card .lock small{display:block;font-size:10px;opacity:.9}
 #balwin{max-height:78vh;overflow:auto;width:min(640px,94vw)}#balwin table.bal{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}#balwin th{text-align:left;font-size:11px;opacity:.75;padding:3px}#balwin td{padding:3px;border-top:1px solid rgba(255,255,255,.08)}#balwin tr.neg td{color:#ff9a8a}#balwin tr.neg{background:rgba(192,57,43,.15)}#balwin tr.pos td b{color:#9f9}.warnc{color:#ffb080}
 #res .coins{display:inline-flex;align-items:center;gap:4px;padding:2px 10px 2px 4px;border-radius:10px;background:linear-gradient(#f0c850,#b8892a);color:#3a2410;border:1px solid #ffe08a;box-shadow:inset 0 1px 0 rgba(255,255,255,.5);font-size:16px;white-space:nowrap}#res .coins b{font-size:17px}#res .coins .ic{width:26px!important;height:26px!important}#res .coins i{font-style:normal;font-size:9px}
+#tut{position:fixed;right:12px;top:305px;width:min(340px,86vw);z-index:40;display:none;padding:10px 12px;border:2px solid #d9a23a;box-shadow:0 6px 20px rgba(0,0,0,.45)}#tut .tuth{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:.85;margin-bottom:4px}#tut .tuth button{background:none;border:0;color:inherit;font-size:14px;cursor:pointer}#tut .tutt{display:block;font-size:17px;margin-bottom:6px}#tut .tutx{font-size:14px;line-height:1.4}#tut #tutnext{margin-top:10px;width:100%;padding:8px;background:#d9a23a;color:#2b1e13;border:0;border-radius:8px;font-weight:bold;font-size:15px;cursor:pointer}#tut .tutw{margin-top:8px;font-size:12px;opacity:.75;font-style:italic}
+.tut-hl{outline:3px solid #ffd24a!important;outline-offset:2px;animation:tutpulse 1s infinite;position:relative;z-index:5}@keyframes tutpulse{50%{outline-color:rgba(255,210,74,.25)}}
+body.inmenu #tut{display:none!important}
 </style></head><body>
 <div id="top" class="panel"><div id="res"></div><div id="popinfo" class="hbox"></div><div id="clock" class="hbox"></div><div id="spd" class="hbox"><button data-sp="0" title="Pause (Leertaste)">⏸</button><button data-sp="1" class="on" title="Normal (1)">▶</button><button data-sp="2" title="Schnell (2)">⏩</button><button data-sp="4" title="Sehr schnell (3)">⏭</button></div><div class="tbg"><button id="statbtn" class="tb" title="Statistik (T)">📊</button><button id="balbtn" class="tb" title="Wirtschaftsbilanz (B)">📈</button><button id="chainbtn" class="tb" title="Produktionsketten (K)">🔗</button><button id="milbtn" class="tb" title="Militär (M)">⚔️</button></div><div class="tbg"><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus (L)">🏷️</button><button id="sndbtn" class="tb" title="Ton an/aus (V)">🔊</button></div><button id="bellbtn" class="tb" title="Meldungen (N)">🔔<span id="bellcnt"></span></button><button id="menubtn" class="tb" title="Menü (Esc)">☰</button><button id="speed" style="display:none">1×</button></div>
 <div id="notewin" class="panel pop"><button id="closenote" class="x">✕</button><div id="notebody"></div></div><button id="chainbtn" class="tb" title="Produktionsketten">🔗</button><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
+<div id="tut" class="panel"></div>
 <div id="balwin" class="panel pop"><button id="closebal" class="x">✕</button><div id="balbody"></div></div>
 <div id="chainwin" class="panel pop"><button id="closechain" class="x">✕</button><div id="chainbody"></div></div>
 <div id="milwin" class="panel pop"><button id="closemil" class="x">✕</button><div id="milbody"></div></div>
@@ -6862,6 +6866,51 @@ let UNL = CFG && CFG.unlock === 'alle' ? 3 : 0;
 const isUnlocked = t => (UNLOCK[t] || 0) <= UNL;
 function tierNow() { const H = buildings.filter(b => b.type === 'wohnhaus' && b.progress >= 1 && !b.removed); const f = H.filter(b => (b.lvl || 0) >= 1).length, bu = H.filter(b => (b.lvl || 0) >= 2).length; let t = 0; if (f >= 1 || H.some(b => (b.lvl || 0) === 0 && (b.sat || 0) >= 2)) t = 1; if (f >= 4) t = 2; if (bu >= 1) t = 3; for (const b of buildings) if (!b.removed && UNLOCK[b.type]) t = Math.max(t, UNLOCK[b.type]); return t; }
 function checkUnlock(silent) { const t = tierNow(); if (t <= UNL) return; const old = UNL; UNL = t; const neu = Object.keys(UNLOCK).filter(k => UNLOCK[k] > old && UNLOCK[k] <= t); if (!silent && neu.length) { toast(`🔓 Neue Gebäude freigeschaltet: ${neu.map(k => TYPES[k].icon + ' ' + TYPES[k].name).join(', ')}`); try { sfx && sfx('done'); } catch (e) { } } renderSub(); renderCats(); }
+
+// ---------- Tutorial ----------
+const TUT_ON = !!(CFG && CFG.tutorial);
+let tutStep = 0, tutDone = false, tutArrow = null;
+const has = t => buildings.some(b => b.type === t && !b.removed);
+const done = t => buildings.some(b => b.type === t && !b.removed && b.progress >= 1);
+const catSel = name => `#menu .cat[data-c="${CATS.findIndex(c => c.name === name)}"]`;
+const nearest = (list, p) => list.slice().sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
+const TUT = [
+  { t: 'Willkommen im Odenwald! 👋', x: 'Hier gründest du deine eigene Siedlung. Ich führe dich durch die ersten Schritte.<br><br><b>Steuerung:</b><br>🖱️ Linke Maustaste ziehen = Karte verschieben<br>🖱️ Rechte Maustaste ziehen = drehen<br>🖱️ Mausrad = zoomen', btn: 'Los geht’s' },
+  { t: 'Dein Haupthaus 🏛️', x: 'Das große Fachwerkhaus mit den Türmchen ist dein <b>Haupthaus</b>. Hier lagern alle Waren und hier warten deine Siedler.<br><br>👉 <b>Klicke auf das Haupthaus</b>, um zu sehen, was drin ist.', at: () => buildings[0], ok: () => selected === buildings[0] },
+  { t: 'Holz ist das Wichtigste 🪓', x: 'Fast jedes Gebäude braucht <b>Bretter</b>. Die kommen aus Baumstämmen.<br><br>👉 Öffne unten <b>🪵 Baustoffe</b>, wähle den <b>Holzfäller</b> und setze ihn an den Waldrand.<br><small>Tipp: Mit dem Mausrad oder Q/E drehst du das Gebäude. Der gelbe Pfeil zeigt, wo vorne ist. Dann ✔ Bauen.</small>', hl: () => [catSel('Baustoffe'), '#sub button[data-t="holzfaeller"]', '#confirm'], ok: () => has('holzfaeller') },
+  { t: 'Die Baustelle 🏗️', x: 'Ein <b>Bauarbeiter</b> kommt, ebnet zuerst den Boden ein und baut dann das Haus Stück für Stück auf.<br><br>Im Tutorial geht das doppelt so schnell. Mit <b>⏩</b> oben kannst du die Zeit zusätzlich beschleunigen.<br><br>⏳ Warte, bis der Holzfäller fertig ist.', hl: () => ['#spd'], at: () => buildings.find(b => b.type === 'holzfaeller'), ok: () => done('holzfaeller') },
+  { t: 'Aus Stämmen werden Bretter 🪚', x: 'Der Holzfäller fällt jetzt Bäume. Damit daraus <b>Bretter</b> werden, brauchst du ein <b>Sägewerk</b>.<br><br>👉 Baue unter <b>🪵 Baustoffe</b> ein Sägewerk – am besten in der Nähe des Holzfällers.', hl: () => [catSel('Baustoffe'), '#sub button[data-t="saegewerk"]', '#confirm'], ok: () => has('saegewerk') },
+  { t: 'Steine 🪨', x: 'Für viele Gebäude brauchst du auch <b>Steine</b>. Der <b>Steinmetz</b> klopft sie aus Felsbrocken.<br><br>👉 Baue einen Steinmetz in die Nähe der grauen Felsen (der Pfeil zeigt dir welche).', hl: () => [catSel('Baustoffe'), '#sub button[data-t="steinmetz"]', '#confirm'], at: () => rocks.length ? nearest(rocks, buildings[0]) : null, ok: () => has('steinmetz') },
+  { t: 'Die Leiste oben 📊', x: 'Oben siehst du deine Vorräte:<br>🪙 <b>Goldmünzen</b> ganz links, daneben Bretter, Stein und Werkzeug.<br>Die Gruppen (Baustoffe, Essen …) klappen auf, wenn du drüberfährst. ▲▼ zeigt, ob etwas mehr oder weniger wird.<br><br>Rechts: Tempo ⏸▶⏩, Statistik, 📈 Bilanz, 🔗 Ketten und 🔔 Meldungen.', hl: () => ['#res', '#popinfo'], btn: 'Verstanden' },
+  { t: 'Deine Siedler brauchen ein Zuhause 🏡', x: 'Mit <b>Wohnhäusern</b> wächst deine Siedlung: Jedes Haus bringt <b>Träger</b>, die Waren herumtragen. Später zahlen die Bewohner auch <b>Steuern</b>.<br><br>👉 Baue unter <b>🏡 Siedlung</b> ein Wohnhaus.', hl: () => [catSel('Siedlung'), '#sub button[data-t="wohnhaus"]', '#confirm'], ok: () => has('wohnhaus') },
+  { t: 'Wasser und Essen 💧🐟', x: 'Die Bewohner einer Hütte wollen <b>Wasser</b> und <b>Essen</b>.<br><br>👉 Baue unter <b>🌾 Landwirtschaft</b> einen <b>Brunnen</b> und einen <b>Fischer</b> am Fluss (der Pfeil zeigt eine gute Fischstelle).', hl: () => [catSel('Landwirtschaft'), '#sub button[data-t="brunnen"]', '#sub button[data-t="fischer"]', '#confirm'], at: () => !has('fischer') && fishSpots.length ? nearest(fishSpots, buildings[0]) : null, ok: () => has('brunnen') && has('fischer') },
+  { t: 'Was braucht das Haus? 🔍', x: 'Jedes Gebäude zeigt dir, was es gerade tut oder was ihm fehlt.<br><br>👉 <b>Klicke auf dein Wohnhaus.</b> Unter „Bedarf“ siehst du ✅ und ❌.', at: () => buildings.find(b => b.type === 'wohnhaus'), ok: () => selected && selected.type === 'wohnhaus' },
+  { t: 'Aufsteigen 🛖 → 🏠 → 🏛️', x: 'Ist eine Hütte gut versorgt, wird sie <b>zufrieden</b>. Dann werden <b>neue Gebäude freigeschaltet</b> (Brauerei, Käserei, Weberei …) – im Baumenü siehst du sie mit 🔒.<br><br>Mit Bier, Käse, Wurst und Kleidung wird aus der Hütte ein <b>Fachwerkhaus</b>, später ein <b>Bürgerhaus</b>.', btn: 'Weiter' },
+  { t: 'Den Überblick behalten 🔗', x: 'Bei so vielen Waren hilft dir die Übersicht der <b>Produktionsketten</b>: Was liefert wem, was fehlt?<br><br>👉 Öffne sie mit <b>🔗</b> oben rechts oder der Taste <b>K</b>.', hl: () => ['#chainbtn'], ok: () => $('chainwin').style.display === 'block' },
+  { t: 'Die Bilanz 📈', x: 'Die <b>Wirtschaftsbilanz</b> zeigt, wovon du zu wenig herstellst – rote Zeilen sind Engpässe, daneben steht, was du bauen solltest.<br><br>👉 Öffne sie mit <b>📈</b> oder der Taste <b>B</b>.', hl: () => ['#balbtn'], ok: () => $('balwin').style.display === 'block' },
+  { t: 'Schätze in den Bergen ⛏️', x: 'Stein, Kohle, Eisen und Gold liegen versteckt in den Bergen. Erst ein <b>Rutengänger</b> findet sie mit seiner Wünschelrute – dann kannst du dort Bergwerke bauen.<br><br>👉 Baue unter <b>⛏️ Bergbau</b> einen Rutengänger nahe am Gebirge.<br><small>Liegt das Gebirge außerhalb deines Gebiets, erweitert ein <b>Wachturm</b> (⚔️ Militär) deine Grenzen.</small>', hl: () => [catSel('Bergbau'), '#sub button[data-t="rutengaenger"]', '#confirm'], ok: () => has('rutengaenger') },
+  { t: 'Geschafft! 🎉', x: 'Du kennst jetzt die Grundlagen. Ab hier gehört die Siedlung dir:<br>• Werkzeug 🔨 brauchst du für jeden neuen Arbeiter – baue Schmelze und Werkzeugschmied.<br>• Halte deine Häuser zufrieden, dann wächst alles weiter.<br>• Speichern geht über ☰ oder automatisch.<br><br>Viel Spaß im Odenwald!', btn: 'Tutorial beenden' },
+];
+function tutRender() {
+  const p = $('tut'); if (!TUT_ON || tutDone || INMENU) { p.style.display = 'none'; tutHL([]); tutMark(null); return; }
+  const st = TUT[tutStep]; p.style.display = 'block';
+  p.innerHTML = `<div class="tuth"><span>🎓 Tutorial · ${tutStep + 1}/${TUT.length}</span><button id="tutx" title="Tutorial beenden">✕</button></div><b class="tutt">${st.t}</b><div class="tutx">${st.x}</div>${st.btn ? `<button id="tutnext">${st.btn} ➜</button>` : '<div class="tutw">⏳ Wartet auf dich …</div>'}`;
+  $('tutx').onclick = () => { if (confirm('Tutorial wirklich beenden? Du kannst normal weiterspielen.')) { tutDone = true; tutRender(); } };
+  if ($('tutnext')) $('tutnext').onclick = () => tutNext();
+}
+function tutNext() { if (tutStep >= TUT.length - 1) { tutDone = true; toast('🎓 Tutorial abgeschlossen – viel Spaß!'); } else { tutStep++; try { sfx && sfx('done'); } catch (e) { } } tutRender(); }
+function tutHL(sel) { document.querySelectorAll('.tut-hl').forEach(e => { if (!sel.some(q => e.matches(q))) e.classList.remove('tut-hl'); }); for (const q of sel) document.querySelectorAll(q).forEach(e => e.classList.add('tut-hl')); }
+function tutMark(at) {
+  if (!at) { if (tutArrow) tutArrow.visible = false; return; }
+  if (!tutArrow) { tutArrow = new THREE.Group(); const m = new THREE.MeshBasicMaterial({ color: 0xffd24a }); tutArrow.add(new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 4).rotateX(Math.PI), m)); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.4, 6), m); t.position.y = 1.3; tutArrow.add(t); scene.add(tutArrow); }
+  tutArrow.visible = true; const top = at.g ? new THREE.Box3().setFromObject(at.g).max.y : height(at.x, at.z) + 1.5; tutArrow.position.set(at.x, top + 1.6 + Math.sin(clock.elapsedTime * 4) * 0.35, at.z);
+}
+function tutTick() {
+  if (!TUT_ON || tutDone || INMENU) return;
+  for (const b of buildings) if (b.progress < 1 && !b.removed) b.fast = true;
+  const st = TUT[tutStep]; tutHL(st.hl ? st.hl() : []); tutMark(st.at ? st.at() : null);
+  if (st.ok && st.ok()) tutNext();
+}
 function renderCats() { $('menu').innerHTML = CATS.map((c, i) => { const n = c.types.filter(isUnlocked).length; return `<button class="cat${openCat === i ? ' on' : ''}" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${n}${n < c.types.length ? ' von ' + c.types.length : ''} Gebäude</small></button>`; }).join(''); if (typeof bindCats === 'function') bindCats(); }
 renderCats();
 function costOf(t) { const c = { ...TYPES[t].cost }; if (t === 'lager' && buildings.some(b => b.type === 'lager' && !b.removed) && isUnlocked('toepfer')) c.ziegel = 3; return c; }
@@ -7304,7 +7353,7 @@ function serialize() {
   const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
   for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 2, unl: UNL, depFound: deposits.map(d => d.found ? 1 : 0), trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 2, tut: TUT_ON ? { s: tutStep, d: tutDone } : null, unl: UNL, depFound: deposits.map(d => d.found ? 1 : 0), trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
@@ -7349,6 +7398,7 @@ function applySave(d) {
   }
   placeBuilding.noPlots = false;
   if (d.trader) TRADER = { ...d.trader };
+  if (d.tut) { tutStep = Math.min(d.tut.s || 0, TUT.length - 1); tutDone = !!d.tut.d; }
   if (d.depFound) deposits.forEach((x, i) => { if (d.depFound[i]) revealDeposit(x, true); }); else deposits.forEach(x => { if (!x.extra) revealDeposit(x, true); });
   UNL = Math.max(UNL, d.unl == null ? 3 : d.unl); checkUnlock(true); renderCats();
   if (d.sold) { const L = buildings.filter(x => !x.removed); for (const so of d.sold) { const b = L[so.post]; if (!b) continue; if (b.guard && !b.guard.soldierUsed && b.type === 'wachturm') { b.guard.soldierUsed = true; b.garrison = []; } const s = { kind: so.kind, rank: so.rank, xp: so.xp, food: 1, post: b }; SOLD.push(s); (b.garrison = b.garrison || []).push(s); if (b.type === 'kaserne') makeSoldierW(s, b.door); } }
@@ -7373,9 +7423,9 @@ function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('main
 function showMain() {
   const last = [...IDX].sort((a, b) => b.t - a.t)[0];
   $('mainbtns').innerHTML = (last ? `<button data-m="cont">▶ Weiterspielen<small>${last.name} · ${fmtDate(last.t)}</small></button>` : '') +
-    `<button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
+    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
   $('mainbtns').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const m = b.dataset.m; if (m !== 'cont') $('mainmenu').style.display = 'none';
-    if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); });
+    if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'tut') bootTo({ mode: 'new', cfg: { classic: true, tutorial: true, unlock: 'normal', tempo: 'normal' } }); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); });
   $('mainmenu').style.display = 'flex';
 }
 // Kartengenerator
@@ -7609,6 +7659,7 @@ function animate() {
   const sub = paused || INMENU ? 0 : speed; for (let i = 0; i < sub; i++) step(real);
   if (INMENU) yaw += real * 0.05;
   if (ghost && placing && placing !== 'bruecke') { ghostShown += (ghostRot - ghostShown) * Math.min(1, real * 12); ghost.rotation.y = ghostShown; }
+  tutTick();
   if (ghost && ghost.userData.arrow) { const a = ghost.userData.arrow; a.position.z = (TYPES[placing] ? TYPES[placing].r : 2) + 0.5 + Math.sin(clock.elapsedTime * 4) * 0.12; }
   if (SET.edge && !INMENU && mouseIn && !pointers.size) { const m = 14, k = dist * 0.9 * real; const fw = new V3(-Math.sin(yaw), 0, -Math.cos(yaw)), rt = new V3(Math.cos(yaw), 0, -Math.sin(yaw)); if (mouseX < m) target.addScaledVector(rt, -k); if (mouseX > innerWidth - m) target.addScaledVector(rt, k); if (mouseY < m) target.addScaledVector(fw, k); if (mouseY > innerHeight - m) target.addScaledVector(fw, -k); target.x = THREE.MathUtils.clamp(target.x, -MAP + 10, MAP - 10); target.z = THREE.MathUtils.clamp(target.z, -MAP + 10, MAP - 10); }
   waterMat.uniforms.uTime.value = t;
@@ -7633,6 +7684,6 @@ function animate() {
 }
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); if (composer) composer.setSize(innerWidth, innerHeight); });
 updateHUD(); animate();
-toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
+if (TUT_ON) tutRender(); else toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
 window.__dbg = { stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, walk, carriers, demolish, saveGame, rev: reveal, buildModel, mk: makeWorker, setCarry, refreshPiles, h: height, serialize, road, rebuildRoads, roadCellsBetween };
 </script></body></html>
