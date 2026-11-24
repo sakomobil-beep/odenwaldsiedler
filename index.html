@@ -4643,7 +4643,20 @@ function lakeDepth(x, z) { let h = 99; for (const l of LAKES) { const d = Math.h
 const riverSide = (x, z) => x - riverX(z) > 0 ? 1 : -1;
 const riverDX = z => (riverX(z + 0.5) - riverX(z - 0.5));
 const sstep = (e0, e1, v) => { const t = Math.min(1, Math.max(0, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+// Eingeebnete Bauplätze: k = 0 (Urgelände) … 1 (ganz eben)
+const FLATS = [];
 function height(x, z) {
+  let h = height0(x, z);
+  for (const f of FLATS) { if (f.k <= 0) continue; const d = Math.hypot(x - f.x, z - f.z); if (d > f.r + 2.5) continue; h += (f.y - h) * (1 - sstep(f.r, f.r + 2.5, d)) * f.k; }
+  return h;
+}
+function updateFlat(f) {
+  const pos = geo.attributes.position;
+  if (!f.idx) { f.idx = []; const R = f.r + 2.6; for (let i = 0; i < pos.count; i++) if (Math.abs(pos.getX(i) - f.x) < R && Math.abs(pos.getZ(i) - f.z) < R) f.idx.push(i); }
+  for (const i of f.idx) pos.setY(i, height(pos.getX(i), pos.getZ(i)));
+  pos.needsUpdate = true;
+}
+function height0(x, z) {
   const hill = noise(x * 0.0075 + 3.1, z * 0.0075 - 1.7), roll = 1 - Math.abs(noise(x * 0.018 + 9, z * 0.018) * 2 - 1);
   let h = noise(x * 0.035, z * 0.035) * 3 + noise(x * 0.11, z * 0.11) * 1.0 + (noise(x * 0.012, z * 0.012) * 4 + hill * hill * 13 + roll * roll * 3.5) * HILLA;
   const r = Math.hypot(x, z);
@@ -5874,8 +5887,13 @@ function placeBuilding(type, x, z, rot = 0, instant = false) {
   // Bäume im Weg fällen
   clearTrees(x, z, T.r + 1.2);
   const { g, fx } = buildModel(type);
-  g.position.set(x, type === 'bruecke' ? 0 : height(x, z), z); g.rotation.y = rot; scene.add(g);
-  const b = { type, g, fx, x, z, rot, progress: instant ? 1 : 0, working: false, status: 'Wird gebaut …', worker: null, plots: [], in: {}, out: {}, inc: {}, outRes: {}, prio: 1, paused: false };
+  let flat = null;
+  if (!['bruecke', 'strasse'].includes(type) && !T.mine) {
+    let sum = 0, n = 0; for (let a = 0; a < 8; a++) for (const rr of [0, T.r * 0.6, T.r]) { sum += height(x + Math.cos(a) * rr, z + Math.sin(a) * rr); n++; }
+    flat = { x, z, r: T.r + 0.4, y: sum / n, k: instant ? 1 : 0 }; FLATS.push(flat); updateFlat(flat);
+  }
+  g.position.set(x, type === 'bruecke' ? 0 : flat ? flat.y : height(x, z), z); g.rotation.y = rot; scene.add(g);
+  const b = { flat, type, g, fx, x, z, rot, progress: instant ? 1 : 0, working: false, status: 'Wird gebaut …', worker: null, plots: [], in: {}, out: {}, inc: {}, outRes: {}, prio: 1, paused: false };
   const door = new V3(0, 0, (T.r + 0.6)).applyAxisAngle(new V3(0, 1, 0), rot); b.door = new V3(x + door.x, 0, z + door.z);
   if (!instant) b.pendingSite = true;
   if (type === 'bauernhof' && !placeBuilding.noPlots) makePlots(b);
@@ -6092,7 +6110,7 @@ function startSite(b) {
   g.traverse(o => { if (!o.isMesh) return; o.userData.origMat = o.material; const cl = m => { const c = m.clone(); c.clippingPlanes = [b.clip]; c.clipShadows = true; return c; }; o.material = Array.isArray(o.material) ? o.material.map(cl) : cl(o.material); });
   // Baugrube / Fundamentfläche
   const r = Math.max(1.2, T.r);
-  b.site = new THREE.Group(); b.site.position.set(b.x, height(b.x, b.z), b.z); b.site.rotation.y = b.rot; scene.add(b.site);
+  b.site = new THREE.Group(); b.site.position.set(b.x, b.flat ? b.flat.y : height(b.x, b.z), b.z); b.site.rotation.y = b.rot; scene.add(b.site);
   // Fundament: Sandsteinquader, die Stück für Stück gesetzt werden
   const lb = new THREE.Box3().setFromObject(g), fw = Math.max(1, (lb.max.x - lb.min.x) * 0.92), fd = Math.max(1, (lb.max.z - lb.min.z) * 0.92);
   const inv = new THREE.Matrix4().makeRotationY(-b.rot), cc = new V3(); lb.getCenter(cc); cc.sub(g.position).applyMatrix4(inv); const ex = new V3(lb.max.x - lb.min.x, 0, lb.max.z - lb.min.z).applyMatrix4(inv);
@@ -6124,7 +6142,7 @@ function endSite(b) {
   if (b.site) scene.remove(b.site); b.site = null;
   if (b.builder) { const w = b.builder; w.queue.length = 0; w.home = null; moveTo(w, lagerDoor(b.x, b.z)); w.queue.push({ fn: () => { w.removed = true; scene.remove(w.g); } }); b.builder = null; }
 }
-const PHASES = [[0.15, 'Fundament wird gelegt'], [0.35, 'Holzgerüst wird aufgestellt'], [0.75, 'Wände werden hochgezogen'], [1.01, 'Dach wird gedeckt']];
+const PHASES = [[0.08, 'Boden wird eingeebnet'], [0.15, 'Fundament wird gelegt'], [0.35, 'Holzgerüst wird aufgestellt'], [0.75, 'Wände werden hochgezogen'], [1.01, 'Dach wird gedeckt']];
 function siteStep(b, dt) {
   if (b.needsBuilder && !b.builder) {
     const w = makeWorker('bauarbeiter'); const l = nearestLager(b.x, b.z); w.g.position.copy(l.door); w.home = null; workers.push(w); b.builder = w; b.needsBuilder = false;
@@ -6138,7 +6156,8 @@ function siteStep(b, dt) {
   }
   if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) b.progress = Math.min(1, b.progress + dt / ((30 + TYPES[b.type].r * 9) * TF));
   const p = b.progress;
-  b.status = b.builderAt ? (PHASES.find(([t]) => p < t) || PHASES[3])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
+  if (b.flat && b.flat.k < 1) { const nk = Math.min(1, p / 0.08); if (nk !== b.flat.k) { b.flat.k = nk; updateFlat(b.flat); if (b.outPile) b.outPile.position.y = height(b.outPile.position.x, b.outPile.position.z); if (nk >= 1) grassDirty = true; } }
+  b.status = b.builderAt ? (PHASES.find(([t]) => p < t) || PHASES[PHASES.length - 1])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
   // sichtbarer Aufbau: unterhalb der Ebene sichtbar, oben abgeschnitten
   if (b.found) { const nf = Math.ceil(b.found.length * Math.min(1, p / 0.15)); b.found.forEach((st, i) => st.visible = i < nf && p < 0.5); }
   if (b.frame) { const fp = (p - 0.15) / 0.2, n = b.frame.children.length; b.frame.children.forEach((m, i) => m.visible = p < 0.6 && fp * n > i); }
