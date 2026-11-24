@@ -89,7 +89,8 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 .picon{position:fixed;left:0;top:0;z-index:2;pointer-events:none;background:rgba(36,24,14,.85);border:2px solid #e05030;border-radius:50%;padding:4px;box-shadow:0 3px 8px rgba(0,0,0,.45);transform-origin:50% 100%;line-height:0}
 .picon .hand{transform-origin:12px 13.5px;animation:pclk 2s steps(8) infinite}@keyframes pclk{to{transform:rotate(360deg)}}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
+<div id="top" class="panel"><div id="res"></div><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
+<div id="milwin" class="panel pop"><button id="closemil" class="x">✕</button><div id="milbody"></div></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div><div id="infobtns"></div></div>
 <div id="toast"></div>
@@ -4487,6 +4488,7 @@ const SET = Object.assign({}, DEF_SET, (() => { try { return JSON.parse(localSto
 if (!localStorage.getItem('odws_set') && localStorage.getItem('odws_q') === 'normal') Object.assign(SET, { quality: 'niedrig', ao: false, bloom: false });
 function saveSet() { localStorage.setItem('odws_set', JSON.stringify(SET)); }
 const QUALITY = SET.quality;
+const WAPPEN_C = SET.wappen || 0x2f6fd0;
 const BOOT = (() => { try { return JSON.parse(sessionStorage.getItem('odws_boot') || 'null'); } catch (e) { return null; } })(); sessionStorage.removeItem('odws_boot');
 // Spielstand-Verzeichnis (unbegrenzt viele Stände)
 function loadIndex() { try { return JSON.parse(localStorage.getItem('odws_index') || '[]'); } catch (e) { return []; } }
@@ -5052,7 +5054,7 @@ const territories = [];
 function inTerritory(x, z, margin = 0) { return territories.some(t => Math.hypot(t.x - x, t.z - z) <= t.r - margin); }
 const FCAP = 3000;
 const poleIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 4).translate(0, 0.8, 0), mat.beam, FCAP);
-const flagIM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.35, 0.03).translate(0.29, 1.4, 0), new THREE.MeshStandardMaterial({ color: 0x2f6fd0, flatShading: true }), FCAP);
+const flagIM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.35, 0.03).translate(0.29, 1.4, 0), new THREE.MeshStandardMaterial({ color: WAPPEN_C, flatShading: true }), FCAP);
 for (const im of [poleIM, flagIM]) { im.castShadow = true; im.frustumCulled = false; im.count = 0; scene.add(im); }
 let flagPts = [];
 function rebuildFlags() {
@@ -5128,6 +5130,12 @@ const ITEMS = {
   schinken: { name: 'Schinken', icon: '🍖', m: M(0xc0605a), geo: new THREE.SphereGeometry(0.2, 6, 4).scale(1.5, 1, 1) },
   golderz: { name: 'Golderz', icon: '🟡', m: M(0xe8c040), geo: new THREE.DodecahedronGeometry(0.22, 0) },
   muenzen: { name: 'Münzen', icon: '🪙', m: new THREE.MeshStandardMaterial({ color: 0xf0c850, metalness: 0.7, roughness: 0.3 }), geo: new THREE.CylinderGeometry(0.18, 0.18, 0.08, 10) },
+  flachs: { name: 'Flachs', icon: '🌿', m: M(0x8aa05a), geo: box(0.2, 0.5, 0.2) },
+  sehne: { name: 'Sehnen', icon: '🧵', m: M(0xd8c8a0), geo: new THREE.TorusGeometry(0.12, 0.04, 5, 10) },
+  schwert: { name: 'Schwerter', icon: '🗡️', m: M(0xc0c4cc), geo: box(0.9, 0.05, 0.1) },
+  schild: { name: 'Schilde', icon: '🛡️', m: M(WAPPEN_C), geo: new THREE.CylinderGeometry(0.25, 0.25, 0.05, 12) },
+  bogen: { name: 'Bögen', icon: '🏹', m: M(0x7a5230), geo: box(0.08, 1.0, 0.05) },
+  pfeile: { name: 'Pfeile', icon: '➶', m: M(0xa8824a), geo: box(0.7, 0.05, 0.05) },
   karren: { name: 'Karren', icon: '🛒', m: M(0x8a6038), geo: box(0.5, 0.3, 0.4) },
   kampfstock: { name: 'Kampfstöcke', icon: '🏏', m: M(0x7a5230), geo: new THREE.CylinderGeometry(0.06, 0.08, 1.1, 6).rotateZ(Math.PI / 2.4) },
   werkzeug: { name: 'Werkzeug', icon: '🔨', m: M(0x9aa0a8), geo: box(0.12, 0.12, 0.7) },
@@ -5142,6 +5150,12 @@ const IMAT = { bark: IM(0x5e4128), endw: IM(0xd9b27a), ring: IM(0xb8895a), plank
 const im = (geo, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = true; return o; };
 const rockGeo = (s, seed) => { const g = new THREE.DodecahedronGeometry(s, 0), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const f = 0.8 + hash(i, seed) * 0.4; p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.8, p.getZ(i) * f); } g.computeVertexNormals(); return g; };
 const ITEM_MAKE = {
+  flachs: () => { const g = new THREE.Group(); for (let k = 0; k < 12; k++) { const a = k * 2.4, r = (k % 3) * 0.03; g.add(im(new THREE.CylinderGeometry(0.008, 0.01, 0.7, 3), IM(0x8aa05a), Math.cos(a) * r, 0, Math.sin(a) * r, Math.cos(a) * 0.1, 0, Math.sin(a) * 0.1)); g.add(im(new THREE.SphereGeometry(0.02, 4, 3), IM(0x6a7ac8), Math.cos(a) * r * 1.5, 0.36, Math.sin(a) * r * 1.5)); } g.add(im(new THREE.TorusGeometry(0.06, 0.012, 4, 8), IMAT.twine, 0, 0, 0, Math.PI / 2)); return g; },
+  sehne: () => { const g = new THREE.Group(); for (let k = 0; k < 3; k++) g.add(im(new THREE.TorusGeometry(0.11, 0.03, 5, 12), IM(0xd8c8a0), 0, k * 0.05, 0, Math.PI / 2)); return g; },
+  schwert: () => { const g = new THREE.Group(); g.add(im(new THREE.BoxGeometry(0.62, 0.012, 0.07), IM(0xc8ccd4, { metalness: 0.8, roughness: 0.3 }), 0.12, 0, 0)); g.add(im(new THREE.ConeGeometry(0.035, 0.1, 4).rotateZ(-Math.PI / 2), IM(0xc8ccd4, { metalness: 0.8, roughness: 0.3 }), 0.48, 0, 0)); g.add(im(new THREE.BoxGeometry(0.04, 0.03, 0.24), IMAT.gold, -0.2, 0, 0)); g.add(im(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 6).rotateZ(Math.PI / 2), IMAT.pouch, -0.3, 0, 0)); g.add(im(new THREE.SphereGeometry(0.03, 6, 5), IMAT.gold, -0.39, 0, 0)); return g; },
+  schild: () => { const g = new THREE.Group(); g.add(im(new THREE.CylinderGeometry(0.22, 0.22, 0.04, 14).rotateX(Math.PI / 2), IM(WAPPEN_C))); g.add(im(new THREE.TorusGeometry(0.22, 0.02, 4, 16), IMAT.iron)); g.add(im(new THREE.SphereGeometry(0.05, 7, 5), IMAT.gold, 0, 0, 0.03)); return g; },
+  bogen: () => { const g = new THREE.Group(); g.add(im(new THREE.TorusGeometry(0.42, 0.02, 4, 16, Math.PI * 0.8).rotateZ(Math.PI * 0.6), IMAT.staff)); g.add(im(new THREE.CylinderGeometry(0.004, 0.004, 0.8, 3), IM(0xeeeeee), -0.33, 0, 0)); return g; },
+  pfeile: () => { const g = new THREE.Group(); for (let k = 0; k < 5; k++) { const a = im(new THREE.CylinderGeometry(0.008, 0.008, 0.6, 4).rotateZ(Math.PI / 2), IMAT.staff, 0, k * 0.025 - 0.05, (k % 2) * 0.03); g.add(a); g.add(im(new THREE.ConeGeometry(0.018, 0.05, 4).rotateZ(-Math.PI / 2), IMAT.head, 0.32, k * 0.025 - 0.05, (k % 2) * 0.03)); g.add(im(new THREE.BoxGeometry(0.06, 0.03, 0.002), IM(0xffffff), -0.28, k * 0.025 - 0.05, (k % 2) * 0.03)); } return g; },
   karren: () => { const c = cartModel(); c.scale.setScalar(0.55); c.position.y = -0.2; return c; },
   stamm: () => { const g = new THREE.Group(); const log = im(new THREE.CylinderGeometry(0.12, 0.14, 0.95, 9), [IMAT.bark, IMAT.endw, IMAT.endw], 0, 0, 0, 0, 0, Math.PI / 2); g.add(log); for (const s of [-1, 1]) g.add(im(new THREE.RingGeometry(0.05, 0.07, 10), IMAT.ring, s * 0.476 * (s > 0 ? 1 : 1.02), 0, 0, 0, s * Math.PI / 2, 0)); return g; },
   bretter: () => { const g = new THREE.Group(); for (let k = 0; k < 3; k++) g.add(im(new THREE.BoxGeometry(1.0, 0.045, 0.16), k % 2 ? IMAT.plank2 : IMAT.plank, (k - 1) * 0.02, k * 0.05, (k - 1) * 0.02)); return g; },
@@ -5164,7 +5178,7 @@ const ITEM_MAKE = {
 const ITEM_PROTO = {};
 function makeItem(k) { if (!ITEM_PROTO[k]) ITEM_PROTO[k] = (ITEM_MAKE[k] || (() => new THREE.Mesh(ITEMS[k].geo, ITEMS[k].m)))(); return ITEM_PROTO[k].clone(); }
 // Trageweise: Schulter (lang & schwer), Rücken (Säcke/Garben), vorne (Tier, Kisten), Hand (klein)
-const CARRY = { stamm: 'shoulder', bretter: 'shoulder', kampfstock: 'shoulder', getreide: 'back', mehl: 'back', schwein: 'front', stein: 'front', eisenerz: 'front', kohle: 'front', golderz: 'front', wasser: 'hand', fisch: 'hand', schinken: 'hand', brot: 'hand', eisenbarren: 'front', muenzen: 'hand', werkzeug: 'hand' };
+const CARRY = { flachs: 'back', sehne: 'hand', schwert: 'shoulder', schild: 'front', bogen: 'shoulder', pfeile: 'hand', stamm: 'shoulder', bretter: 'shoulder', kampfstock: 'shoulder', getreide: 'back', mehl: 'back', schwein: 'front', stein: 'front', eisenerz: 'front', kohle: 'front', golderz: 'front', wasser: 'hand', fisch: 'hand', schinken: 'hand', brot: 'hand', eisenbarren: 'front', muenzen: 'hand', werkzeug: 'hand' };
 function placeCarry(w, item, style) {
   const c = w.carry; while (c.children.length) c.remove(c.children[0]);
   if (!item) { c.visible = false; return; }
@@ -5191,7 +5205,7 @@ function placeCarry(w, item, style) {
   }
   rt.dispose(); renderer.setClearColor(sky, 1);
 }
-const stock = { stamm: 8, bretter: 80, stein: 55, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, karren: 0, kampfstock: 2, werkzeug: 10 };
+const stock = { stamm: 8, bretter: 80, stein: 55, getreide: 0, mehl: 0, wasser: 0, brot: 0, eisenerz: 0, kohle: 0, eisenbarren: 0, flachs: 0, sehne: 0, schwert: 0, schild: 0, bogen: 0, pfeile: 0, fisch: 0, schwein: 0, schinken: 0, golderz: 0, muenzen: 0, karren: 0, kampfstock: 2, werkzeug: 10 };
 
 // ---------- Gebäudetypen ----------
 const TYPES = {
@@ -5212,6 +5226,11 @@ const TYPES = {
   fischer: { name: 'Fischer', icon: '🎣', cost: { bretter: 3 }, r: 1.6, desc: 'Am Ufer von Fluss oder See. Fängt Fische – Essen für die Bergwerke.' },
   bruecke: { name: 'Brücke', icon: '🌉', cost: { bretter: 8, stein: 4 }, r: 1, desc: 'Über den Fluss. Siedler können dann ans andere Ufer.' },
   schmelze: { name: 'Eisenschmelze', icon: '🔥', cost: { bretter: 3, stein: 5 }, r: 2.1, desc: '1 Eisenerz + 1 Kohle → 1 Eisenbarren' },
+  flachsbauer: { name: 'Flachsbauer', icon: '🌿', cost: { bretter: 3 }, r: 2.0, desc: 'Baut Flachs an → Flachs' },
+  seilerei: { name: 'Seilerei', icon: '🧵', cost: { bretter: 3, stein: 1 }, r: 2.0, desc: '1 Flachs → 1 Sehne (für Bögen)' },
+  waffenschmied: { name: 'Waffenschmied', icon: '🗡️', cost: { bretter: 4, stein: 4 }, r: 2.3, desc: 'Auf Auftrag: Schwert, Schild, Bogen, Pfeile' },
+  kaserne: { name: 'Kaserne', icon: '🏰', cost: { bretter: 8, stein: 8 }, r: 3.0, desc: 'Bildet Schwertkämpfer und Bogenschützen aus, befördert mit Münzen' },
+  burg: { name: 'Burg', icon: '🏯', cost: { bretter: 14, stein: 20, eisenbarren: 2 }, r: 3.2, desc: 'Großes Gebiet (Radius 40), Platz für 6 Kämpfer' },
   wagner: { name: 'Wagner', icon: '🛒', cost: { bretter: 5, stein: 2 }, r: 2.3, desc: 'Baut auf Auftrag Karren (2 Bretter + 1 Eisenbarren). Träger mit Karren tragen 4 Waren auf einmal.' },
   waffenschnitzer: { name: 'Waffenschnitzer', icon: '🏏', cost: { bretter: 3, stein: 1 }, r: 2.1, desc: '1 Brett → 1 Kampfstock' },
   wachturm: { name: 'Wachturm', icon: '🗼', cost: { bretter: 5, stein: 4 }, r: 1.6, desc: 'Ein Wächter mit Kampfstock zieht ein und erweitert dein Gebiet.' },
@@ -5329,7 +5348,7 @@ function buildModelOld(type) {
     g.add(mesh(new THREE.ConeGeometry(2.1, 1.6, 4).rotateY(Math.PI / 4), mat.roof, 0, 6.9, 0));
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(mesh(box(0.12, 1.2, 0.12), mat.trunk, sx * 1.1, 5.7, sz * 1.1));
     g.add(mesh(box(0.06, 1.6, 0.06), mat.beam, 0, 8.4, 0));
-    const fl = mesh(box(0.9, 0.55, 0.03), M(0x2f6fd0), 0.47, 8.9, 0); g.add(fl); fx.flag = fl;
+    const fl = mesh(box(0.9, 0.55, 0.03), M(WAPPEN_C), 0.47, 8.9, 0); g.add(fl); fx.flag = fl;
     g.add(mesh(box(0.7, 1.1, 0.06), mat.beam, 0, 0.55, 0.95));
   } else if (type === 'schmelze') {
     g.add(mesh(new THREE.CylinderGeometry(0.9, 1.4, 3.6, 8), mat.stone, 0, 1.8, -0.4));
@@ -5616,6 +5635,51 @@ function buildModel(type) {
     for (let i = 0; i < 4; i++) { const f = makeItem('fisch'); f.scale.setScalar(0.8); f.rotation.set(0, Math.PI / 2, Math.PI / 2); f.position.set(-0.3 + i * 0.2, 0.92, 0); rack.add(f); }
     const net = mesh(new THREE.PlaneGeometry(1.0, 0.8, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6a5a40, wireframe: true }), -1.3, 0.65, 0.4); net.rotation.y = Math.PI / 2; g.add(net); for (const z of [0, 0.8]) B(g, 0.05, 1.1, 0.05, OW.brown, -1.3, 0.55, z);
     const boat = new THREE.Group(); boat.position.set(0.3, 0.25, 1.4); boat.rotation.set(Math.PI, 0.2, 0); g.add(boat); const hull = mesh(new THREE.SphereGeometry(0.4, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), M(0x6a4428), 0, 0, 0); hull.scale.set(2.0, 0.6, 0.8); boat.add(hull);
+  } else if (type === 'flachsbauer') {
+    g = H({ w: 2.0, d: 1.7, h1: 1.0, h2: 0.95, frontWin: [1], chimney: false });
+    const fld = new THREE.Group(); fld.position.set(0.2, 0, 3.0); g.add(fld); fld.add(mesh(box(2.6, 0.1, 1.6), mat.field, 0, 0.04, 0));
+    for (let i = 0; i < 40; i++) { const f = makeItem('flachs'); f.scale.set(0.7, 0.8 + Math.random() * 0.3, 0.7); f.position.set(-1.15 + (i % 8) * 0.33, 0.36, -0.6 + Math.floor(i / 8) * 0.3); fld.add(f); }
+    for (let i = 0; i < 3; i++) { const f = makeItem('flachs'); f.position.set(-1.6, 0.36, 0.3 + i * 0.25); f.rotation.z = 0.3; g.add(f); }
+  } else if (type === 'seilerei') {
+    g = H({ w: 2.2, d: 1.8, frontWin: [2] });
+    const rope = new THREE.Group(); rope.position.set(1.7, 0, 0.6); g.add(rope); for (const z of [-0.5, 0.5]) B(rope, 0.08, 1.0, 0.08, OW.brown, 0, 0.5, z); B(rope, 0.06, 0.06, 1.1, OW.brown, 0, 0.95, 0);
+    for (let k = 0; k < 4; k++) B(rope, 0.015, 0.7, 0.015, M(0xd8c8a0), 0, 0.58, -0.36 + k * 0.24);
+    const wheel = new THREE.Group(); wheel.position.set(-1.7, 0.7, 0.6); wheel.rotation.y = Math.PI / 2; g.add(wheel); wheel.add(mesh(new THREE.TorusGeometry(0.35, 0.04, 5, 14), OW.brown)); for (let k = 0; k < 3; k++) { const sp = mesh(box(0.03, 0.7, 0.03), OW.brown); sp.rotation.z = k * Math.PI / 3; wheel.add(sp); } B(g, 0.08, 0.7, 0.08, OW.brown, -1.7, 0.35, 0.6); fx.spin2 = wheel;
+    for (let i = 0; i < 2; i++) { const sn = makeItem('sehne'); sn.position.set(1.2, 0.1 + i * 0.12, 1.4); g.add(sn); }
+  } else if (type === 'waffenschmied') {
+    g = H({ w: 2.6, d: 2.1, groundSand: true, beam: OW.ox, plaster: OW.plasterW, chimney: false, frontWin: [2] });
+    const pipe = mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.6, 8), OW.iron, -0.6, g.userData.top - 0.2, -0.3); g.add(pipe); fx.smokeAt = new V3(-0.6, g.userData.top + 0.75, -0.3);
+    anvil(g, 1.9, 0.9);
+    const forge = new THREE.Group(); forge.position.set(-1.9, 0, 0.6); g.add(forge); B(forge, 1.0, 0.8, 0.9, OW.sand, 0, 0.4, 0); const glowM = new THREE.MeshStandardMaterial({ color: 0x331100, emissive: 0xff5a10, emissiveIntensity: 0.2 }); B(forge, 0.6, 0.12, 0.5, glowM, 0, 0.85, 0); fx.glow = glowM; fx.sparkAt = new V3(1.9, 1.0, 0.9);
+    const rack = new THREE.Group(); rack.position.set(-0.3, 0, 1.6); g.add(rack); B(rack, 1.2, 0.08, 0.08, OW.brown, 0, 1.0, 0); for (const sx of [-1, 1]) B(rack, 0.08, 1.0, 0.08, OW.brown, sx * 0.55, 0.5, 0);
+    for (let i = 0; i < 3; i++) { const sw = makeItem('schwert'); sw.rotation.z = -Math.PI / 2; sw.position.set(-0.35 + i * 0.2, 0.6, 0.05); rack.add(sw); }
+    const sh = makeItem('schild'); sh.position.set(0.35, 0.6, 0.06); rack.add(sh);
+    signBoard(g, 0.9, 1.1, 1.15, () => { const sw = makeItem('schwert'); sw.scale.setScalar(0.5); sw.rotation.z = Math.PI / 4; return sw; });
+  } else if (type === 'kaserne') {
+    g = new THREE.Group(); const W = 4.4, D = 2.4;
+    B(g, W, 0.3, D, OW.sand2, 0, 0.15, -1.0); B(g, W, 1.5, D, OW.sand, 0, 1.05, -1.0);
+    for (let i = 0; i < 26; i++) B(g, 0.32, 0.13, 0.02, i % 2 ? OW.sand2 : OW.sand3, (Math.random() - 0.5) * (W - 0.3), 0.4 + Math.random() * 1.2, -1.0 + D / 2 + 0.005);
+    const up = owHouse({ w: W - 0.25, d: D - 0.25, h1: 0.01, h2: 1.05, beam: OW.brown, plaster: OW.plasterW, shut: OW.gS, style: 'giebel', frontWin: [1, 3, 5], chimney: true, groundWin: false }); up.position.set(0, 1.79, -1.0); g.add(up);
+    for (const x of [-1.2, 1.2]) { B(g, 0.6, 1.0, 0.05, OW.gS, x, 0.6, -1.0 + D / 2 + 0.02); sandArch(g, x, 1.1, -1.0 + D / 2 + 0.03, 0.34); }
+    // Hof mit Palisade, Strohpuppen, Zielscheibe, Waffengestell
+    for (let i = 0; i < 26; i++) { const a = i / 25 * Math.PI, px = Math.cos(a) * 2.6, pz = 0.2 + Math.sin(a) * 2.4; if (Math.abs(px) < 0.5 && pz > 2) continue; B(g, 0.14, 0.9 + (i % 2) * 0.12, 0.14, OW.wood, px, 0.45, pz); }
+    for (const x of [1.8, 2.3]) { const d = new THREE.Group(); d.position.set(x, 0, 2.6); g.add(d); B(d, 0.06, 1.2, 0.06, OW.brown, 0, 0.6, 0); B(d, 0.6, 0.06, 0.06, OW.brown, 0, 0.95, 0); d.add(mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.5, 8), M(0xd8b450), 0, 0.9, 0)); d.add(mesh(new THREE.SphereGeometry(0.12, 7, 5), M(0xd8b450), 0, 1.25, 0)); }
+    const tg = new THREE.Group(); tg.position.set(-1.6, 0, -0.4 + 1.6); g.add(tg); B(tg, 0.06, 1.0, 0.06, OW.brown, -0.2, 0.5, -0.1); B(tg, 0.06, 1.0, 0.06, OW.brown, 0.2, 0.5, -0.1);
+    [0xffffff, 0xc0392b, 0xffffff, 0xc0392b].forEach((c, k) => tg.add(mesh(new THREE.CylinderGeometry(0.4 - k * 0.1, 0.4 - k * 0.1, 0.04 + k * 0.005, 16).rotateX(Math.PI / 2), M(c), 0, 0.9, 0.02 + k * 0.005)));
+    const rk = new THREE.Group(); rk.position.set(-0.3, 0, 0.6); g.add(rk); B(rk, 1.4, 0.07, 0.07, OW.brown, 0, 0.9, 0); for (const sx of [-1, 1]) B(rk, 0.07, 0.9, 0.07, OW.brown, sx * 0.65, 0.45, 0); for (let i = 0; i < 4; i++) { const st = makeItem(i % 2 ? 'bogen' : 'schwert'); st.rotation.z = -Math.PI / 2; st.position.set(-0.45 + i * 0.3, 0.5, 0.06); rk.add(st); }
+    const fl = mesh(box(0.9, 0.55, 0.03), M(WAPPEN_C), 0.47, 4.3, -1.0); g.add(fl); B(g, 0.05, 1.6, 0.05, OW.iron, 0, 3.9, -1.0); fx.flag = fl;
+    g.userData.top = 3.3;
+  } else if (type === 'burg') {
+    g = new THREE.Group(); const S = 4.4;
+    B(g, S, 2.6, S, OW.sand, 0, 1.3, 0);
+    for (let i = 0; i < 40; i++) { const side = i % 4, t = (Math.random() - 0.5) * (S - 0.3), y = 0.3 + Math.random() * 2.1; const p = B(g, 0.35, 0.14, 0.02, i % 3 ? OW.sand2 : OW.sand3, side < 2 ? t : (side === 2 ? 1 : -1) * (S / 2 + 0.005), y, side < 2 ? (side ? 1 : -1) * (S / 2 + 0.005) : t); p.rotation.y = side < 2 ? 0 : Math.PI / 2; }
+    for (let k = 0; k < 16; k++) { const a = k % 4, t = -S / 2 + 0.25 + Math.floor(k / 4) * (S - 0.5) / 3; B(g, 0.4, 0.4, 0.4, OW.sand3, a < 2 ? t : (a === 2 ? 1 : -1) * (S / 2 - 0.2), 2.8, a < 2 ? (a ? 1 : -1) * (S / 2 - 0.2) : t); }
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const tw = new THREE.Group(); tw.position.set(sx * S / 2, 0, sz * S / 2); g.add(tw); tw.add(mesh(new THREE.CylinderGeometry(0.75, 0.85, 3.8, 10), OW.sand, 0, 1.9, 0)); tw.add(mesh(new THREE.ConeGeometry(0.95, 1.5, 10), OW.tile, 0, 4.55, 0)); owWindow(tw, 0, 2.7, OW.sand3, null, false, 0.22, 0.3); tw.children.slice(-4).forEach(c => { c.position.z += 0.78; }); }
+    const keep = owHouse({ w: 2.2, d: 2.2, h1: 0.01, h2: 1.3, beam: OW.ox, plaster: OW.plasterW, style: 'voll', frontWin: [0, 2], groundWin: false, roof: OW.slate }); keep.position.set(0, 2.6, -0.3); g.add(keep);
+    B(g, 1.1, 1.6, 0.06, OW.brown, 0, 0.8, S / 2 + 0.02); sandArch(g, 0, 1.6, S / 2 + 0.03, 0.56);
+    for (let k = 0; k < 6; k++) B(g, 1.1, 0.05, 0.03, OW.iron, 0, 0.2 + k * 0.25, S / 2 + 0.06);
+    B(g, 0.06, 2.2, 0.06, OW.iron, 0, 6.6, -0.3); const fl = mesh(box(1.3, 0.8, 0.03), M(WAPPEN_C), 0.68, 7.3, -0.3); g.add(fl); fx.flag = fl;
+    g.userData.top = 6.2;
   } else if (type === 'wagner') {
     g = H({ w: 2.4, d: 2.0, frontWin: [2], beam: OW.brown });
     B(g, 1.3, 0.1, 0.6, OW.wood, 1.75, 0.75, 0.9); for (const sx of [-1, 1]) B(g, 0.08, 0.75, 0.55, OW.brown, 1.75 + sx * 0.55, 0.37, 0.9);
@@ -5627,7 +5691,7 @@ function buildModel(type) {
     B(g, 1.3, 0.1, 0.55, OW.wood, 1.85, 0.75, 0.9); for (const sx of [-1, 1]) B(g, 0.08, 0.75, 0.5, OW.brown, 1.85 + sx * 0.55, 0.37, 0.9);
     const rack = new THREE.Group(); rack.position.set(-1.65, 0, 0.6); g.add(rack); B(rack, 0.08, 1.4, 0.08, OW.brown, -0.4, 0.7, 0); B(rack, 0.08, 1.4, 0.08, OW.brown, 0.4, 0.7, 0); B(rack, 0.9, 0.07, 0.1, OW.brown, 0, 1.2, 0);
     for (let i = 0; i < 5; i++) { const st = makeItem('kampfstock'); st.rotation.z = Math.PI / 2 + 0.1; st.position.set(-0.3 + i * 0.15, 0.65, 0.07); rack.add(st); }
-    const shield = new THREE.Group(); shield.position.set(0.9, 1.65, 1.2); g.add(shield); shield.add(mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.04, 14).rotateX(Math.PI / 2), M(0x2f6fd0))); shield.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 8).rotateX(Math.PI / 2), OW.gold, 0, 0, 0.02));
+    const shield = new THREE.Group(); shield.position.set(0.9, 1.65, 1.2); g.add(shield); shield.add(mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.04, 14).rotateX(Math.PI / 2), M(WAPPEN_C))); shield.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 8).rotateX(Math.PI / 2), OW.gold, 0, 0, 0.02));
   } else if (type === 'schmied') {
     g = H({ w: 2.6, d: 2.1, groundSand: true, beam: OW.brown, plaster: OW.plasterW, chimney: false, frontWin: [2] });
     const pipe = mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.6, 8), OW.iron, -0.6, g.userData.top - 0.2, -0.3); g.add(pipe); g.add(mesh(new THREE.ConeGeometry(0.16, 0.18, 8), OW.iron, -0.6, g.userData.top + 0.65, -0.3)); fx.smokeAt = new V3(-0.6, g.userData.top + 0.75, -0.3);
@@ -5681,7 +5745,7 @@ function buildModel(type) {
     g.add(mesh(new THREE.ConeGeometry(1.6, 2.6, 4).rotateY(Math.PI / 4), OW.tile, 0, 5.05, 0));
     for (let r = 1; r < 6; r++) g.add(mesh(new THREE.CylinderGeometry(1.6 - r * 0.27 + 0.03, 1.6 - r * 0.27 + 0.03, 0.03, 4, 1, true).rotateY(Math.PI / 4), OW.tileL, 0, 3.75 + r * 0.43, 0));
     B(g, 0.05, 1.4, 0.05, OW.iron, 0, 6.9, 0); g.add(mesh(new THREE.SphereGeometry(0.08, 6, 5), OW.gold, 0, 6.35, 0));
-    const fl = mesh(box(0.9, 0.55, 0.03), M(0x2f6fd0), 0.47, 7.3, 0); g.add(fl); fx.flag = fl;
+    const fl = mesh(box(0.9, 0.55, 0.03), M(WAPPEN_C), 0.47, 7.3, 0); g.add(fl); fx.flag = fl;
   } else {
     const old = buildModelOld(type); g = old.g; Object.assign(fx, old.fx);
     if (type === 'brunnen') { g.traverse(o => { if (o.isMesh && o.material === mat.stone) o.material = OW.sand; if (o.isMesh && o.material === mat.roof) o.material = OW.tile; if (o.isMesh && o.material === mat.beam) o.material = OW.brown; }); const crank = new THREE.Group(); crank.position.set(0, 1.65, 0); g.add(crank); crank.add(mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.7, 8).rotateZ(Math.PI / 2), M(0x8a6038))); B(crank, 0.04, 0.3, 0.04, OW.iron, 0.9, -0.12, 0); B(crank, 0.04, 0.04, 0.2, OW.iron, 0.9, -0.27, 0.1); barrel(g, 1.0, 0.7, 0.75); }
@@ -5719,6 +5783,8 @@ const LOOK = { // Kleidung & Kopfbedeckung je Beruf
   waffenschnitzer: { c: 0x8a6a3a, hat: 'cap', hc: 0x5a3e22 }, fischer: { c: 0x2f8a8a, hat: 'bucket', hc: 0x6a7a5a }, schweinezucht: { c: 0x7a8a3a, hat: 'straw' }, metzger: { c: 0xeeeeee, hat: 'cap', hc: 0xffffff, apron: 0xd8a0a0 },
   bauarbeiter: { c: 0x6a6a5a, hat: 'cap', hc: 0xd87a28, apron: 0x8a6a45 },
   wagner: { c: 0x6a5a3a, hat: 'cap', hc: 0x3a2a1a, apron: 0x8a6a45 },
+  flachsbauer: { c: 0x5a7aa0, hat: 'straw' }, seilerei: { c: 0x9a8a6a, hat: 'cap', hc: 0x5a4a3a }, waffenschmied: { c: 0x4a3a2a, hat: 'none', apron: 0x3a2618 }, kaserne: { c: 0x7a3a2a, hat: 'helmet' },
+  schwertkaempfer: { c: WAPPEN_C, hat: 'helmet' }, bogenschuetze: { c: 0x3f6b3a, hat: 'cap', hc: 0x2a4a2a },
   traeger: { c: 0x8a5a2a, hat: 'cap', hc: 0x5a3e22 }, waechter: { c: 0x2f4fa0, hat: 'helmet' },
 };
 function makeWorker(type) {
@@ -5760,7 +5826,9 @@ function makeWorker(type) {
   if (type === 'traeger') { const pack = new THREE.Group(); pack.position.set(0, 0.72, -0.24); pack.add(mesh(new THREE.CylinderGeometry(0.17, 0.13, 0.4, 8, 1, true), M(0xa8824a), 0, 0, 0)); pack.add(mesh(box(0.04, 0.5, 0.04), mat.trunk, -0.15, 0, 0.05)); pack.add(mesh(box(0.04, 0.5, 0.04), mat.trunk, 0.15, 0, 0.05)); body.add(pack); }
   if (type === 'fischer') { const rod = mesh(new THREE.CylinderGeometry(0.012, 0.025, 1.8, 4), mat.trunk, 0, 0, 0.8); rod.rotation.x = Math.PI / 2; tool.add(rod); }
   if (type === 'bauernhof' || type === 'schweinezucht') { tool.add(mesh(box(0.035, 0.035, 0.8), mat.trunk, 0, 0, 0.3)); tool.add(mesh(box(0.2, 0.03, 0.1), M(0x9aa0a8), 0, 0, 0.7)); }
-  if (type === 'waechter') { tool.add(mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.1, 6), M(0x7a5230), 0, 0.3, 0)); const sh = new THREE.Group(); sh.position.set(0, -0.3, 0.06); sh.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 12).rotateX(Math.PI / 2), M(0x2f6fd0), 0, 0, 0)); sh.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 8).rotateX(Math.PI / 2), M(0xd8c070), 0, 0, 0.02)); arm2.add(sh); }
+  if (type === 'schwertkaempfer') { const sw = makeItem('schwert'); sw.rotation.set(0, Math.PI / 2, Math.PI / 2); sw.position.set(0, 0.1, 0.1); tool.add(sw); const sh = makeItem('schild'); sh.position.set(0, -0.3, 0.08); arm2.add(sh); }
+  if (type === 'bogenschuetze') { const bw = makeItem('bogen'); bw.rotation.set(0, Math.PI / 2, 0); bw.position.set(0, -0.05, 0.1); arm2.add(bw); const q = makeItem('pfeile'); q.rotation.z = -1.3; q.position.set(0.1, 0.75, -0.2); body.add(q); }
+  if (type === 'waechter') { tool.add(mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.1, 6), M(0x7a5230), 0, 0.3, 0)); const sh = new THREE.Group(); sh.position.set(0, -0.3, 0.06); sh.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 12).rotateX(Math.PI / 2), M(WAPPEN_C), 0, 0, 0)); sh.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 8).rotateX(Math.PI / 2), M(0xd8c070), 0, 0, 0.02)); arm2.add(sh); }
   const carry = new THREE.Group(); carry.visible = false; g.add(carry);
   scene.add(g);
   return { g, body, legs, arm, arm2, head, carry, queue: [], anim: null, walkPh: Math.random() * 6, seed };
@@ -5788,6 +5856,7 @@ function finishBuilding(b) {
   b.g.scale.set(1, 1, 1); if (b.scaffold) scene.remove(b.scaffold);
   if (b.type === 'lager') return;
   if (b.type === 'bruecke') { markBridge(b); b.status = 'Fertig – Siedler können den Fluss überqueren'; toast('Die Brücke ist fertig!'); return; }
+  if (b.type === 'burg') { b.needsGuard = true; b.status = 'Wartet auf einen Wächter oder Kämpfer'; toast('Burg ist fertig!'); return; }
   if (b.type === 'wachturm') { b.needsGuard = true; b.status = 'Wartet auf Kampfstock 🏏'; toast('Wachturm ist fertig!'); return; }
   b.needsWorker = true; b.status = 'Wartet auf Werkzeug 🔨';
   toast(`${TYPES[b.type].name} ist fertig!`);
@@ -5797,6 +5866,8 @@ const POOL = {};
 for (const k of Object.keys(TYPES)) if (!['lager', 'bruecke', 'strasse', 'wachturm'].includes(k)) POOL[k] = 1;
 POOL.waechter = 1;
 function trySpawnGuard(b) {
+  const free = kasernen().flatMap(k => k.garrison || []).sort((a, c) => c.rank - a.rank)[0];
+  if (free) { b.needsGuard = false; sendToPost(free, b); b.status = 'Ein Kämpfer marschiert los …'; b.claimed = true; addTerritory(b.x, b.z, b.type === 'burg' ? 40 : 22); return; }
   if (POOL.waechter > 0) { POOL.waechter--; stock.kampfstock++; }
   if (stock.kampfstock < 1) { b.status = 'Kein Kampfstock im Lager – Waffenschnitzer bauen!'; return; }
   stock.kampfstock--; refreshPiles(); b.needsGuard = false;
@@ -5804,7 +5875,7 @@ function trySpawnGuard(b) {
   setCarry(w, 'kampfstock');
   b.status = 'Ein Siedler wird zum Wächter und marschiert los …';
   moveTo(w, b.door);
-  w.queue.push({ fn: () => { setCarry(w, null); w.g.visible = false; b.guard = w; b.status = 'Besetzt – Gebiet erweitert'; addTerritory(b.x, b.z, 22); toast('Ein Wächter hat den Wachturm bezogen – dein Gebiet wächst!'); } });
+  w.queue.push({ fn: () => { setCarry(w, null); w.g.visible = false; b.guard = w; const s = { kind: 'schwert', rank: 0, xp: 0, food: 1, w }; SOLD.push(s); s.post = b; (b.garrison = b.garrison || []).push(s); b.status = 'Besetzt – Gebiet erweitert'; addTerritory(b.x, b.z, b.type === 'burg' ? 40 : 22); toast('Ein Wächter hat den Wachturm bezogen – dein Gebiet wächst!'); } });
 }
 function trySpawnWorker(b) {
   if (POOL[b.type] > 0) { POOL[b.type]--; stock.werkzeug++; }
@@ -5901,12 +5972,14 @@ function stat(kind, item, n) { statLog.push([simT, kind, item, n]); if (statLog.
 
 // ---------- Träger ----------
 const carriers = [];
-const RECIPE_IN = { saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 }, wagner: { bretter: 2, eisenbarren: 1 } };
+const RECIPE_IN = { saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 }, seilerei: { flachs: 1 }, wagner: { bretter: 2, eisenbarren: 1 } };
 const isActive = b => b.progress >= 1 && !b.removed && !b.paused && (b.worker || b.needsWorker);
 function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
   if (!isActive(b)) return [];
   const res = [];
   if (TYPES[b.type].mine) { const have = FOODS.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*food', 2 - have]); return res; }
+  if (b.type === 'waffenschmied') { const need = {}; for (const [p, n] of Object.entries(b.wo || {})) if (n > 0) for (const [k, v] of Object.entries(WS_REC[p][0])) need[k] = Math.max(need[k] || 0, v * 2); for (const [k, v] of Object.entries(need)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v) res.push([k, v - have]); } return res; }
+  if (b.type === 'kaserne') { const need = {}; if (b.trS > 0) { need.schwert = 1; need.schild = 1; } if (b.trB > 0) { need.bogen = 1; need.pfeile = 5; } if (b.promo > 0) need.muenzen = 1; for (const [k, v] of Object.entries(need)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v) res.push([k, v - have]); } return res; }
   const r = RECIPE_IN[b.type]; if (!r) return res;
   if (b.type === 'wagner' && !(b.orders > 0)) return res;
   for (const [k, v] of Object.entries(r)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v * 2) res.push([k, v * 2 - have]); }
@@ -6045,6 +6118,57 @@ function siteStep(b, dt) {
   if (p >= 1) { b.builderAt = false; endSite(b); finishBuilding(b); }
 }
 
+// ---------- Militär: Kämpfer, Ränge, Sold, Besatzungen ----------
+const RANKS = { schwert: ['Wächter', 'Landsknecht', 'Waffenknecht', 'Ritter', 'Burgmann'], bogen: ['Jäger', 'Schütze', 'Meisterschütze'] };
+const SOLD = [];
+const maxRank = k => RANKS[k].length - 1;
+const strength = s => Math.round((s.kind === 'bogen' ? 8 : 10) * (1 + s.rank * 0.6) * (s.hungry ? 0.5 : 1));
+const capOf = b => b.type === 'burg' ? 6 : b.type === 'wachturm' ? 3 : 0;
+function dressRank(w, s) {
+  if (w.rankG) w.body.remove(w.rankG); const g = new THREE.Group(); w.rankG = g; w.body.add(g);
+  const armor = [null, M(0x8a6a45), M(0x9aa0aa), M(0xb8bec8), M(0xd8dce4)][s.kind === 'bogen' ? Math.min(2, s.rank) : s.rank];
+  if (armor) g.add(mesh(new THREE.CylinderGeometry(0.17, 0.21, 0.38, 8), armor, 0, 0.68, 0));
+  if (s.rank >= 3 || (s.kind === 'bogen' && s.rank >= 2)) { const cape = mesh(box(0.38, 0.55, 0.03), M(WAPPEN_C), 0, 0.6, -0.2); cape.rotation.x = 0.12; g.add(cape); }
+  if (s.rank >= 4) g.add(mesh(new THREE.ConeGeometry(0.06, 0.16, 5), OW.gold, 0, 1.35, 0));
+  for (let i = 0; i <= s.rank; i++) g.add(mesh(box(0.06, 0.02, 0.02), OW.gold, 0.12, 0.55 + i * 0.05, 0.19));
+  w.rankG.traverse(o => { if (o.isMesh) o.castShadow = true; });
+}
+function makeSoldierW(s, at) { const w = makeWorker(s.kind === 'bogen' ? 'bogenschuetze' : 'schwertkaempfer'); w.g.position.copy(at); w.home = null; w.soldier = s; workers.push(w); dressRank(w, s); s.w = w; return w; }
+function kasernen() { return buildings.filter(b => b.type === 'kaserne' && b.progress >= 1 && !b.removed); }
+function soldierAI(s) { // Übung auf dem Kasernenhof
+  const w = s.w, b = s.post; if (!w || !b || b.type !== 'kaserne') return;
+  if (w.queue.length) return;
+  const spot = s.kind === 'bogen' ? new V3(-1.2 + Math.random() * 0.8, 0, 2.6) : new V3(1.4 + Math.random() * 0.6, 0, 2.4 + Math.random() * 0.4);
+  const look = s.kind === 'bogen' ? new V3(-1.6, 0, -0.4 - 2) : new V3(2.6, 0, 2.6);
+  const P = spot.applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z)), L = look.applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z));
+  moveTo(w, P); doFn(w, () => faceTo(w, L)); work(w, 2 + Math.random() * 2, s.kind === 'bogen' ? 'shoot' : 'hammer', null);
+}
+function sendToPost(s, b) {
+  const from = s.post; s.post = b; if (from && from.garrison) from.garrison.splice(from.garrison.indexOf(s), 1);
+  b.garrison = b.garrison || []; b.garrison.push(s);
+  const w = s.w || makeSoldierW(s, from ? from.door : lagerDoor(b.x, b.z)); w.g.visible = true; w.queue.length = 0;
+  moveTo(w, b.door); w.queue.push({ fn: () => { w.g.visible = false; toast(`${RANKS[s.kind][s.rank]} hat ${TYPES[b.type].name} bezogen`); } });
+}
+function militaryStep(dt) {
+  for (const s of SOLD) {
+    // Sold: alle ~2 Min. eine Mahlzeit aus dem Lager
+    s.food = (s.food ?? 1) - dt / (120 * TF);
+    if (s.food <= 0) { const f = FOODS.filter(k => stock[k] > 0).sort((a, c) => stock[c] - stock[a])[0]; if (f) { stock[f]--; stat('use', f, 1); s.food = 1; s.hungry = false; } else { s.food = 0; s.hungry = true; } }
+    // Übungsplatz: langsamer Aufstieg in der Kaserne (bis Rang 2 ohne Münzen)
+    if (s.post && s.post.type === 'kaserne' && s.rank < Math.min(2, maxRank(s.kind))) { s.xp = (s.xp || 0) + dt / (300 * TF); if (s.xp >= 1) { s.xp = 0; s.rank++; if (s.w) dressRank(s.w, s); toast(`Durch Übung aufgestiegen: ${RANKS[s.kind][s.rank]}`); } }
+    if (s.post && s.post.type === 'kaserne') soldierAI(s);
+  }
+}
+function soldierHTML(s) { return `${s.kind === 'bogen' ? '🏹' : '⚔️'} <b>${RANKS[s.kind][s.rank]}</b> · Stärke ${strength(s)}${s.hungry ? ' · <span style="color:#ff8a6a">hungrig</span>' : ''}`; }
+function renderMil() {
+  if ($('milwin').style.display !== 'block') return;
+  const by = {}; for (const s of SOLD) { const k = s.post ? TYPES[s.post.type].name + (s.post.type === 'kaserne' ? '' : ` (${Math.round(s.post.x)}, ${Math.round(s.post.z)})`) : 'unterwegs'; (by[k] = by[k] || []).push(s); }
+  const tot = SOLD.reduce((a, s) => a + strength(s), 0);
+  $('milbody').innerHTML = `<div class="subhead">⚔️ Militär <small>${SOLD.length} Kämpfer · Gesamtstärke ${tot}</small></div>` +
+    (SOLD.length ? Object.entries(by).map(([k, l]) => `<h4>${k}</h4>` + l.map(s => `<div class="w">${soldierHTML(s)}</div>`).join('')).join('') : '<p>Noch keine Kämpfer. Baue Waffenschmied und Kaserne.</p>') +
+    `<h4>Ränge</h4><small>⚔️ ${RANKS.schwert.join(' → ')}<br>🏹 ${RANKS.bogen.join(' → ')}<br>Bis Rang 3 durch Übung in der Kaserne, darüber nur mit 🪙 Münzen. Jeder Kämpfer isst etwa alle 2 Minuten.</small>`;
+}
+
 // ---------- Arbeits-Abläufe ----------
 function moveTo(w, p) { w.queue.push({ to: new V3(p.x, 0, p.z) }); }
 function work(w, t, anim, onDone) { w.queue.push({ wait: t * WORKF, anim, fn: onDone }); }
@@ -6120,6 +6244,21 @@ function planNext(b) {
       work(w, 3, 'sow', () => { for (const p of pigs) p.growth = Math.min(1, p.growth + 0.2); b.fx.feed.visible = false; b.status = 'Schweine wachsen'; });
       moveTo(w, b.door);
     }
+  } else if (T === 'waffenschmied') {
+    const prod = Object.keys(WS_REC).find(p => (b.wo || {})[p] > 0 && hasIn(b, WS_REC[p][0]));
+    if (!prod) return idle(Object.values(b.wo || {}).some(n => n > 0) ? 'Wartet auf Material' : 'Wartet auf Auftrag – Gebäude antippen', 2);
+    const [inp, n, t] = WS_REC[prod]; takeIn(b, inp); b.wo[prod]--;
+    const ws = WORKSPOT.schmied, stand = new V3(ws[0], 0, ws[1]).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z)), look = new V3(ws[2], 0, ws[3]).applyAxisAngle(new V3(0, 1, 0), b.rot).add(new V3(b.x, 0, b.z));
+    moveTo(w, stand); doFn(w, () => { faceTo(w, look); b.working = true; b.status = 'Schmiedet ' + ITEMS[prod].name; holdFront(w, prod); });
+    work(w, t, 'hammer', () => { holdFront(w, null); b.working = false; setCarry(w, prod); });
+    deliver(w, prod, n);
+  } else if (T === 'kaserne') {
+    b.working = false;
+    if (b.trS > 0 && hasIn(b, { schwert: 1, schild: 1 })) { takeIn(b, { schwert: 1, schild: 1 }); b.trS--; doFn(w, () => { b.status = 'Bildet einen Schwertkämpfer aus'; b.working = true; }); work(w, 6, 'hammer', () => { const s = { kind: 'schwert', rank: 0, xp: 0, food: 1 }; SOLD.push(s); s.post = b; (b.garrison = b.garrison || []).push(s); makeSoldierW(s, b.door); toast('Neuer Schwertkämpfer ausgebildet ⚔️'); b.working = false; }); return; }
+    if (b.trB > 0 && hasIn(b, { bogen: 1, pfeile: 5 })) { takeIn(b, { bogen: 1, pfeile: 5 }); b.trB--; doFn(w, () => { b.status = 'Bildet einen Bogenschützen aus'; b.working = true; }); work(w, 6, 'shoot', () => { const s = { kind: 'bogen', rank: 0, xp: 0, food: 1 }; SOLD.push(s); s.post = b; (b.garrison = b.garrison || []).push(s); makeSoldierW(s, b.door); toast('Neuer Bogenschütze ausgebildet 🏹'); b.working = false; }); return; }
+    const cand = (b.garrison || []).filter(s => s.rank < maxRank(s.kind)).sort((a, c) => a.rank - c.rank)[0];
+    if (b.promo > 0 && cand && hasIn(b, { muenzen: 1 })) { takeIn(b, { muenzen: 1 }); b.promo--; doFn(w, () => { b.status = 'Befördert einen Kämpfer'; b.working = true; }); work(w, 3, 'hammer', () => { cand.rank++; cand.xp = 0; if (cand.w) dressRank(cand.w, cand); toast(`Beförderung! Neuer Rang: ${RANKS[cand.kind][cand.rank]} 🪙`); b.working = false; }); return; }
+    return idle((b.trS || b.trB || b.promo) ? 'Wartet auf Ausrüstung oder Münzen' : 'Bereit – Aufträge im Gebäude-Menü', 2);
   } else if (T === 'fischer') {
     let best = null, bd = 26;
     for (const f of fishSpots) { if (f.amount <= 0 || f.reserved || riverSide(f.x, f.z) !== riverSide(b.x, b.z) && Math.abs(f.x - riverX(f.z)) > 1 && !bridgesDone().length) continue; const d = Math.hypot(f.x - b.x, f.z - b.z); if (d < bd) { bd = d; best = f; } }
@@ -6142,6 +6281,7 @@ function planNext(b) {
       goldmine: [{ brot: 1 }, 'golderz', 1, 6, 'Baut Gold ab'], muenzpraege: [{ golderz: 1, kohle: 1 }, 'muenzen', 1, 6, 'Prägt Münzen'],
       metzger: [{ schwein: 1 }, 'schinken', 2, 5, 'Macht Schinken'],
       wagner: [{ bretter: 2, eisenbarren: 1 }, 'karren', 1, 9, 'Baut einen Karren'],
+      flachsbauer: [{}, 'flachs', 1, 6, 'Erntet Flachs'], seilerei: [{ flachs: 1 }, 'sehne', 1, 5, 'Dreht Sehnen'],
       schmied: [{ eisenbarren: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
     let [inp, out, n, t, verb] = rec;
     if (TYPES[T].mine) { const food = FOODS.filter(f => b.in[f] > 0).sort((a, c) => b.in[c] - b.in[a])[0]; if (!food) return idle('Wartet auf Essen (Brot, Fisch oder Schinken)', 2); inp = { [food]: 1 }; }
@@ -6164,7 +6304,8 @@ function planNext(b) {
   }
 }
 // Arbeitsplätze vor dem Haus: [stehen x, z, schaut zu x, z, Bewegung, Ware in der Hand]
-const WORKSPOT = { schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.95, 1.6, 1.95, 1.0, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
+const WS_REC = { schwert: [{ eisenbarren: 1, kohle: 1 }, 1, 7], schild: [{ bretter: 1, eisenbarren: 1 }, 1, 6], bogen: [{ bretter: 2, sehne: 1 }, 1, 6], pfeile: [{ bretter: 1, eisenbarren: 1 }, 5, 5] };
+const WORKSPOT = { flachsbauer: [1.6, 1.8, 1.6, 3.0, 'dig', null], seilerei: [1.7, 1.5, 1.7, 0.9, 'carve', 'flachs'], schmied: [1.9, 1.5, 1.9, 0.9, 'hammer', 'eisenbarren'], muenzpraege: [1.95, 1.6, 1.95, 1.0, 'hammer', 'golderz'], baeckerei: [1.9, 1.55, 1.9, 0.3, 'push', 'brot'],
   saegewerk: [0.3, 2.65, 0.3, 1.8, 'saw', null], schmelze: [0, 1.6, 0, 0.85, 'stoke', 'kohle'], metzger: [-1.85, 1.3, -1.85, 0.7, 'hammer', 'schinken'], waffenschnitzer: [1.85, 1.5, 1.85, 0.9, 'carve', 'kampfstock'], wagner: [1.75, 1.6, 1.75, 0.9, 'hammer', 'bretter'] };
 function holdFront(w, item) { w.holding = !!item; placeCarry(w, item, 'work'); }
 function faceTo(w, p) { w.g.rotation.y = Math.atan2(p.x - w.g.position.x, p.z - w.g.position.z); }
@@ -6215,7 +6356,7 @@ const CATS = [
   { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger'] },
   { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
-  { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'wachturm'] },
+  { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'flachsbauer', 'seilerei', 'waffenschmied', 'kaserne', 'wachturm', 'burg'] },
   { name: 'Wege & Lager', icon: '🛤️', types: ['bruecke', 'lager', 'wagner'] },
 ];
 let openCat = -1;
@@ -6275,7 +6416,7 @@ function selectB(b) {
 }
 // ---------- Berufs-Schilder über den Gebäuden ----------
 const labelBox = document.createElement('div'); labelBox.id = 'labels'; document.body.appendChild(labelBox);
-const JOB = { wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Bergmann (Stein)', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
+const JOB = { flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Bergmann (Stein)', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
 const _lv = new V3();
 function updatePauseIcons() {
   for (const b of buildings) {
@@ -6312,7 +6453,8 @@ function renderInfo() {
   if (b.type === 'bauernhof') extra = `Felder: ${b.plots.length} · reif: ${b.plots.filter(p => p.state === 'reif').length} · wachsend: ${b.plots.filter(p => p.state === 'wächst').length}`;
   if (b.type === 'wagner') { const busy = b.working && b.worker && b.worker.queue[0] && b.worker.queue[0].wait; const pr = busy ? Math.min(1, (b.worker.queue[0].el || 0) / b.worker.queue[0].wait) : 0; extra = `Offene Aufträge: <b>${b.orders || 0}</b> · Karren im Lager: ${stock.karren} · Karren unterwegs: ${carriers.filter(c => c.cart).length}<div style="height:8px;background:#0005;border-radius:4px;margin-top:4px"><div style="height:8px;width:${pr * 100}%;background:#e0ac48;border-radius:4px"></div></div>`; }
   if (b.type === 'schweinezucht') extra = 'Schweine: ' + b.fx.pigs.map(p => Math.round(p.growth * 100) + ' %').join(' · ');
-  if (b.type === 'wachturm' && b.guard) extra = 'Wächter: 1 · Gebiet: Radius 22';
+  if (b.type === 'wachturm' || b.type === 'burg') extra = `Besatzung ${(b.garrison || []).length}/${capOf(b)} · Gebiet: Radius ${b.type === 'burg' ? 40 : 22}<br>` + (b.garrison || []).map(soldierHTML).join('<br>');
+  if (b.type === 'kaserne') extra = `Kämpfer hier: ${(b.garrison || []).length}<br>` + (b.garrison || []).map(soldierHTML).join('<br>');
   const inStr = Object.entries(b.in).filter(([, v]) => v > 0).map(([k, v]) => ITEMS[k].icon + v).join(' '), outStr = Object.entries(b.out).filter(([, v]) => v > 0).map(([k, v]) => ITEMS[k].icon + v).join(' ');
   if (inStr || outStr) extra += `<br>Eingang: ${inStr || '–'} · Ausgang: ${outStr || '–'}`;
   if (b.paused) extra += '<br>⏸ angehalten';
@@ -6511,9 +6653,9 @@ function drawMini() {
   }
   mctx.putImageData(miniImg, 0, 0);
   const sc = MP / SIZE, px = x => (x + MAP) * sc;
-  mctx.fillStyle = 'rgba(47,111,208,0.22)'; mctx.strokeStyle = 'rgba(47,111,208,0.95)'; mctx.lineWidth = 1.5;
+  mctx.fillStyle = '#' + new THREE.Color(WAPPEN_C).getHexString() + '38'; mctx.strokeStyle = '#' + new THREE.Color(WAPPEN_C).getHexString(); mctx.lineWidth = 1.5;
   for (const t of territories) { mctx.beginPath(); mctx.arc(px(t.x), px(t.z), t.r * sc, 0, Math.PI * 2); mctx.fill(); }
-  mctx.fillStyle = '#2f6fd0'; for (const [x, z] of flagPts) mctx.fillRect(px(x) - 0.7, px(z) - 0.7, 1.4, 1.4);
+  mctx.fillStyle = '#' + new THREE.Color(WAPPEN_C).getHexString(); for (const [x, z] of flagPts) mctx.fillRect(px(x) - 0.7, px(z) - 0.7, 1.4, 1.4);
   for (const b of buildings) { mctx.fillStyle = b.type === 'lager' ? '#ffd24a' : b.type === 'wachturm' ? '#ff5050' : '#ffffff'; const s = b.type === 'lager' ? 5 : 3; mctx.fillRect(px(b.x) - s / 2, px(b.z) - s / 2, s, s); }
   // Blickfeld
   const vw = dist * 1.1 * sc;
@@ -6551,13 +6693,18 @@ let moveFrom = null;
 let confirmDel = false;
 function renderInfoBtns() {
   const b = selected, box = $('infobtns'); if (!b) { box.innerHTML = ''; return; }
-  const prod = b.type !== 'lager' && b.type !== 'bruecke' && b.type !== 'wachturm';
+  const prod = !['lager', 'bruecke', 'wachturm', 'burg', 'kaserne'].includes(b.type);
   let h = '';
   if (prod) h += `<div class="row"><span>Vorrang:</span>${['Hoch', 'Normal', 'Niedrig'].map((n, i) => `<button data-prio="${i}" class="${b.prio === i ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="row"><button data-act="pause">${b.paused ? '▶ Weiterarbeiten' : '⏸ Anhalten'}</button></div>`;
+  if (b.type === 'waffenschmied') { b.wo = b.wo || {}; h += Object.keys(WS_REC).map(p => `<div class="row"><span style="min-width:110px">${ITEMS[p].icon} ${ITEMS[p].name}</span><button data-wo="${p}" data-n="-1">−</button><b style="min-width:22px;text-align:center">${b.wo[p] || 0}</b><button data-wo="${p}" data-n="1">+</button><button data-wo="${p}" data-n="5">+5</button></div>`).join(''); }
+  if (b.type === 'kaserne') { const rowK = (k, l) => `<div class="row"><span style="min-width:150px">${l}</span><button data-kz="${k}" data-n="-1">−</button><b style="min-width:22px;text-align:center">${b[k] || 0}</b><button data-kz="${k}" data-n="1">+</button></div>`; h += rowK('trS', '⚔️ Schwertkämpfer') + rowK('trB', '🏹 Bogenschützen') + rowK('promo', '🪙 Beförderungen') + `<div class="row"><button data-send="1">🚩 Besten Kämpfer zu Turm/Burg schicken</button></div>`; }
   if (b.type === 'wagner') h += `<div class="row"><span>🛒 Aufträge:</span><button data-ord="-1">−</button><b style="min-width:24px;text-align:center">${b.orders || 0}</b><button data-ord="1">+</button><button data-ord="5">+5</button></div>`;
   if (b !== buildings[0]) h += `<div class="row"><button data-act="del" class="${confirmDel ? 'warn' : ''}">${confirmDel ? '❗ Wirklich abreißen?' : '🗑 Abreißen'}</button></div>`;
   box.innerHTML = h;
+  box.querySelectorAll('[data-wo]').forEach(x => x.onclick = () => { b.wo[x.dataset.wo] = Math.max(0, (b.wo[x.dataset.wo] || 0) + +x.dataset.n); renderInfoBtns(); });
+  box.querySelectorAll('[data-kz]').forEach(x => x.onclick = () => { b[x.dataset.kz] = Math.max(0, (b[x.dataset.kz] || 0) + +x.dataset.n); renderInfoBtns(); });
+  box.querySelectorAll('[data-send]').forEach(x => x.onclick = () => { const s = (b.garrison || []).slice().sort((a, c) => c.rank - a.rank)[0]; if (!s) return toast('Keine Kämpfer in der Kaserne'); const posts = buildings.filter(t => (t.type === 'wachturm' || t.type === 'burg') && t.progress >= 1 && !t.removed && (t.garrison || []).length < capOf(t)).sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z)); if (!posts.length) return toast('Kein Turm oder keine Burg mit freiem Platz'); sendToPost(s, posts[0]); renderInfoBtns(); });
   box.querySelectorAll('[data-ord]').forEach(x => x.onclick = () => { b.orders = Math.max(0, (b.orders || 0) + +x.dataset.ord); renderInfoBtns(); });
   box.querySelectorAll('[data-prio]').forEach(x => x.onclick = () => { b.prio = +x.dataset.prio; renderInfoBtns(); });
   box.querySelectorAll('[data-act]').forEach(x => x.onclick = () => {
@@ -6584,6 +6731,7 @@ function renderStats() {
   $('statsbody').innerHTML = h;
 }
 $('sndbtn').textContent = soundOn ? '🔊' : '🔇'; $('sndbtn').onclick = () => { audioInit(); sndSetOn(!soundOn); toast(soundOn ? 'Ton an' : 'Ton aus'); };
+$('milbtn').onclick = () => { const m = $('milwin'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; renderMil(); }; $('closemil').onclick = () => $('milwin').style.display = 'none';
 $('lblbtn').classList.toggle('on', !!SET.labels); $('lblbtn').onclick = () => { SET.labels = !SET.labels; saveSet(); $('lblbtn').classList.toggle('on', SET.labels); toast(SET.labels ? 'Gebäude-Schilder an' : 'Gebäude-Schilder aus'); };
 $('statbtn').onclick = () => { const s = $('stats'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; renderStats(); };
 $('closestats').onclick = () => $('stats').style.display = 'none';
@@ -6595,11 +6743,11 @@ function serialize() {
   const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
   for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 2, pool: { ...POOL }, bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 2, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
-    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, orders: b.orders || 0, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
+    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, orders: b.orders || 0, wo: b.wo, trS: b.trS, trB: b.trB, promo: b.promo, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
   };
 }
 function thumb() {
@@ -6629,7 +6777,7 @@ function applySave(d) {
   placeBuilding.noPlots = true;
   for (const s of d.buildings) {
     const b = placeBuilding(s.type, s.x, s.z, s.rot, s.progress >= 1);
-    b.progress = s.progress; b.orders = s.orders || 0; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
+    b.progress = s.progress; b.orders = s.orders || 0; b.wo = s.wo || {}; b.trS = s.trS || 0; b.trB = s.trB || 0; b.promo = s.promo || 0; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
     for (const [x, z, st, gr] of s.plots || []) { const p = createPlot(b, x, z); p.state = st; p.growth = gr; updatePlot(p); }
     if (s.pigs && b.fx.pigs) s.pigs.forEach((g, i) => { if (b.fx.pigs[i]) b.fx.pigs[i].growth = b.fx.pigs[i].shown = g; });
     if (b.progress < 1) { b.pendingSite = true; continue; }
@@ -6639,6 +6787,9 @@ function applySave(d) {
     else if (b.type !== 'lager') { if (s.worker) { const w = makeWorker(b.type); w.g.position.copy(b.door); w.g.position.y = height(b.door.x, b.door.z); b.worker = w; w.home = b; workers.push(w); b.status = 'Bereit'; } else { b.needsWorker = true; b.status = 'Wartet auf Werkzeug 🔨'; } }
   }
   placeBuilding.noPlots = false;
+  if (d.sold) { const L = buildings.filter(x => !x.removed); for (const so of d.sold) { const b = L[so.post]; if (!b) continue; if (b.guard && !b.guard.soldierUsed && b.type === 'wachturm') { b.guard.soldierUsed = true; b.garrison = []; } const s = { kind: so.kind, rank: so.rank, xp: so.xp, food: 1, post: b }; SOLD.push(s); (b.garrison = b.garrison || []).push(s); if (b.type === 'kaserne') makeSoldierW(s, b.door); } }
+  else for (const b of buildings) if (b.guard && !(b.garrison || []).length) { const s = { kind: 'schwert', rank: 0, xp: 0, food: 1, post: b }; SOLD.push(s); b.garrison = [s]; }
+  for (const b of buildings) if (b.type === 'burg' && b.progress >= 1 && !(b.garrison || []).length) { b.needsGuard = true; }
   buildWalk();
   if (d.cam) { target.x = d.cam[0]; target.z = d.cam[1]; yaw = d.cam[2]; pitch = d.cam[3]; dist = d.cam[4]; }
   simT = d.simT || 0; fogDirty = true;
@@ -6735,6 +6886,7 @@ function showSettings() {
     <h4>🖥️ Anzeige</h4>
     <div class="opt"><span>Größe der Bedienung</span>${seg('ui', [[0.85, 'Klein'], [1, 'Normal'], [1.2, 'Groß'], [1.4, 'Sehr groß']])}</div>
     <div class="opt"><span>Minikarte</span>${onoff('minimap')}</div>
+    <div class="opt"><span>Wappenfarbe (nach Neuladen)</span><div class="seg">${[[0x2f6fd0, 'Blau'], [0xb02a2a, 'Rot'], [0x2f8a3a, 'Grün'], [0xd0a020, 'Gold'], [0x6a3a8a, 'Purpur']].map(([c, n]) => `<button data-set="wappen" data-v="${c}" class="${(SET.wappen || 0x2f6fd0) === c ? 'on' : ''}" style="border-left:10px solid #${c.toString(16).padStart(6, '0')}">${n}</button>`).join('')}</div></div>
     <div class="opt"><span>Berufs-Schilder über Gebäuden</span>${onoff('labels')}</div>`, () => { closeScreen(); if (INMENU) showMain(); });
   s.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { const k = b.dataset.set; let v = b.dataset.v; v = v === 'true' ? true : v === 'false' ? false : isNaN(+v) ? v : +v; SET[k] = v; saveSet(); s.querySelectorAll(`[data-set="${k}"]`).forEach(x => x.classList.toggle('on', x === b)); applyLiveSettings(); });
   s.querySelectorAll('[data-sl]').forEach(r => r.oninput = () => { const k = r.dataset.sl; SET[k] = +r.value; s.querySelector(`[data-slv="${k}"]`).textContent = r.value; saveSet(); applyLiveSettings(); });
@@ -6788,6 +6940,7 @@ function step(dt) {
   for (const b of buildings) if (b.needsGuard) trySpawnGuard(b);
   for (const b of [...buildings].sort((a, c) => (['schmied', 'schmelze'].indexOf(c.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(c.type)) - (['schmied', 'schmelze'].indexOf(a.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(a.type)))) if (b.needsWorker) trySpawnWorker(b);
   for (const b of [...buildings]) if (b.progress < 1 && !b.removed) { if (b.pendingSite) { b.pendingSite = false; startSite(b); } siteStep(b, dt); }
+  militaryStep(dt);
   // Träger
   carT += dt; if (carT > 2 && carriers.length < carrierTarget()) { carT = 0; spawnCarrier(); }
   // Arbeiter
@@ -6818,6 +6971,7 @@ function step(dt) {
       if (q.anim === 'push') { const k = Math.sin(q.el * 1.8); w.arm.rotation.x = w.arm2.rotation.x = -1.3 + k * 0.25; w.body.rotation.x = 0.15 + k * 0.08; w.carry.position.z = 0.42 + (k + 1) * 0.25; if (Math.random() < dt * 1.5) play('crackle', w.g.position.x, w.g.position.z, 0.8); }
       if (q.anim === 'saw') { const k = Math.sin(q.el * 0.9); w.arm.rotation.x = w.arm2.rotation.x = -1.15; w.body.rotation.x = 0.2; if (w.home && w.home.fx.log) w.home.fx.log.position.x = -0.4 + (q.el / q.wait) * 1.4; hitEvery(0.55, 'saw', 0.7); }
       if (q.anim === 'stoke') { w.arm.rotation.x = w.arm2.rotation.x = -1.0 + Math.sin(q.el * 3) * 0.35; w.body.rotation.x = 0.2; if (Math.random() < dt * 2) play('crackle', w.g.position.x, w.g.position.z, 1); }
+      if (q.anim === 'shoot') { const k = (q.el * 0.6) % 1; w.arm2.rotation.x = -1.5; w.arm.rotation.x = -1.5 + (k < 0.7 ? k * 0.6 : 0); if (k > 0.7 && !q.sh) { q.sh = 1; play('dig', w.g.position.x, w.g.position.z, 0.5); } if (k < 0.1) q.sh = 0; }
       if (q.anim === 'carve') { w.arm.rotation.x = -1.1 + Math.sin(q.el * 14) * 0.18; w.arm2.rotation.x = -1.0; w.body.rotation.x = 0.2; hitEvery(0.4, 'dig', 0.4); }
       if (q.anim === 'dig' || q.anim === 'sow') hitEvery(0.9, 'dig', 0.6);
       if (q.anim === 'dig' || q.anim === 'sow') { w.body.rotation.x = 0.35; w.arm.rotation.x = -0.6 + Math.sin(ph) * 0.6; if (q.anim === 'sow') w.g.rotation.y += Math.sin(ph * 0.5) * dt; }
@@ -6886,7 +7040,7 @@ function animate() {
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
-  statT += real; if (statT > 1) { statT = 0; renderStats(); }
+  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); }
   autoT += real; if (SET.autosave && autoT > SET.autosave && !INMENU) { autoT = 0; saveGame(null, true); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
