@@ -5831,14 +5831,23 @@ function createPlot(b, x, z) {
     const g = new THREE.Group(); g.position.set(x, height(x, z), z);
     const soil = mesh(box(2, 0.12, 2, 4, 1, 4), mat.field); soil.position.y = 0.04; g.add(soil);
     const crops = [];
-    for (let i = 0; i < 16; i++) { const c = mesh(new THREE.ConeGeometry(0.1, 0.7, 4), M(0x6fa83a), -0.75 + (i % 4) * 0.5, 0.1, -0.75 + Math.floor(i / 4) * 0.5); c.geometry.translate(0, 0.35, 0); c.visible = false; g.add(c); crops.push(c); }
+    const stalkM = M(0x6fa83a), earM = M(0xd8b450); addWind(stalkM, 0.25, 0); addWind(earM, 0.25, 0);
+    for (let i = 0; i < 25; i++) { const t = new THREE.Group(); t.position.set(-0.8 + (i % 5) * 0.4 + (hash(i, x) - 0.5) * 0.12, 0.1, -0.8 + Math.floor(i / 5) * 0.4 + (hash(z, i) - 0.5) * 0.12); t.rotation.y = hash(i, z) * 6;
+      const ears = []; for (let k = 0; k < 5; k++) { const a = k / 5 * 6.283, lean = 0.12 + hash(k, i) * 0.1, h = 0.55 + hash(i, k) * 0.2; const st = mesh(new THREE.CylinderGeometry(0.008, 0.012, h, 3).translate(0, h / 2, 0), stalkM, Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04); st.rotation.set(Math.sin(a) * lean, 0, -Math.cos(a) * lean); st.castShadow = false; t.add(st);
+        const leaf = mesh(new THREE.PlaneGeometry(0.03, 0.28).translate(0, 0.14, 0), stalkM, 0, 0.05, 0); leaf.material = stalkM; leaf.rotation.set(0.7, a, 0); t.add(leaf);
+        const ear = mesh(new THREE.CapsuleGeometry(0.022, 0.1, 2, 5), earM, 0, h + 0.05, 0); ear.castShadow = false; st.add(ear); ear.position.set(0, h + 0.04, 0); ears.push(ear);
+        for (let q = 0; q < 3; q++) { const aw = mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.09, 3), earM, 0, 0.1, 0); aw.rotation.z = (q - 1) * 0.3; ear.add(aw); } }
+      t.userData.ears = ears; t.visible = false; g.add(t); crops.push(t); }
+    g.userData.stalkM = stalkM; g.userData.earM = earM;
     scene.add(g);
     const p = { x, z, g, crops, state: 'leer', growth: 0, reserved: false }; b.plots.push(p); return p;
 }
 const cYoung = new THREE.Color(0x6fa83a), cRipe = new THREE.Color(0xe0b84a);
 function updatePlot(p) {
   const s = p.state === 'leer' ? 0 : 0.08 + p.growth * 0.92;
-  p.crops.forEach((c, i) => { c.visible = p.state !== 'leer'; c.scale.set(1, s * (0.85 + hash(i, p.x) * 0.3), 1); c.material.color.copy(cYoung).lerp(cRipe, THREE.MathUtils.smoothstep(p.growth, 0.6, 1)); });
+  const ripe = THREE.MathUtils.smoothstep(p.growth, 0.55, 1);
+  p.g.userData.stalkM.color.copy(cYoung).lerp(cRipe, ripe); p.g.userData.earM.color.set(0x9cc55a).lerp(new THREE.Color(0xe8c050), ripe);
+  p.crops.forEach((c, i) => { c.visible = p.state !== 'leer'; c.scale.set(0.6 + s * 0.4, s * (0.85 + hash(i, p.x) * 0.3), 0.6 + s * 0.4); for (const e of c.userData.ears) { e.visible = p.growth > 0.45; e.scale.setScalar(THREE.MathUtils.clamp((p.growth - 0.45) * 2.5, 0.2, 1) * (1 + ripe * 0.3)); e.parent.rotation.z *= 1; } c.rotation.x = ripe * 0.12; });
 }
 
 // ---------- Platz prüfen ----------
