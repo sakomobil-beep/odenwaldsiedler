@@ -6083,7 +6083,8 @@ const lagers = () => buildings.filter(b => b.type === 'lager' && b.progress >= 1
 function nearestLager(x, z) { let best = buildings[0], bd = 1e9; for (const l of lagers()) { const d = Math.hypot(l.x - x, l.z - z); if (d < bd) { bd = d; best = l; } } return best; }
 const lagerDoor = (x = 0, z = 0) => nearestLager(x, z).door.clone();
 
-function canAfford(c) { return Object.entries(c).every(([k, v]) => stock[k] >= v); }
+function siteOutstanding() { const o = {}; for (const b of buildings) if (!b.removed && b.progress < 1 && b.siteNeed) for (const [k, v] of Object.entries(b.siteNeed)) o[k] = (o[k] || 0) + Math.max(0, v - (b.in[k] || 0) - (b.inc[k] || 0)); return o; }
+function canAfford(c) { const o = siteOutstanding(); return Object.entries(c).every(([k, v]) => stock[k] - (o[k] || 0) >= v); }
 function placeBuilding(type, x, z, rot = 0, instant = false) {
   const T = TYPES[type];
   // Bäume im Weg fällen
@@ -6227,6 +6228,7 @@ const carriers = [];
 const RECIPE_IN = { bogenbauer: { bretter: 2, sehne: 1, eisenbarren: 1 }, raeucherei: { fisch: 1, stamm: 1 }, kuhstall: { getreide: 1, wasser: 1 }, kaeserei: { milch: 2 }, konditorei: { mehl: 1, milch: 1, honig: 1 }, brauerei: { getreide: 1, hopfen: 1, wasser: 1 }, wirtshaus: { bier: 2 }, weberei: { wolle: 1 }, schneider: { stoff: 1 }, toepfer: { lehm: 1 }, koehler: { stamm: 2 }, saegewerk: { stamm: 1 }, muehle: { getreide: 1 }, baeckerei: { mehl: 1, wasser: 1 }, schmelze: { eisenerz: 1, kohle: 1 }, waffenschnitzer: { bretter: 1 }, metzger: { schwein: 1 }, schmied: { eisenbarren: 1 }, muenzpraege: { golderz: 1, kohle: 1 }, schweinezucht: { getreide: 1, wasser: 1 }, seilerei: { flachs: 1 }, wagner: { bretter: 2, eisenbarren: 1 } };
 const isActive = b => b.progress >= 1 && !b.removed && !b.paused && (b.worker || b.needsWorker);
 function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
+  if (b.progress < 1) { if (b.removed || !b.siteNeed) return []; return Object.entries(b.siteNeed).map(([k, v]) => [k, v - (b.in[k] || 0) - (b.inc[k] || 0)]).filter(x => x[1] > 0); }
   if (b.type === 'wohnhaus') return houseWants(b);
   if (!isActive(b)) return [];
   const res = [];
@@ -6308,6 +6310,7 @@ function planCarrier(w) {
 }
 
 // ---------- Baustellen mit Bauarbeitern ----------
+function siteFrac(b) { if (!b.siteNeed) return 1; let n = 0, g = 0; for (const [k, v] of Object.entries(b.siteNeed)) { n += v; g += Math.min(v, b.in[k] || 0); } return n ? g / n : 1; }
 function startSite(b) {
   const T = TYPES[b.type], g = b.g;
   g.scale.set(1, 1, 1); g.updateMatrixWorld(true);
@@ -6339,11 +6342,13 @@ function startSite(b) {
   for (let k = 1; k <= 3; k++) { const lv = new THREE.Group(); lv.position.y = H * k / 3.4; b.scaf.add(lv); for (const s of [-1, 1]) { lv.add(mesh(box(2 * r + 0.3, 0.04, 0.05), mat.wood, 0, 0, s * (r + 0.15))); lv.add(mesh(box(0.05, 0.04, 2 * r + 0.3), mat.wood, s * (r + 0.15), 0, 0)); } lv.add(mesh(box(2 * r + 0.3, 0.04, 0.28), mat.plank, 0, -0.02, r + 0.3)); lv.visible = false; b.scafLevels.push(lv); }
   b.scaf.scale.y = 0.05;
   // Baumaterial-Stapel (verschwindet beim Verbauen)
+  b.siteNeed = b.siteNeed || { ...T.cost };
   b.matPile = []; let i = 0;
-  for (const [k, v] of Object.entries(T.cost)) for (let n = 0; n < Math.min(v, 6); n++, i++) { const m = makeItem(k); m.position.set(r + 0.9 + (i % 2) * 0.45, 0.12 + Math.floor(i / 2) * 0.17, -r * 0.5 + (Math.floor(i / 4)) * 0.4); b.site.add(m); b.matPile.push(m); }
+  for (const [k, v] of Object.entries(T.cost)) for (let n = 0; n < Math.min(v, 6); n++, i++) { const m = makeItem(k); m.userData.k = k; m.userData.n = n; m.userData.of = Math.min(v, 6); m.visible = false; m.position.set(r + 0.9 + (i % 2) * 0.45, 0.12 + Math.floor(i / 2) * 0.17, -r * 0.5 + (Math.floor(i / 4)) * 0.4); b.site.add(m); b.matPile.push(m); }
   b.needsBuilder = true; b.status = 'Wartet auf einen Bauarbeiter';
 }
 function endSite(b) {
+  if (b.siteNeed) { for (const k of Object.keys(b.siteNeed)) { b.in[k] = Math.max(0, (b.in[k] || 0) - b.siteNeed[k]); if (!b.in[k]) delete b.in[k]; } b.siteNeed = null; }
   b.g.traverse(o => { if (o.isMesh && o.userData.origMat) { o.material = o.userData.origMat; delete o.userData.origMat; } });
   if (b.site) scene.remove(b.site); b.site = null;
   if (b.builder) { const w = b.builder; w.queue.length = 0; w.home = null; moveTo(w, lagerDoor(b.x, b.z)); w.queue.push({ fn: () => { w.removed = true; scene.remove(w.g); } }); b.builder = null; }
@@ -6372,17 +6377,18 @@ function siteStep(b, dt) {
   if (lv && b.progress > 0) { b.flat.k = 1; updateFlat(b.flat); }
   else if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) {
     if (lv) { b.flat.k = Math.min(1, b.flat.k + dt / (12 * TF)); updateFlat(b.flat); if (b.outPile) b.outPile.position.y = height(b.outPile.position.x, b.outPile.position.z); if (b.flat.k >= 1) grassDirty = true; }
-    else b.progress = Math.min(1, b.progress + dt * (b.fast ? 2 : 1) / ((30 + TYPES[b.type].r * 9) * TF));
+    else b.progress = Math.min(siteFrac(b), b.progress + dt * (b.fast ? 2 : 1) / ((30 + TYPES[b.type].r * 9) * TF));
   }
   if (b.scaf) b.scaf.visible = !(b.flat && b.flat.k < 1);
   const p = b.progress;
   b.status = b.builderAt && b.flat && b.flat.k < 1 ? `Stufe 1: Boden wird eingeebnet (${Math.floor(b.flat.k * 100)} %)` : b.builderAt ? 'Stufe 2: ' + (PHASES.find(([t]) => p < t) || PHASES[PHASES.length - 1])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
+  if (b.progress < 1 && siteFrac(b) < 1 && b.progress >= siteFrac(b) - 0.001 && !(b.flat && b.flat.k < 1)) { const miss = Object.entries(b.siteNeed).filter(([k, v]) => (b.in[k] || 0) < v).map(([k, v]) => `${ITEMS[k].icon} ${b.in[k] || 0}/${v}`).join(' · '); b.status = 'Wartet auf Baumaterial: ' + miss; }
   // sichtbarer Aufbau: unterhalb der Ebene sichtbar, oben abgeschnitten
   if (b.found) { const nf = Math.ceil(b.found.length * Math.min(1, p / 0.15)); b.found.forEach((st, i) => st.visible = i < nf && p < 0.5); }
   if (b.frame) { const fp = (p - 0.15) / 0.2, n = b.frame.children.length; b.frame.children.forEach((m, i) => m.visible = p < 0.6 && fp * n > i); }
   if (b.clip) { const k = p < 0.35 ? -0.02 : (p - 0.35) / 0.65; b.clip.constant = b.siteY0 + (b.siteY1 - b.siteY0) * k + 0.01; }
   if (b.scaf) { b.scaf.scale.y = Math.max(0.05, Math.min(1, p * 1.25)); b.scafLevels.forEach((lv, i) => lv.visible = p > 0.25 + i * 0.22); if (p > 0.93) { const f = Math.min(1, (p - 0.93) / 0.07); b.scaf.scale.y = Math.max(0.05, 1 - f); b.scafLevels.forEach(lv => lv.visible = f < 0.5); } }
-  if (b.matPile) { const left = Math.ceil(b.matPile.length * (1 - p)); b.matPile.forEach((m, i) => m.visible = i < left); }
+  if (b.matPile) b.matPile.forEach(m => { const k = m.userData.k, need = (b.siteNeed && b.siteNeed[k]) || 1, got = Math.min(1, (b.in[k] || 0) / need); m.visible = m.userData.n < Math.round(m.userData.of * got) - Math.round(m.userData.of * p); });
   if (p >= 1) { b.builderAt = false; endSite(b); finishBuilding(b); }
 }
 
@@ -6966,8 +6972,7 @@ function doBuild() {
   const why = placeReason(placing, x, z); if (mf) mf.removed = false; if (why) return toast('Hier geht es nicht: ' + why);
   if (mf) { demolish(mf, true); }
   const cst = costOf(placing); if (!canAfford(cst)) return toast('Nicht genug Material');
-  for (const [k, v] of Object.entries(cst)) { stock[k] -= v; stat('use', k, v); }
-  const t = placing; placeBuilding(placing, x, z, placing === 'bruecke' ? bridgeRot(z) : ghostRot); refreshPiles(); cancelPlacing(); toast(TYPES[t].name + ' wird gebaut');
+  const t = placing; const nb = placeBuilding(placing, x, z, placing === 'bruecke' ? bridgeRot(z) : ghostRot); if (nb && nb.progress < 1) nb.siteNeed = { ...cst }; refreshPiles(); cancelPlacing(); toast(TYPES[t].name + ' wird gebaut');
 }
 function selectB(b) {
   selected = b; const p = $('info');
@@ -7258,7 +7263,7 @@ function demolish(b, fullRefund) {
   if (b.builder) { b.builder.removed = true; scene.remove(b.builder.g); }
   for (const p of b.plots) scene.remove(p.g);
   const f = fullRefund ? 1 : 0.5;
-  for (const [k, v] of Object.entries(TYPES[b.type].cost)) stock[k] += Math.floor(v * f);
+  if (b.progress < 1 && b.siteNeed) { for (const k of Object.keys(b.siteNeed)) stock[k] += b.in[k] || 0; } else for (const [k, v] of Object.entries(TYPES[b.type].cost)) stock[k] += Math.floor(v * f);
   for (const box of [b.in, b.out]) for (const [k, v] of Object.entries(box)) if (v > 0) stock[k] += v;
   if (b.worker) { const w = b.worker; w.home = null; w.queue.length = 0; w.g.visible = true; holdFront(w, null); setCarry(w, null); moveTo(w, lagerDoor(b.x, b.z)); w.queue.push({ fn: () => { w.removed = true; scene.remove(w.g); POOL[b.type] = (POOL[b.type] || 0) + 1; refreshPiles(); } }); b.worker = null; }
   if (b.guard) { const gw = b.guard; gw.home = null; gw.queue.length = 0; gw.g.visible = true; gw.g.position.copy(b.door); moveTo(gw, lagerDoor(b.x, b.z)); gw.queue.push({ fn: () => { gw.removed = true; scene.remove(gw.g); POOL.waechter = (POOL.waechter || 0) + 1; } }); const i = territories.findIndex(t => Math.abs(t.x - b.x) < 0.01 && Math.abs(t.z - b.z) < 0.01); if (i >= 0) territories.splice(i, 1); rebuildFlags(); }
@@ -7357,7 +7362,7 @@ function serialize() {
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
-    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, orders: b.orders || 0, up: b.up || 0, fast: !!b.fast, lvl: b.lvl || 0, sat: b.sat || 0, wo: b.wo, trS: b.trS, trB: b.trB, promo: b.promo, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
+    buildings: buildings.filter(b => !b.removed).map(b => ({ type: b.type, x: b.x, z: b.z, rot: b.rot, progress: b.progress, prio: b.prio, paused: b.paused, orders: b.orders || 0, siteNeed: b.progress < 1 ? b.siteNeed : null, up: b.up || 0, fast: !!b.fast, lvl: b.lvl || 0, sat: b.sat || 0, wo: b.wo, trS: b.trS, trB: b.trB, promo: b.promo, in: b.in, out: b.out, worker: !!b.worker, guard: !!b.guard, needsWorker: !!b.needsWorker, plots: b.plots.map(p => [p.x, p.z, p.state, p.growth]), pigs: b.fx.pigs ? b.fx.pigs.map(p => p.growth) : null })),
   };
 }
 function thumb() {
@@ -7387,7 +7392,7 @@ function applySave(d) {
   placeBuilding.noPlots = true;
   for (const s of d.buildings) {
     const b = placeBuilding(s.type, s.x, s.z, s.rot, s.progress >= 1);
-    b.progress = s.progress; b.orders = s.orders || 0; b.sat = s.sat || 0; b.fast = !!s.fast; if (s.up) { b.up = 1; addUpBadge(b); } if (b.type === 'wohnhaus' && s.lvl) setHouseLevel(b, s.lvl); else b.lvl = s.lvl || 0; b.wo = s.wo || {}; b.trS = s.trS || 0; b.trB = s.trB || 0; b.promo = s.promo || 0; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
+    b.progress = s.progress; b.orders = s.orders || 0; if (b.progress < 1) { if (s.siteNeed) b.siteNeed = s.siteNeed; else { b.siteNeed = { ...TYPES[b.type].cost }; s.in = Object.assign({}, s.in, b.siteNeed); } } b.sat = s.sat || 0; b.fast = !!s.fast; if (s.up) { b.up = 1; addUpBadge(b); } if (b.type === 'wohnhaus' && s.lvl) setHouseLevel(b, s.lvl); else b.lvl = s.lvl || 0; b.wo = s.wo || {}; b.trS = s.trS || 0; b.trB = s.trB || 0; b.promo = s.promo || 0; b.prio = s.prio ?? 1; b.paused = !!s.paused; b.in = s.in || {}; b.out = s.out || {}; refreshOut(b);
     for (const [x, z, st, gr] of s.plots || []) { const p = createPlot(b, x, z); p.state = st; p.growth = gr; updatePlot(p); }
     if (s.pigs && b.fx.pigs) s.pigs.forEach((g, i) => { if (b.fx.pigs[i]) b.fx.pigs[i].growth = b.fx.pigs[i].shown = g; });
     if (b.progress < 1) { b.pendingSite = true; continue; }
