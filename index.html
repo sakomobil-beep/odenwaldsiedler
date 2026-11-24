@@ -6496,8 +6496,8 @@ function demolish(b, fullRefund) {
   const f = fullRefund ? 1 : 0.5;
   for (const [k, v] of Object.entries(TYPES[b.type].cost)) stock[k] += Math.floor(v * f);
   for (const box of [b.in, b.out]) for (const [k, v] of Object.entries(box)) if (v > 0) stock[k] += v;
-  if (b.worker) { b.worker.removed = true; scene.remove(b.worker.g); stock.werkzeug++; }
-  if (b.guard) { b.guard.removed = true; stock.kampfstock++; const i = territories.findIndex(t => Math.abs(t.x - b.x) < 0.01 && Math.abs(t.z - b.z) < 0.01); if (i >= 0) territories.splice(i, 1); rebuildFlags(); }
+  if (b.worker) { const w = b.worker; w.home = null; w.queue.length = 0; w.g.visible = true; holdFront(w, null); setCarry(w, null); moveTo(w, lagerDoor(b.x, b.z)); w.queue.push({ fn: () => { w.removed = true; scene.remove(w.g); POOL[b.type] = (POOL[b.type] || 0) + 1; refreshPiles(); } }); b.worker = null; }
+  if (b.guard) { const gw = b.guard; gw.home = null; gw.queue.length = 0; gw.g.visible = true; gw.g.position.copy(b.door); moveTo(gw, lagerDoor(b.x, b.z)); gw.queue.push({ fn: () => { gw.removed = true; scene.remove(gw.g); POOL.waechter = (POOL.waechter || 0) + 1; } }); const i = territories.findIndex(t => Math.abs(t.x - b.x) < 0.01 && Math.abs(t.z - b.z) < 0.01); if (i >= 0) territories.splice(i, 1); rebuildFlags(); }
   for (const t of trees) if (t.reserved && Math.hypot(t.x - b.x, t.z - b.z) < 40) t.reserved = false;
   for (const r of rocks) r.reserved = false; for (const fs of fishSpots) fs.reserved = false;
   buildings.splice(buildings.indexOf(b), 1); grassDirty = true;
@@ -6516,7 +6516,7 @@ function renderInfoBtns() {
   if (prod) h += `<div class="row"><span>Vorrang:</span>${['Hoch', 'Normal', 'Niedrig'].map((n, i) => `<button data-prio="${i}" class="${b.prio === i ? 'on' : ''}">${n}</button>`).join('')}</div>
     <div class="row"><button data-act="pause">${b.paused ? '▶ Weiterarbeiten' : '⏸ Anhalten'}</button></div>`;
   if (b.type === 'wagner') h += `<div class="row"><span>🛒 Aufträge:</span><button data-ord="-1">−</button><b style="min-width:24px;text-align:center">${b.orders || 0}</b><button data-ord="1">+</button><button data-ord="5">+5</button></div>`;
-  if (b !== buildings[0]) h += `<div class="row"><button data-act="move">🔀 Umsetzen</button><button data-act="del" class="${confirmDel ? 'warn' : ''}">${confirmDel ? '❗ Wirklich abreißen?' : '🗑 Abreißen'}</button></div>`;
+  if (b !== buildings[0]) h += `<div class="row"><button data-act="del" class="${confirmDel ? 'warn' : ''}">${confirmDel ? '❗ Wirklich abreißen?' : '🗑 Abreißen'}</button></div>`;
   box.innerHTML = h;
   box.querySelectorAll('[data-ord]').forEach(x => x.onclick = () => { b.orders = Math.max(0, (b.orders || 0) + +x.dataset.ord); renderInfoBtns(); });
   box.querySelectorAll('[data-prio]').forEach(x => x.onclick = () => { b.prio = +x.dataset.prio; renderInfoBtns(); });
