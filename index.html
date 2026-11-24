@@ -6494,7 +6494,7 @@ function puff(p) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.25, 
 // ---------- UI ----------
 
 const HUD_PIN = ['bretter', 'stein', 'werkzeug', 'muenzen'];
-const HUD_GROUPS = [['🪵', 'Baustoffe', ['stamm', 'bretter', 'stein']], ['🍞', 'Nahrung', ['getreide', 'mehl', 'wasser', 'brot', 'fisch', 'schwein', 'schinken']], ['⛏️', 'Metall', ['eisenerz', 'kohle', 'eisenbarren', 'werkzeug', 'karren']], ['🪙', 'Gold', ['golderz', 'muenzen']], ['⚔️', 'Waffen', ['flachs', 'sehne', 'kampfstock', 'schwert', 'schild', 'bogen', 'pfeile']]];
+const HUD_GROUPS = [['🪵', 'Baustoffe', ['stamm', 'bretter', 'stein']], ['🍞', 'Essen', ['brot', 'fisch', 'schinken']], ['🌾', 'Landwirtschaft', ['getreide', 'mehl', 'wasser', 'schwein']], ['⛏️', 'Metall', ['eisenerz', 'kohle', 'eisenbarren', 'werkzeug', 'karren']], ['🪙', 'Gold', ['golderz', 'muenzen']], ['⚔️', 'Waffen', ['flachs', 'sehne', 'kampfstock', 'schwert', 'schild', 'bogen', 'pfeile']]];
 { const known = HUD_GROUPS.flatMap(g => g[2]); const rest = Object.keys(ITEMS).filter(k => !known.includes(k)); if (rest.length) HUD_GROUPS.push(['📦', 'Sonstiges', rest]); HUD_GROUPS.forEach(g => g[2] = g[2].filter(k => ITEMS[k])); }
 let hudHist = [], hudOpen = null, hudLowFood = false;
 function trendOf(k) { const old = hudHist[0]; if (!old || simT - old.t < 5) return ''; const d = stock[k] - (old.s[k] || 0); return d > 0 ? '<i class="up">▲</i>' : d < 0 ? '<i class="dn">▼</i>' : ''; }
@@ -6504,7 +6504,7 @@ function updateHUD() {
   const mines = buildings.some(b => TYPES[b.type] && TYPES[b.type].mine && b.progress >= 1 && !b.removed), food = FOODS.reduce((a, f) => a + (stock[f] || 0), 0);
   hudLowFood = mines && food === 0;
   let h = `<div class="pins">${HUD_PIN.filter(k => ITEMS[k]).map(hudChip).join('')}</div>`;
-  h += HUD_GROUPS.map(([ic, name, ks], i) => { const sum = ks.reduce((a, k) => a + (stock[k] || 0), 0), low = (i === 1 && hudLowFood); return `<div class="grp${hudOpen === i ? ' open' : ''}${low ? ' low' : ''}" data-g="${i}" title="${name}${low ? ' – kein Essen, Minen stehen still!' : ''}"><span class="gh">${ic}<b>${sum}</b><small>${name}</small></span><div class="gdrop"><div class="gt">${ic} ${name}</div>${ks.map(hudChip).join('')}</div></div>`; }).join('');
+  h += HUD_GROUPS.map(([ic, name, ks], i) => { const sum = ks.reduce((a, k) => a + (stock[k] || 0), 0), low = (i === 1 && hudLowFood); return `<div class="grp${hudOpen === i ? ' open' : ''}${low ? ' low' : ''}" data-g="${i}" title="${name}${low ? ' – kein Brot, Fisch oder Schinken! Baue eine Bäckerei, einen Fischer oder einen Metzger.' : ''}"><span class="gh">${ic}<b>${sum}</b><small>${name}</small></span><div class="gdrop"><div class="gt">${ic} ${name}</div>${ks.map(hudChip).join('')}</div></div>`; }).join('');
   if (h !== updateHUD.last) { updateHUD.last = h; $('res').innerHTML = h; $('res').querySelectorAll('.grp').forEach(x => { x.onclick = e => { e.stopPropagation(); hudOpen = hudOpen === +x.dataset.g ? null : +x.dataset.g; updateHUD(); }; }); }
   const pop = workers.filter(w => !w.removed).length, car = carriers.filter(c => !c.removed).length, free = Object.values(POOL).reduce((a, n) => a + n, 0);
   $('popinfo').innerHTML = `<span title="Arbeiter / Träger / wartend im Lager">👥 <b>${pop}</b><small>/${car}/${free}</small></span><span title="Kämpfer">⚔️ <b>${typeof SOLD !== 'undefined' ? SOLD.length : 0}</b></span>`;
@@ -6662,7 +6662,7 @@ function renderNotes() { const c = $('bellcnt'); if (!c) return; c.textContent =
   const cl = $('noteclr'); if (cl) cl.onclick = () => { NOTES.length = 0; renderNotes(); }; }
 const noteSeen = new Map();
 function checkProblems() { for (const b of buildings) { if (b.removed || b.progress < 1 || b.paused || !b.status) continue; const bad = /^Wartet auf (?!Auftrag)|Ausgang voll/.test(b.status); if (!bad) { b.probT = 0; continue; } b.probT = (b.probT || 0) + 1; if (b.probT === 30 && noteSeen.get(b) !== b.status) { noteSeen.set(b, b.status); addNote(`${TYPES[b.type].icon} ${TYPES[b.type].name}: ${b.status}`, b); } }
-  if (hudLowFood && !checkProblems.food) { checkProblems.food = true; addNote('🍞 Kein Essen mehr – die Minen stehen still!'); } if (!hudLowFood) checkProblems.food = false; }
+  if (hudLowFood && !checkProblems.food) { checkProblems.food = true; addNote('🍞 Kein Brot, Fisch oder Schinken – die Minen stehen still! Baue eine Bäckerei, einen Fischer oder einen Metzger.'); } if (!hudLowFood) checkProblems.food = false; }
 
 // ---------- Kamera & Eingabe ----------
 let yaw = 0.6, pitch = 0.85, dist = innerWidth < innerHeight ? 55 : 40;
