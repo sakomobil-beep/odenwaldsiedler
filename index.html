@@ -85,8 +85,9 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 .blabel .bi{font-size:16px}.blabel .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:2px}
 .dot.work{background:#6fd04a;box-shadow:0 0 6px #6fd04a}.dot.idle{background:#c8c0a8}.dot.wait{background:#f0a030}.dot.pause{background:#e05030}.dot.bau{background:#5aa0e0}
 .lagercols{display:flex;gap:14px;margin-top:6px}.lagercols>div{flex:1;line-height:1.5}#info{max-width:420px!important}
+#top .tb.on{background:#d9a23a;color:#2b1e13}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
+<div id="top" class="panel"><div id="res"></div><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div><div id="infobtns"></div></div>
 <div id="toast"></div>
@@ -4479,7 +4480,7 @@ three/build/three.module.js:
 const $ = id => document.getElementById(id);
 const V3 = THREE.Vector3;
 // ---------- Einstellungen & Start-Konfiguration ----------
-const DEF_SET = { quality: 'hoch', grass: true, shadows: true, ao: true, bloom: true, view: 330, vol: 80, volFx: 100, volAmb: 70, speed: 1, autosave: 60, camSpeed: 1, edge: true, ui: 1, minimap: true, labels: true };
+const DEF_SET = { quality: 'hoch', grass: true, shadows: true, ao: true, bloom: true, view: 330, vol: 80, volFx: 100, volAmb: 70, speed: 1, autosave: 60, camSpeed: 1, edge: true, ui: 1, minimap: true, labels: false };
 const SET = Object.assign({}, DEF_SET, (() => { try { return JSON.parse(localStorage.getItem('odws_set') || '{}'); } catch (e) { return {}; } })());
 if (!localStorage.getItem('odws_set') && localStorage.getItem('odws_q') === 'normal') Object.assign(SET, { quality: 'niedrig', ao: false, bloom: false });
 function saveSet() { localStorage.setItem('odws_set', JSON.stringify(SET)); }
@@ -6543,6 +6544,7 @@ function renderStats() {
   $('statsbody').innerHTML = h;
 }
 $('sndbtn').textContent = soundOn ? '🔊' : '🔇'; $('sndbtn').onclick = () => { audioInit(); sndSetOn(!soundOn); toast(soundOn ? 'Ton an' : 'Ton aus'); };
+$('lblbtn').classList.toggle('on', !!SET.labels); $('lblbtn').onclick = () => { SET.labels = !SET.labels; saveSet(); $('lblbtn').classList.toggle('on', SET.labels); toast(SET.labels ? 'Gebäude-Schilder an' : 'Gebäude-Schilder aus'); };
 $('statbtn').onclick = () => { const s = $('stats'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; renderStats(); };
 $('closestats').onclick = () => $('stats').style.display = 'none';
 
