@@ -4801,7 +4801,7 @@ function applyFog() {
   for (const st of stumps) if (st && !st.gone && !st.dead) updStump(st);
   for (const b of boulders) { const v = isExplored(b.x, b.z); if (v !== b.vis) { b.vis = v; updBoulder(b); } }
   for (const r of rocks) r.g.visible = isExplored(r.x, r.z);
-  for (const d of deposits) d.g.visible = isExplored(d.x, d.z);
+  for (const d of deposits) d.g.visible = !!d.found && isExplored(d.x, d.z);
   for (const f of fishSpots) f.g.visible = isExplored(f.x, f.z);
 }
 
@@ -5004,9 +5004,21 @@ MOUNTAINS.forEach((m, mi) => {
     const g = new THREE.Group(), cm = M(depCol[kind]);
     for (let k = 0; k < 7; k++) { const c = mesh(new THREE.OctahedronGeometry(0.35 + hash(k, x) * 0.35, 0), cm, (hash(k, 1) - 0.5) * 2.4, 0.2, (hash(k, 2) - 0.5) * 2.4); c.scale.y = 1.6; c.rotation.set(hash(k, 3), hash(k, 4) * 6, 0); g.add(c); }
     g.position.set(x, height(x, z), z); scene.add(g);
-    deposits.push({ kind, x, z, g });
+    deposits.push({ kind, x, z, g, found: false });
   });
 });
+// zusätzliche, verborgene Vorkommen – findet nur der Rutengänger
+MOUNTAINS.forEach((m, mi) => { for (let j = 0; j < 3; j++) {
+  const a = hash(mi * 7 + j, 31) * 6.28, rr = m.R * (0.2 + hash(mi, j + 40) * 0.45), x = m.x + Math.cos(a) * rr, z = m.z + Math.sin(a) * rr;
+  if (deposits.some(d => Math.hypot(d.x - x, d.z - z) < 7) || mountain(x, z) < 2.5) continue;
+  const kind = ['stein', 'kohle', 'eisenerz', 'stein', 'kohle', 'gold'][Math.floor(hash(mi * 3 + j, 55) * 6)];
+  if (!depCol[kind]) continue; clearTrees(x, z, 5);
+  const g = new THREE.Group(), cm = M(depCol[kind]); for (let k = 0; k < 5; k++) { const c = mesh(new THREE.OctahedronGeometry(0.3 + hash(k, x) * 0.3, 0), cm, (hash(k, 1) - 0.5) * 2, 0.2, (hash(k, 2) - 0.5) * 2); c.scale.y = 1.6; c.rotation.set(hash(k, 3), hash(k, 4) * 6, 0); g.add(c); }
+  g.position.set(x, height(x, z), z); scene.add(g); deposits.push({ kind, x, z, g, found: false, extra: true });
+} });
+for (const d of deposits) { const sg = new THREE.Group(); sg.position.set(1.4, 0, 1.2); d.g.add(sg); sg.add(mesh(box(0.08, 1.3, 0.08), M(0x5a3e22), 0, 0.65, 0)); sg.add(mesh(box(0.55, 0.38, 0.05), M(depCol[d.kind]), 0, 1.2, 0.05)); sg.add(mesh(box(0.6, 0.06, 0.06), M(0x5a3e22), 0, 1.42, 0.05)); d.g.visible = false; }
+function markEmpty(p) { const g = new THREE.Group(); g.position.set(p.x, height(p.x, p.z), p.z); g.add(mesh(box(0.06, 0.8, 0.06), M(0x5a3e22), 0, 0.4, 0)); g.add(mesh(box(0.35, 0.25, 0.04), M(0xd8d0c0), 0, 0.75, 0.03)); for (const r of [-0.7, 0.7]) { const x = mesh(box(0.28, 0.04, 0.02), M(0xb03020), 0, 0.75, 0.06); x.rotation.z = r; g.add(x); } scene.add(g); setTimeout(() => scene.remove(g), 90000); }
+function revealDeposit(d, quiet) { d.found = true; d.g.visible = isExplored(d.x, d.z); if (!quiet) toast(`⛏️ Der Rutengänger hat ${{ stein: 'Stein', eisenerz: 'Eisenerz', kohle: 'Kohle', gold: 'Gold' }[d.kind]} gefunden!`, d); }
 // ---------- Felsbrocken am Bergfuß ----------
 var boulders = [];
 const boulderIM = new THREE.InstancedMesh(gradGeo(new THREE.DodecahedronGeometry(0.5, 0), 0.7, 1.15, 0.1), new THREE.MeshStandardMaterial({ color: 0x8f877c, vertexColors: true, flatShading: true }), 2500);
@@ -5301,6 +5313,7 @@ const TYPES = {
   kuhstall: { name: 'Kuhstall', icon: '🐄', cost: { bretter: 4, stein: 1 }, r: 2.4, desc: '1 Getreide + 1 Wasser → 2 Milch' },
   kaeserei: { name: 'Käserei', icon: '🧀', cost: { bretter: 3, stein: 2 }, r: 2.0, desc: '2 Milch → 1 Käse' },
   konditorei: { name: 'Konditorei', icon: '🥧', cost: { bretter: 3, stein: 3 , muenzen: 2}, r: 2.0, desc: '1 Mehl + 1 Milch + 1 Honig → 2 Kuchen' },
+  rutengaenger: { name: 'Rutengänger', icon: '🪄', cost: { bretter: 2 }, r: 1.8, desc: 'Sucht mit der Wünschelrute in den Bergen nach Stein, Kohle, Eisen und Gold. Nur gefundene Vorkommen können abgebaut werden.' },
   hopfenbauer: { name: 'Hopfenbauer', icon: '🌱', cost: { bretter: 3 }, r: 2.1, desc: 'Baut Hopfen an → Hopfen (für Bier)' },
   brauerei: { name: 'Brauerei', icon: '🍺', cost: { bretter: 4, stein: 2 }, r: 2.2, desc: 'Getreide + Hopfen + Wasser → 2 Bier · Honig + Wasser → Met' },
   wirtshaus: { name: 'Wirtshaus', icon: '🍻', cost: { bretter: 5, stein: 3 }, r: 2.3, desc: 'Schenkt Bier aus – versorgt Wohnhäuser im Umkreis von 25 Schritten' },
@@ -5747,6 +5760,13 @@ function buildModel(type) {
     for (let i = 0; i < 4; i++) { const f = makeItem('fisch'); f.scale.setScalar(0.8); f.rotation.set(0, Math.PI / 2, Math.PI / 2); f.position.set(-0.3 + i * 0.2, 0.92, 0); rack.add(f); }
     const net = mesh(new THREE.PlaneGeometry(1.0, 0.8, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6a5a40, wireframe: true }), -1.3, 0.65, 0.4); net.rotation.y = Math.PI / 2; g.add(net); for (const z of [0, 0.8]) B(g, 0.05, 1.1, 0.05, OW.brown, -1.3, 0.55, z);
     const boat = new THREE.Group(); boat.position.set(0.3, 0.25, 1.4); boat.rotation.set(Math.PI, 0.2, 0); g.add(boat); const hull = mesh(new THREE.SphereGeometry(0.4, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), M(0x6a4428), 0, 0, 0); hull.scale.set(2.0, 0.6, 0.8); boat.add(hull);
+  } else if (type === 'rutengaenger') {
+    g = H({ w: 1.7, d: 1.5, frontWin: [1], chimney: false, roof: OW.shing });
+    const tb = new THREE.Group(); tb.position.set(1.45, 0, 0.8); g.add(tb); B(tb, 0.8, 0.06, 0.5, OW.wood, 0, 0.72, 0); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(tb, 0.06, 0.72, 0.06, OW.brown, sx * 0.35, 0.36, sz * 0.2); B(tb, 0.5, 0.01, 0.35, M(0xe8dcc0), -0.08, 0.76, 0, 0, 0.2, 0);
+    [0x8f8a84, 0x1e1e22, 0xb5562e, 0xe8c040].forEach((c, k) => tb.add(mesh(new THREE.OctahedronGeometry(0.06, 0), M(c), 0.25, 0.8, -0.15 + k * 0.1)));
+    const sp = new THREE.Group(); sp.position.set(-1.25, 0, 1.2); g.add(sp); B(sp, 0.08, 1.5, 0.08, OW.brown, 0, 0.75, 0); [[0x8f8a84, 0.3], [0x1e1e22, -0.4], [0xe8c040, 0.9]].forEach(([c, r], k) => { const a = new THREE.Group(); a.position.y = 1.0 + k * 0.17; a.rotation.y = r; sp.add(a); a.add(mesh(box(0.55, 0.13, 0.03), M(0xc8a878), 0.25, 0, 0)); a.add(mesh(box(0.1, 0.1, 0.035), M(c), 0.42, 0, 0)); });
+    const rod = new THREE.Group(); rod.position.set(0.45, 0.02, 1.1); rod.rotation.y = 0.4; g.add(rod); for (const s2 of [-1, 1]) { const l = B(rod, 0.025, 0.025, 0.55, OW.wood, s2 * 0.1, 0.02, 0.2); l.rotation.y = s2 * 0.25; }
+    crate(g, -0.6, 1.1, 0.7); const pk = new THREE.Group(); pk.position.set(0.9, 0, 1.2); pk.rotation.z = 0.3; g.add(pk); B(pk, 0.04, 0.8, 0.04, OW.wood, 0, 0.4, 0); B(pk, 0.4, 0.05, 0.05, OW.iron, 0, 0.78, 0);
   } else if (type === 'bogenbauer') {
     g = H({ w: 2.0, d: 1.7, frontWin: [0, 2] }); shedRoof(g, 1.1, 0.9, 1.45, 1.75, 0.55, OW.shing);
     const wb = new THREE.Group(); wb.position.set(1.75, 0, 0.75); g.add(wb); B(wb, 1.0, 0.07, 0.45, OW.wood, 0, 0.72, 0); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(wb, 0.06, 0.72, 0.06, OW.brown, sx * 0.45, 0.36, sz * 0.18);
@@ -6000,6 +6020,7 @@ const LOOK = { // Kleidung & Kopfbedeckung je Beruf
   wagner: { c: 0x6a5a3a, hat: 'cap', hc: 0x3a2a1a, apron: 0x8a6a45 },
   flachsbauer: { c: 0x5a7aa0, hat: 'straw' }, seilerei: { c: 0x9a8a6a, hat: 'cap', hc: 0x5a4a3a }, waffenschmied: { c: 0x4a3a2a, hat: 'none', apron: 0x3a2618 }, kaserne: { c: 0x7a3a2a, hat: 'helmet' },
   schwertkaempfer: { c: WAPPEN_C, hat: 'helmet' }, bogenschuetze: { c: 0x3f6b3a, hat: 'cap', hc: 0x2a4a2a },
+  rutengaenger: { c: 0x6a5a8a, hat: 'straw' },
   bogenbauer: { c: 0x3f6b3a, hat: 'cap', hc: 0x2a4a2a, apron: 0x8a6a45 },
   raeucherei: { c: 0x6a5a4a, hat: 'cap', hc: 0x3a2a1a, apron: 0x4a3a2a }, kuhstall: { c: 0x8a6a3a, hat: 'straw' }, kaeserei: { c: 0xf0ead8, hat: 'cap', hc: 0xffffff, apron: 0xf0d880 }, konditorei: { c: 0xf4e0e8, hat: 'chef', apron: 0xffffff },
   hopfenbauer: { c: 0x5a8a3a, hat: 'straw' }, brauerei: { c: 0x8a6a3a, hat: 'cap', hc: 0x5a3a1a, apron: 0x4a3020 }, wirtshaus: { c: 0x7a3a2a, hat: 'none', apron: 0xf0ead8 }, schaefer: { c: 0x7a6a4a, hat: 'straw' }, weberei: { c: 0x5a7ab0, hat: 'scarf', hc: 0xd8c070 }, schneider: { c: 0x6a4a8a, hat: 'cap', hc: 0x3a2a5a }, imker: { c: 0xe8e0c8, hat: 'straw' }, lehmgrube: { c: 0x8a6a4a, hat: 'cap', hc: 0x5a4030 }, toepfer: { c: 0xa86a3a, hat: 'none', apron: 0x8a5a3a }, koehler: { c: 0x3a3530, hat: 'cap', hc: 0x222222 }, haendler: { c: 0x8a2a6a, hat: 'cap', hc: 0xd0a020 },
@@ -6173,8 +6194,8 @@ function placeReason(type, x, z) {
   if (!reachable(x, z)) return 'Auf der anderen Flussseite – baue zuerst eine Brücke';
   if (mk) {
     if (!inTerritory(x, z, 0.5)) return 'Außerhalb deines Gebiets – baue einen Wachturm am Rand';
-    const dep = deposits.find(d => d.kind === mk && Math.hypot(d.x - x, d.z - z) < 4.5);
-    if (!dep) return 'Muss direkt am ' + { stein: 'grauen Stein', eisenerz: 'roten Eisenerz', kohle: 'schwarzen Kohle', gold: 'gelben Gold' }[mk] + '-Vorkommen im Gebirge stehen';
+    const dep = deposits.find(d => d.found && d.kind === mk && Math.hypot(d.x - x, d.z - z) < 4.5);
+    if (!dep) return (deposits.some(d => !d.found && d.kind === mk && Math.hypot(d.x - x, d.z - z) < 4.5) ? 'Hier hat noch kein Rutengänger gesucht – ' : '') + 'Muss direkt am '  + { stein: 'grauen Stein', eisenerz: 'roten Eisenerz', kohle: 'schwarzen Kohle', gold: 'gelben Gold' }[mk] + '-Vorkommen im Gebirge stehen';
     if (!freeSpot(x, z, r)) return 'Zu nah an einem Gebäude';
     return null;
   }
@@ -6423,6 +6444,7 @@ const CHAIN_IO = {
   flachsbauer: [[], ['flachs']], seilerei: [['flachs'], ['sehne']],
   waffenschmied: [['eisenbarren', 'kohle', 'bretter'], ['schwert', 'schild']],
   bogenbauer: [['bretter', 'sehne', 'eisenbarren'], ['bogen', 'pfeile']],
+  rutengaenger: [[], ['🔍 Vorkommen']],
   kaserne: [['schwert', 'schild', 'bogen', 'pfeile', 'muenzen'], ['⚔️ Kämpfer']],
   raeucherei: [['fisch', 'stamm'], ['raeucherfisch']], kuhstall: [['getreide', 'wasser'], ['milch']], kaeserei: [['milch'], ['kaese']], konditorei: [['mehl', 'milch', 'honig'], ['kuchen']],
   hopfenbauer: [[], ['hopfen']], brauerei: [['getreide', 'hopfen', 'wasser', 'honig'], ['bier', 'met']], wirtshaus: [['bier'], ['🍻 Ausschank']], schaefer: [[], ['wolle']], weberei: [['wolle'], ['stoff']], schneider: [['stoff'], ['kleidung']],
@@ -6433,7 +6455,7 @@ const CHAINS = [
   ['🪵 Baustoffe', ['foerster', 'holzfaeller', 'saegewerk', 'steinmetz', 'steinmine']],
   ['🍞 Nahrung', ['bauernhof', 'brunnen', 'muehle', 'baeckerei', 'fischer', 'schweinezucht', 'metzger']],
   ['🧀 Feine Kost', ['raeucherei', 'kuhstall', 'kaeserei', 'konditorei']],
-  ['⛏️ Bergbau & Metall', ['kohlemine', 'eisenmine', 'schmelze', 'schmied', 'wagner']],
+  ['⛏️ Bergbau & Metall', ['rutengaenger', 'kohlemine', 'eisenmine', 'schmelze', 'schmied', 'wagner']],
   ['🪙 Gold', ['goldmine', 'muenzpraege']],
   ['🍺 Bier & Met', ['hopfenbauer', 'imker', 'brauerei', 'wirtshaus']],
   ['👕 Kleidung', ['schaefer', 'weberei', 'schneider']],
@@ -6696,6 +6718,17 @@ function planNext(b) {
     moveTo(w, shore); doFn(w, () => { b.status = 'Angelt'; faceTo(w, best); });
     work(w, 5, 'fish', () => { best.amount--; best.reserved = false; setCarry(w, 'fisch'); b.status = 'Bringt Fisch nach Hause'; });
     deliver(w, 'fisch', 1); moveTo(w, b.door);
+  } else if (T === 'rutengaenger') {
+    b.searched = b.searched || []; let best = null, bd = 1e9;
+    for (let k = 0; k < 60; k++) { const a = Math.random() * 6.28, r = 6 + Math.random() * 40, x = b.x + Math.cos(a) * r, z = b.z + Math.sin(a) * r;
+      if (mountain(x, z) < 2.5 || !isExplored(x, z) || !reachable(x, z) || b.searched.some(p => Math.hypot(p[0] - x, p[1] - z) < 5)) continue;
+      const near = deposits.some(d => !d.found && Math.hypot(d.x - x, d.z - z) < 12) ? -15 : 0, d = r + near; if (d < bd) { bd = d; best = [x, z]; } }
+    if (!best) return idle('Keine unerforschten Berge in der Nähe (Umkreis 40)', 4);
+    b.searched.push(best); if (b.searched.length > 80) b.searched.shift();
+    const pt = new V3(best[0], 0, best[1]); b.working = true; b.status = 'Wandert mit der Wünschelrute in die Berge';
+    moveTo(w, pt); doFn(w, () => { b.status = 'Sucht mit der Wünschelrute …'; holdFront(w, 'kampfstock'); });
+    work(w, 4, 'carve', () => { holdFront(w, null); const d = deposits.find(d => !d.found && Math.hypot(d.x - pt.x, d.z - pt.z) < 6.5); if (d) { revealDeposit(d); b.status = 'Hat ein Vorkommen gefunden!'; b.finds = (b.finds || 0) + 1; } else { b.status = 'Hier ist nichts'; markEmpty(pt); } });
+    moveTo(w, b.door);
   } else if (T === 'brunnen') {
     b.working = true; b.status = 'Schöpft Wasser'; doFn(w, () => faceTo(w, b));
     work(w, 2.4, 'pull', () => { setCarry(w, 'wasser'); b.status = 'Bringt Wasser nach Hause'; });
@@ -6807,7 +6840,7 @@ genBuildIcons();
 const CATS = [
   { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'foerster', 'saegewerk', 'steinmetz'] },
   { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger', 'raeucherei', 'kuhstall', 'kaeserei', 'konditorei'] },
-  { name: 'Bergbau', icon: '⛏️', types: ['steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
+  { name: 'Bergbau', icon: '⛏️', types: ['rutengaenger', 'steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
   { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
   { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'flachsbauer', 'seilerei', 'bogenbauer', 'waffenschmied', 'kaserne', 'wachturm', 'burg'] },
   { name: 'Handwerk', icon: '🧺', types: ['hopfenbauer', 'brauerei', 'schaefer', 'weberei', 'schneider', 'imker', 'lehmgrube', 'toepfer', 'koehler'] },
@@ -6891,7 +6924,7 @@ function selectB(b) {
 }
 // ---------- Berufs-Schilder über den Gebäuden ----------
 const labelBox = document.createElement('div'); labelBox.id = 'labels'; document.body.appendChild(labelBox);
-const JOB = { bogenbauer: 'Bogenbauer', raeucherei: 'Räucherer', kuhstall: 'Kuhhirt', kaeserei: 'Käser', konditorei: 'Konditor', hopfenbauer: 'Hopfenbauer', brauerei: 'Brauer', wirtshaus: 'Wirt', schaefer: 'Schäfer', weberei: 'Weber', schneider: 'Schneider', imker: 'Imker', lehmgrube: 'Lehmstecher', toepfer: 'Töpfer', koehler: 'Köhler', wohnhaus: 'Wohnhaus', markt: 'Markt', flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', foerster: 'Förster', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Steinbrecher', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
+const JOB = { rutengaenger: 'Rutengänger', bogenbauer: 'Bogenbauer', raeucherei: 'Räucherer', kuhstall: 'Kuhhirt', kaeserei: 'Käser', konditorei: 'Konditor', hopfenbauer: 'Hopfenbauer', brauerei: 'Brauer', wirtshaus: 'Wirt', schaefer: 'Schäfer', weberei: 'Weber', schneider: 'Schneider', imker: 'Imker', lehmgrube: 'Lehmstecher', toepfer: 'Töpfer', koehler: 'Köhler', wohnhaus: 'Wohnhaus', markt: 'Markt', flachsbauer: 'Flachsbauer', seilerei: 'Seiler', waffenschmied: 'Waffenschmied', kaserne: 'Kaserne', burg: 'Burg',  wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', foerster: 'Förster', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Steinbrecher', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
 const _lv = new V3();
 function updatePauseIcons() {
   for (const b of buildings) {
@@ -7268,7 +7301,7 @@ function serialize() {
   const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
   for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 2, unl: UNL, trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 2, unl: UNL, depFound: deposits.map(d => d.found ? 1 : 0), trader: { ...TRADER }, pool: { ...POOL }, sold: SOLD.filter(s => s.post && !s.post.removed).map(s => ({ kind: s.kind, rank: s.rank, xp: s.xp || 0, post: buildings.filter(x => !x.removed).indexOf(s.post) })), bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
@@ -7313,6 +7346,7 @@ function applySave(d) {
   }
   placeBuilding.noPlots = false;
   if (d.trader) TRADER = { ...d.trader };
+  if (d.depFound) deposits.forEach((x, i) => { if (d.depFound[i]) revealDeposit(x, true); }); else deposits.forEach(x => { if (!x.extra) revealDeposit(x, true); });
   UNL = Math.max(UNL, d.unl == null ? 3 : d.unl); checkUnlock(true); renderCats();
   if (d.sold) { const L = buildings.filter(x => !x.removed); for (const so of d.sold) { const b = L[so.post]; if (!b) continue; if (b.guard && !b.guard.soldierUsed && b.type === 'wachturm') { b.guard.soldierUsed = true; b.garrison = []; } const s = { kind: so.kind, rank: so.rank, xp: so.xp, food: 1, post: b }; SOLD.push(s); (b.garrison = b.garrison || []).push(s); if (b.type === 'kaserne') makeSoldierW(s, b.door); } }
   else for (const b of buildings) if (b.guard && !(b.garrison || []).length) { const s = { kind: 'schwert', rank: 0, xp: 0, food: 1, post: b }; SOLD.push(s); b.garrison = [s]; }
