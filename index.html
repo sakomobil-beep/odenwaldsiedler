@@ -6124,7 +6124,7 @@ function endSite(b) {
   if (b.site) scene.remove(b.site); b.site = null;
   if (b.builder) { const w = b.builder; w.queue.length = 0; w.home = null; moveTo(w, lagerDoor(b.x, b.z)); w.queue.push({ fn: () => { w.removed = true; scene.remove(w.g); } }); b.builder = null; }
 }
-const PHASES = [[0.08, 'Boden wird eingeebnet'], [0.15, 'Fundament wird gelegt'], [0.35, 'Holzgerüst wird aufgestellt'], [0.75, 'Wände werden hochgezogen'], [1.01, 'Dach wird gedeckt']];
+const PHASES = [[0.15, 'Fundament wird gelegt'], [0.35, 'Holzgerüst wird aufgestellt'], [0.75, 'Wände werden hochgezogen'], [1.01, 'Dach wird gedeckt']];
 function siteStep(b, dt) {
   if (b.needsBuilder && !b.builder) {
     const w = makeWorker('bauarbeiter'); const l = nearestLager(b.x, b.z); w.g.position.copy(l.door); w.home = null; workers.push(w); b.builder = w; b.needsBuilder = false;
@@ -6132,7 +6132,7 @@ function siteStep(b, dt) {
   }
   const w = b.builder;
   if (b.builderAt && w && !w.queue.length) { // um die Baustelle herumgehen und arbeiten
-    const levelling = b.flat && b.progress < 0.08, sh = w.tools && w.tools.shovel;
+    const levelling = b.flat && b.flat.k < 1, sh = w.tools && w.tools.shovel;
     if (sh) { sh.visible = levelling; w.tools.hammer.visible = !levelling; }
     if (levelling) {
       const a = Math.random() * Math.PI * 2, d = Math.random() * b.flat.r * 0.85, p = new V3(b.x + Math.sin(a) * d, 0, b.z + Math.cos(a) * d);
@@ -6144,10 +6144,15 @@ function siteStep(b, dt) {
       moveTo(w, p); w.queue.push({ fn: () => faceTo(w, b) }); work(w, 1 + Math.random() * 0.8, b.progress < 0.15 ? 'dig' : 'hammer', null);
     }
   }
-  if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) b.progress = Math.min(1, b.progress + dt / ((30 + TYPES[b.type].r * 9) * TF));
+  const lv = b.flat && b.flat.k < 1;
+  if (lv && b.progress > 0) { b.flat.k = 1; updateFlat(b.flat); }
+  else if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) {
+    if (lv) { b.flat.k = Math.min(1, b.flat.k + dt / (12 * TF)); updateFlat(b.flat); if (b.outPile) b.outPile.position.y = height(b.outPile.position.x, b.outPile.position.z); if (b.flat.k >= 1) grassDirty = true; }
+    else b.progress = Math.min(1, b.progress + dt / ((30 + TYPES[b.type].r * 9) * TF));
+  }
+  if (b.scaf) b.scaf.visible = !(b.flat && b.flat.k < 1);
   const p = b.progress;
-  if (b.flat && b.flat.k < 1) { const nk = Math.min(1, p / 0.08); if (nk !== b.flat.k) { b.flat.k = nk; updateFlat(b.flat); if (b.outPile) b.outPile.position.y = height(b.outPile.position.x, b.outPile.position.z); if (nk >= 1) grassDirty = true; } }
-  b.status = b.builderAt ? (PHASES.find(([t]) => p < t) || PHASES[PHASES.length - 1])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
+  b.status = b.builderAt && b.flat && b.flat.k < 1 ? `Stufe 1: Boden wird eingeebnet (${Math.floor(b.flat.k * 100)} %)` : b.builderAt ? 'Stufe 2: ' + (PHASES.find(([t]) => p < t) || PHASES[PHASES.length - 1])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
   // sichtbarer Aufbau: unterhalb der Ebene sichtbar, oben abgeschnitten
   if (b.found) { const nf = Math.ceil(b.found.length * Math.min(1, p / 0.15)); b.found.forEach((st, i) => st.visible = i < nf && p < 0.5); }
   if (b.frame) { const fp = (p - 0.15) / 0.2, n = b.frame.children.length; b.frame.children.forEach((m, i) => m.visible = p < 0.6 && fp * n > i); }
