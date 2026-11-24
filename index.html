@@ -6154,7 +6154,7 @@ function makePlots(b) {
 }
 const FIELD_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 });
 const _gRay = new THREE.Raycaster(), _gO = new THREE.Vector3(), _gD = new THREE.Vector3(0, -1, 0);
-function groundY(x, z) { _gO.set(x, 200, z); _gRay.set(_gO, _gD); const h = _gRay.intersectObject(ground, false)[0]; return h ? h.point.y : height(x, z); }
+function groundY(x, z) { const cell = SIZE / SEG, gx = (x + SIZE / 2) / cell, gz = (z + SIZE / 2) / cell, ix = Math.floor(gx), iz = Math.floor(gz), u = gx - ix, v = gz - iz, x0 = ix * cell - SIZE / 2, z0 = iz * cell - SIZE / 2; const h00 = height(x0, z0), h10 = height(x0 + cell, z0), h01 = height(x0, z0 + cell); if (u + v <= 1) return h00 + u * (h10 - h00) + v * (h01 - h00); const h11 = height(x0 + cell, z0 + cell); return h11 + (1 - u) * (h01 - h11) + (1 - v) * (h10 - h11); }
 function createPlot(b, x, z) {
     clearTrees(x, z, 1.8);
     const g = new THREE.Group(); g.position.set(x, height(x, z), z);
