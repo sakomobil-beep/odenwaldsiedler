@@ -6251,6 +6251,7 @@ function renderChains() {
 
 // ---------- Bergwerke (Odenwald-Detailstufe, je Art eigenes Design) ----------
 function mineModel(g, type, fx) {
+  const MS = 0.72, outer = g; g = new THREE.Group(); g.scale.setScalar(MS); outer.add(g);
   const ore = { steinmine: 'stein', eisenmine: 'eisenerz', kohlemine: 'kohle', goldmine: 'golderz' }[type];
   const oreM = type === 'goldmine' ? new THREE.MeshStandardMaterial({ color: 0xe0b040, emissive: 0x6a4a00, emissiveIntensity: 0.35, metalness: 0.6, roughness: 0.4 }) : M({ steinmine: 0xc48a72, eisenmine: 0x8a4a32, kohlemine: 0x1c1c20 }[type]);
   const dark = M(0x0b0908), moss = M(0x4e6a34), lampM = new THREE.MeshStandardMaterial({ color: 0xffc060, emissive: 0xff9a30, emissiveIntensity: 1.2 });
@@ -6322,7 +6323,7 @@ function mineModel(g, type, fx) {
     lamp(P, -0.85, 1.3, 0.35); lamp(P, 0.85, 1.3, 0.35);
     const T = rails(-0.3, 0.6, 6); hunt(T, 0, 1.0);
     // Wetterschacht (Abzug) auf dem Berg
-    const ws = new THREE.Group(); ws.position.set(1.4, 1.9, -1.4); g.add(ws); ws.add(mesh(new THREE.CylinderGeometry(0.3, 0.38, 1.4, 10), OW.sand2, 0, 0.7, 0)); ws.add(mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.12, 10), OW.sand3, 0, 1.42, 0)); fx.smokeAt = new V3(1.4, 3.5, -1.4);
+    const ws = new THREE.Group(); ws.position.set(1.4, 1.9, -1.4); g.add(ws); ws.add(mesh(new THREE.CylinderGeometry(0.3, 0.38, 1.4, 10), OW.sand2, 0, 0.7, 0)); ws.add(mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.12, 10), OW.sand3, 0, 1.42, 0)); fx.smokeAt = new V3(1.4, 3.5, -1.4).multiplyScalar(MS);
     // Pferdegöpel (Rundlauf mit Haspel)
     const gp = new THREE.Group(); gp.position.set(2.0, 0, 1.6); g.add(gp); gp.add(mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.03, 20), M(0x5a4a3a), 0, 0.02, 0));
     gp.add(mesh(new THREE.CylinderGeometry(0.22, 0.26, 1.4, 10), OW.wood, 0, 0.7, 0)); const cone = mesh(new THREE.ConeGeometry(0.9, 0.6, 10), OW.shing, 0, 1.75, 0); gp.add(cone); for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI * 2; B(gp, 0.1, 1.5, 0.1, OW.brown, Math.cos(a) * 0.8, 0.75, Math.sin(a) * 0.8); }
