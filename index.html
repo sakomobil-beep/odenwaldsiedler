@@ -6124,7 +6124,7 @@ function endSite(b) {
   if (b.site) scene.remove(b.site); b.site = null;
   if (b.builder) { const w = b.builder; w.queue.length = 0; w.home = null; moveTo(w, lagerDoor(b.x, b.z)); w.queue.push({ fn: () => { w.removed = true; scene.remove(w.g); } }); b.builder = null; }
 }
-const PHASES = [[0.15, 'Fundament wird gelegt'], [0.35, 'Holzgerüst wird aufgestellt'], [0.75, 'Wände werden hochgezogen'], [1.01, 'Dach wird gedeckt']];
+const PHASES = [[0.08, 'Boden wird eingeebnet'], [0.15, 'Fundament wird gelegt'], [0.35, 'Holzgerüst wird aufgestellt'], [0.75, 'Wände werden hochgezogen'], [1.01, 'Dach wird gedeckt']];
 function siteStep(b, dt) {
   if (b.needsBuilder && !b.builder) {
     const w = makeWorker('bauarbeiter'); const l = nearestLager(b.x, b.z); w.g.position.copy(l.door); w.home = null; workers.push(w); b.builder = w; b.needsBuilder = false;
@@ -6132,7 +6132,7 @@ function siteStep(b, dt) {
   }
   const w = b.builder;
   if (b.builderAt && w && !w.queue.length) { // um die Baustelle herumgehen und arbeiten
-    const levelling = b.flat && b.flat.k < 1, sh = w.tools && w.tools.shovel;
+    const levelling = b.flat && b.progress < 0.08, sh = w.tools && w.tools.shovel;
     if (sh) { sh.visible = levelling; w.tools.hammer.visible = !levelling; }
     if (levelling) {
       const a = Math.random() * Math.PI * 2, d = Math.random() * b.flat.r * 0.85, p = new V3(b.x + Math.sin(a) * d, 0, b.z + Math.cos(a) * d);
@@ -6144,15 +6144,10 @@ function siteStep(b, dt) {
       moveTo(w, p); w.queue.push({ fn: () => faceTo(w, b) }); work(w, 1 + Math.random() * 0.8, b.progress < 0.15 ? 'dig' : 'hammer', null);
     }
   }
-  const lv = b.flat && b.flat.k < 1;
-  if (lv && b.progress > 0) { b.flat.k = 1; updateFlat(b.flat); }
-  else if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) {
-    if (lv) { b.flat.k = Math.min(1, b.flat.k + dt / (12 * TF)); updateFlat(b.flat); if (b.outPile) b.outPile.position.y = height(b.outPile.position.x, b.outPile.position.z); if (b.flat.k >= 1) grassDirty = true; }
-    else b.progress = Math.min(1, b.progress + dt / ((30 + TYPES[b.type].r * 9) * TF));
-  }
-  if (b.scaf) b.scaf.visible = !(b.flat && b.flat.k < 1);
+  if (b.builderAt && w && w.queue[0] && w.queue[0].wait !== undefined) b.progress = Math.min(1, b.progress + dt / ((30 + TYPES[b.type].r * 9) * TF));
   const p = b.progress;
-  b.status = b.builderAt && b.flat && b.flat.k < 1 ? `Stufe 1: Boden wird eingeebnet (${Math.floor(b.flat.k * 100)} %)` : b.builderAt ? 'Stufe 2: ' + (PHASES.find(([t]) => p < t) || PHASES[PHASES.length - 1])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
+  if (b.flat && b.flat.k < 1) { const nk = Math.min(1, p / 0.08); if (nk !== b.flat.k) { b.flat.k = nk; updateFlat(b.flat); if (b.outPile) b.outPile.position.y = height(b.outPile.position.x, b.outPile.position.z); if (nk >= 1) grassDirty = true; } }
+  b.status = b.builderAt ? (PHASES.find(([t]) => p < t) || PHASES[PHASES.length - 1])[1] + ` (${Math.floor(p * 100)} %)` : b.status;
   // sichtbarer Aufbau: unterhalb der Ebene sichtbar, oben abgeschnitten
   if (b.found) { const nf = Math.ceil(b.found.length * Math.min(1, p / 0.15)); b.found.forEach((st, i) => st.visible = i < nf && p < 0.5); }
   if (b.frame) { const fp = (p - 0.15) / 0.2, n = b.frame.children.length; b.frame.children.forEach((m, i) => m.visible = p < 0.6 && fp * n > i); }
@@ -6270,46 +6265,6 @@ function mineModel(outer, type, fx) {
   const rock = (g, x, y, z, r, m, k = 0) => { const o = mesh(new THREE.DodecahedronGeometry(r, 0), m, x, y, z); o.rotation.set(k, k * 1.7, k * 0.5); o.scale.set(1.2, 0.75, 1); g.add(o); return o; };
 
   // ===== A: Zechengebäude im Fachwerkstil =====
-  function A(t) {
-    const g = new THREE.Group(), om = oreMat(t);
-    if (t === 'steinmine') {
-      for (let k = 0; k < 5; k++) rock(g, -1.8 + k * 0.9, 0.5, -1.9, 0.75, k % 2 ? OW.sand : OW.sand2, k);
-      B(g, 3.6, 1.1, 0.5, OW.sand2, 0, 0.55, -1.4); for (let k = 0; k < 7; k++) B(g, 0.02, 1.0, 0.02, M(0x7a4636), -1.5 + k * 0.5, 0.55, -1.14);
-      const sh = new THREE.Group(); sh.position.set(-1.0, 0, 0.3); g.add(sh); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(sh, 0.12, 1.5, 0.12, OW.brown, sx * 0.8, 0.75, sz * 0.6);
-      B(sh, 1.9, 0.08, 1.6, OW.shing, 0, 1.6, 0, 0.18, 0, 0); B(sh, 1.8, 0.08, 0.1, OW.brown, 0, 1.5, 0.62);
-      B(sh, 1.2, 0.5, 0.5, OW.wood, 0, 0.25, 0); B(sh, 0.6, 0.35, 0.4, OW.sand3, -0.2, 0.68, 0); sh.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.02, 20).rotateX(Math.PI / 2), OW.iron, 0.3, 0.75, 0));
-      for (let k = 0; k < 9; k++) B(g, 0.45, 0.28, 0.3, k % 2 ? OW.sand3 : OW.sand, 0.8 + (k % 3) * 0.48, 0.14 + Math.floor(k / 3) * 0.28, 1.0);
-      const cr = new THREE.Group(); cr.position.set(1.4, 0, -0.5); g.add(cr); B(cr, 0.14, 2.4, 0.14, OW.brown, 0, 1.2, 0); const arm = B(cr, 1.6, 0.1, 0.1, OW.brown, -0.6, 2.3, 0); arm.rotation.z = 0.15; B(cr, 0.015, 1.2, 0.015, M(0x8a7a5a), -1.3, 1.6, 0); B(cr, 0.4, 0.28, 0.28, OW.sand3, -1.3, 0.95, 0);
-      items(g, t, -0.2, 1.6, 2);
-    } else if (t === 'eisenmine') {
-      rock(g, -0.6, 0.5, -1.6, 1.0, M(0x8a4a36), 1); rock(g, 0.8, 0.4, -1.8, 0.9, M(0x6e3a2a), 2);
-      const tw = owHouse({ w: 1.6, d: 1.6, h1: 1.2, h2: 1.2, beam: OW.ox, plaster: OW.plasterW, style: 'voll', frontWin: [1], groundSand: true, chimney: false }); tw.position.set(-0.4, 0, -0.2); g.add(tw);
-      const top = new THREE.Group(); top.position.set(-0.4, tw.userData.top || 3.2, -0.2); g.add(top); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(top, 0.1, 1.0, 0.1, OW.brown, sx * 0.5, 0.5, sz * 0.5); top.add(mesh(new THREE.ConeGeometry(0.85, 0.7, 4).rotateY(Math.PI / 4), OW.tile, 0, 1.35, 0)); wheel(top, 0, 0.55, 0, 0.35, OW.iron);
-      B(g, 0.6, 0.9, 0.06, OW.gS, -0.4, 0.45, 0.62); sandArch(g, -0.4, 0.9, 0.63, 0.3);
-      const T = rails(g, -0.4, 0.75, 6); hunt(T, 0, 1.0, om);
-      heap(g, 1.4, 0.8, 0x7a3a26, 0.7, om); items(g, t, 1.0, 1.9);
-      const pw = new THREE.Group(); pw.position.set(1.5, 0, -0.7); g.add(pw); for (const sx of [-1, 1]) B(pw, 0.12, 1.5, 0.12, OW.brown, sx * 0.45, 0.75, 0); B(pw, 1.1, 0.12, 0.18, OW.brown, 0, 1.45, 0); for (let k = 0; k < 3; k++) { B(pw, 0.1, 1.0, 0.1, OW.wood, -0.27 + k * 0.27, 0.8, 0); B(pw, 0.15, 0.16, 0.15, OW.iron, -0.27 + k * 0.27, 0.28, 0); } B(pw, 1.0, 0.2, 0.4, OW.wood, 0, 0.1, 0);
-    } else if (t === 'kohlemine') {
-      rock(g, -1.2, 0.5, -1.6, 1.0, M(0x4a4038), 1); rock(g, 0.3, 0.6, -1.9, 1.1, M(0x3a322c), 2);
-      const hs = owHouse({ w: 1.7, d: 1.4, h1: 1.1, h2: 0.9, beam: OW.brown, plaster: M(0x8a7a6a), style: 'giebel', frontWin: [1], chimney: true, roof: OW.slate }); hs.position.set(-1.1, 0, -0.3); g.add(hs);
-      const bk = new THREE.Group(); bk.position.set(1.3, 0, 0.3); g.add(bk); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(bk, 0.12, 1.3, 0.12, OW.brown, sx * 0.5, 0.65, sz * 0.45); B(bk, 1.2, 0.8, 1.1, OW.wood, 0, 1.6, 0); for (let k = 0; k < 5; k++) B(bk, 1.22, 0.03, 0.03, OW.brown, 0, 1.25 + k * 0.17, 0.56); B(bk, 1.3, 0.08, 1.2, OW.slate, 0, 2.05, 0, 0.15, 0, 0);
-      const cv = new THREE.Group(); cv.position.set(-0.2, 0, -0.2); g.add(cv); const belt = B(cv, 0.4, 0.08, 2.2, M(0x2a2420), 0.6, 1.25, 0.25, 0, 0, 0); belt.rotation.set(0, Math.PI / 2, 0.55); for (let k = 0; k < 4; k++) B(cv, 0.08, 0.4 + k * 0.3, 0.08, OW.brown, -0.2 + k * 0.42, (0.4 + k * 0.3) / 2 + 0.6, 0.25);
-      for (let k = 0; k < 6; k++) cv.add(mesh(new THREE.DodecahedronGeometry(0.08, 0), om, -0.2 + k * 0.3, 0.9 + k * 0.2, 0.25));
-      B(g, 0.9, 0.6, 0.6, M(0x222), 1.3, 0.3, 0.3); heap(g, 1.4, 1.5, 0x2a2420, 0.7, om); const T = rails(g, -1.1, 0.5, 5); hunt(T, 0, 0.8, om); items(g, t, 0.0, 1.9);
-    } else {
-      rock(g, -0.2, 0.6, -1.7, 1.1, OW.sand2, 1); rock(g, 1.1, 0.5, -1.5, 0.9, OW.sand, 2);
-      const tw = new THREE.Group(); tw.position.set(-0.3, 0, -0.3); g.add(tw); B(tw, 1.6, 2.6, 1.6, OW.sand, 0, 1.3, 0); for (let k = 0; k < 16; k++) B(tw, 0.3, 0.12, 0.02, k % 2 ? OW.sand2 : OW.sand3, (k % 4 - 1.5) * 0.35, 0.3 + Math.floor(k / 4) * 0.6, 0.81);
-      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; B(tw, 0.3, 0.3, 0.3, OW.sand3, Math.max(-0.65, Math.min(0.65, Math.cos(a) * 0.95)), 2.75, Math.max(-0.65, Math.min(0.65, Math.sin(a) * 0.95))); }
-      B(tw, 0.75, 1.05, 0.05, dark, 0, 0.53, 0.82); sandArch(tw, 0, 1.05, 0.83, 0.38); for (let k = 0; k < 4; k++) B(tw, 0.03, 1.0, 0.03, OW.iron, -0.27 + k * 0.18, 0.5, 0.86); owWindow(tw, 0, 1.9, OW.sand3, null, false, 0.25, 0.35); tw.children.slice(-4).forEach(c => c.position.z += 0.82);
-      B(tw, 0.05, 1.4, 0.05, OW.iron, 0.5, 3.6, 0.5); const fl = mesh(box(0.6, 0.38, 0.02), M(WAPPEN_C), 0.82, 4.05, 0.5); tw.add(fl);
-      lamp(tw, -0.55, 1.2, 0.9); lamp(tw, 0.55, 1.2, 0.9);
-      const ch = new THREE.Group(); ch.position.set(1.2, 0, 1.0); ch.rotation.y = -0.4; g.add(ch); B(ch, 0.7, 0.4, 0.45, M(0x6a3a1c), 0, 0.2, 0); B(ch, 0.72, 0.08, 0.47, M(0x6a3a1c), 0, 0.5, -0.15, -0.9, 0, 0); for (const sx of [-1, 1]) B(ch, 0.06, 0.42, 0.47, OW.gold, sx * 0.28, 0.21, 0); for (let k = 0; k < 6; k++) ch.add(mesh(new THREE.DodecahedronGeometry(0.08, 0), om, -0.2 + (k % 3) * 0.2, 0.42, -0.08 + Math.floor(k / 3) * 0.15));
-      const T = rails(g, -0.3, 0.55, 5); hunt(T, 0, 0.8, om); items(g, t, -1.5, 1.4, 2);
-    }
-    return g;
-  }
-
-
   function detail(g, t, om, fx) {
     // gemeinsame Details: Werkzeug, Grubenholz, Fass, Laterne, Zunftschild
     const pk = new THREE.Group(); pk.position.set(-1.7, 0, 1.3); pk.rotation.z = 0.25; g.add(pk); B(pk, 0.05, 0.9, 0.05, OW.wood, 0, 0.45, 0); B(pk, 0.5, 0.06, 0.06, OW.iron, 0, 0.88, 0);
@@ -6321,25 +6276,25 @@ function mineModel(outer, type, fx) {
   function A(t, fx) {
     const g = new THREE.Group(), om = oreMat(t);
     if (t === 'steinmine') {
-      for (let k = 0; k < 5; k++) rock(g, -1.8 + k * 0.9, 0.5, -1.9, 0.75, k % 2 ? OW.sand : OW.sand2, k);
-      B(g, 3.6, 1.1, 0.5, OW.sand2, 0, 0.55, -1.4); for (let k = 0; k < 7; k++) B(g, 0.02, 1.0, 0.02, M(0x7a4636), -1.5 + k * 0.5, 0.55, -1.14);
-      const sh = new THREE.Group(); sh.position.set(-1.0, 0, 0.3); g.add(sh); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(sh, 0.12, 1.5, 0.12, OW.brown, sx * 0.8, 0.75, sz * 0.6);
-      const rf = owGable ? null : null; B(sh, 1.9, 0.08, 1.6, OW.shing, 0, 1.6, 0, 0.18, 0, 0); B(sh, 1.8, 0.08, 0.1, OW.brown, 0, 1.5, 0.62);
+      for (let k = 0; k < 5; k++) rock(g, -1.8 + k * 0.9, 0.9, -2.0, 0.95, k % 2 ? OW.sand : OW.sand2, k); for (let k = 0; k < 3; k++) rock(g, -1.2 + k * 1.2, 2.0, -2.2, 0.7, k % 2 ? OW.sand2 : OW.sand3, k + 5); for (let k = 0; k < 4; k++) { const tr = new THREE.Group(); tr.position.set(-1.6 + k * 1.1, 2.4 + (k % 2) * 0.3, -2.4); g.add(tr); B(tr, 0.08, 0.4, 0.08, OW.brown, 0, 0.2, 0); tr.add(mesh(new THREE.ConeGeometry(0.3, 0.9, 7), M(0x2e5a30), 0, 0.75, 0)); }
+      B(g, 3.6, 1.0, 0.6, OW.sand2, 0, 0.5, -1.3); B(g, 3.0, 0.9, 0.5, OW.sand, 0, 1.45, -1.65); B(g, 2.2, 0.7, 0.4, OW.sand2, 0, 2.25, -1.95); for (let k = 0; k < 7; k++) B(g, 0.02, 0.95, 0.02, M(0x7a4636), -1.5 + k * 0.5, 0.5, -0.99); for (let k = 0; k < 6; k++) B(g, 0.02, 0.85, 0.02, M(0x7a4636), -1.25 + k * 0.5, 1.45, -1.39);
+      const sh = new THREE.Group(); sh.position.set(-1.0, 0, 0.3); g.add(sh); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(sh, 0.12, 2.0, 0.12, OW.brown, sx * 0.8, 1.0, sz * 0.6);
+      B(sh, 1.9, 0.08, 1.6, OW.shing, 0, 2.1, 0, 0.18, 0, 0); B(sh, 1.8, 0.08, 0.1, OW.brown, 0, 2.0, 0.62); for (const sx of [-1, 1]) { const br = B(sh, 0.07, 0.6, 0.07, OW.brown, sx * 0.6, 1.75, 0.6); br.rotation.z = sx * 0.8; }
       B(sh, 1.2, 0.5, 0.5, OW.wood, 0, 0.25, 0); B(sh, 0.6, 0.35, 0.4, OW.sand3, -0.2, 0.68, 0); { const saw = new THREE.Group(); saw.position.set(0.3, 0.75, 0); sh.add(saw); saw.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.02, 20).rotateX(Math.PI / 2), OW.iron)); for (let k = 0; k < 12; k++) { const tth = B(saw, 0.05, 0.05, 0.022, OW.iron, Math.cos(k / 12 * Math.PI * 2) * 0.31, Math.sin(k / 12 * Math.PI * 2) * 0.31, 0); tth.rotation.z = k / 12 * Math.PI * 2; } fx.spin2 = saw; }
       for (let k = 0; k < 9; k++) B(g, 0.45, 0.28, 0.3, k % 2 ? OW.sand3 : OW.sand, 0.8 + (k % 3) * 0.48, 0.14 + Math.floor(k / 3) * 0.28, 1.0);
-      const cr = new THREE.Group(); cr.position.set(1.4, 0, -0.5); g.add(cr); B(cr, 0.14, 2.4, 0.14, OW.brown, 0, 1.2, 0); const arm = B(cr, 1.6, 0.1, 0.1, OW.brown, -0.6, 2.3, 0); arm.rotation.z = 0.15; B(cr, 0.015, 1.2, 0.015, M(0x8a7a5a), -1.3, 1.6, 0); B(cr, 0.4, 0.28, 0.28, OW.sand3, -1.3, 0.95, 0);
+      const cr = new THREE.Group(); cr.position.set(1.4, 0, -0.5); g.add(cr); B(cr, 0.16, 3.4, 0.16, OW.brown, 0, 1.7, 0); for (const r of [-1, 1]) { const st = B(cr, 0.09, 1.4, 0.09, OW.brown, r * 0.4, 0.6, 0); st.rotation.z = r * 0.55; } const arm = B(cr, 2.0, 0.11, 0.11, OW.brown, -0.8, 3.2, 0); arm.rotation.z = 0.12; const sp = B(cr, 0.07, 1.0, 0.07, OW.brown, -0.4, 2.8, 0); sp.rotation.z = 0.9; B(cr, 0.015, 2.1, 0.015, M(0x8a7a5a), -1.6, 2.05, 0); B(cr, 0.45, 0.3, 0.3, OW.sand3, -1.6, 0.95, 0);
       items(g, t, -0.2, 1.6, 2);
     } else if (t === 'eisenmine') {
       rock(g, -0.6, 0.5, -1.6, 1.0, M(0x8a4a36), 1); rock(g, 0.8, 0.4, -1.8, 0.9, M(0x6e3a2a), 2);
-      const tw = owHouse({ w: 1.6, d: 1.6, h1: 1.2, h2: 1.2, beam: OW.ox, plaster: OW.plasterW, style: 'voll', frontWin: [1], groundSand: true, chimney: false }); tw.position.set(-0.4, 0, -0.2); g.add(tw);
-      const top = new THREE.Group(); top.position.set(-1.75, 0, 0.5); g.add(top); for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const l = B(top, 0.12, 2.9, 0.12, OW.brown, sx * 0.42, 1.45, sz * 0.42); l.rotation.set(sz * 0.05, 0, -sx * 0.05); } for (const y of [0.8, 1.6]) for (const sz of [-1, 1]) B(top, 0.9, 0.07, 0.07, OW.brown, 0, y, sz * 0.42); for (const sz of [-1, 1]) for (const r of [-1, 1]) { const x = B(top, 0.05, 1.0, 0.05, OW.brown, 0, 1.2, sz * 0.43); x.rotation.z = r * 0.75; } B(top, 1.0, 0.1, 1.0, OW.brown, 0, 2.9, 0); top.add(mesh(new THREE.ConeGeometry(0.8, 0.6, 4).rotateY(Math.PI / 4), OW.tile, 0, 3.55, 0)); fx.spin2 = wheel(top, 0, 3.2, 0, 0.3, OW.iron); B(top, 0.015, 2.6, 0.015, M(0x8a7a5a), 0.3, 1.9, 0); top.add(mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.25, 8), OW.wood, 0.3, 0.55, 0)); B(top, 0.9, 0.25, 0.9, OW.sand, 0, 0.12, 0); B(top, 0.7, 0.03, 0.7, dark, 0, 0.26, 0);
+      const tw = owHouse({ w: 1.6, d: 1.6, h1: 1.2, h2: 1.2, beam: OW.ox, plaster: OW.plasterW, style: 'voll', frontWin: [1], groundSand: true, chimney: false }); tw.position.set(-0.3, 0, -0.35); tw.scale.setScalar(1.2); g.add(tw);
+      const top = new THREE.Group(); top.position.set(-1.95, 0, 0.5); top.scale.set(1.05, 1.3, 1.05); g.add(top); for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const l = B(top, 0.12, 2.9, 0.12, OW.brown, sx * 0.42, 1.45, sz * 0.42); l.rotation.set(sz * 0.05, 0, -sx * 0.05); } for (const y of [0.8, 1.6]) for (const sz of [-1, 1]) B(top, 0.9, 0.07, 0.07, OW.brown, 0, y, sz * 0.42); for (const sz of [-1, 1]) for (const r of [-1, 1]) { const x = B(top, 0.05, 1.0, 0.05, OW.brown, 0, 1.2, sz * 0.43); x.rotation.z = r * 0.75; } B(top, 1.0, 0.1, 1.0, OW.brown, 0, 2.9, 0); top.add(mesh(new THREE.ConeGeometry(0.8, 0.6, 4).rotateY(Math.PI / 4), OW.tile, 0, 3.55, 0)); fx.spin2 = wheel(top, 0, 3.2, 0, 0.3, OW.iron); B(top, 0.015, 2.6, 0.015, M(0x8a7a5a), 0.3, 1.9, 0); top.add(mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.25, 8), OW.wood, 0.3, 0.55, 0)); B(top, 0.9, 0.25, 0.9, OW.sand, 0, 0.12, 0); B(top, 0.7, 0.03, 0.7, dark, 0, 0.26, 0);
       B(g, 0.6, 0.9, 0.06, OW.gS, -0.4, 0.45, 0.62); lamp(g, 0.15, 1.1, 0.75); sandArch(g, -0.4, 0.9, 0.63, 0.3);
       const T = rails(g, -0.4, 0.75, 6); hunt(T, 0, 1.0, om);
       heap(g, 1.4, 0.8, 0x7a3a26, 0.7, om); items(g, t, 1.0, 1.9);
       const pw = new THREE.Group(); pw.position.set(1.5, 0, -0.7); g.add(pw); for (const sx of [-1, 1]) B(pw, 0.12, 1.5, 0.12, OW.brown, sx * 0.45, 0.75, 0); B(pw, 1.1, 0.12, 0.18, OW.brown, 0, 1.45, 0); for (let k = 0; k < 3; k++) { B(pw, 0.1, 1.0, 0.1, OW.wood, -0.27 + k * 0.27, 0.8, 0); B(pw, 0.15, 0.16, 0.15, OW.iron, -0.27 + k * 0.27, 0.28, 0); } B(pw, 1.0, 0.2, 0.4, OW.wood, 0, 0.1, 0); { const cam = new THREE.Group(); cam.position.set(0, 1.25, -0.2); pw.add(cam); cam.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.0, 8).rotateZ(Math.PI / 2), OW.wood)); for (let k = 0; k < 3; k++) B(cam, 0.06, 0.25, 0.06, OW.brown, -0.27 + k * 0.27, 0.1, 0, k, 0, 0); fx.spin3x = cam; }
     } else if (t === 'kohlemine') {
       rock(g, -1.2, 0.5, -1.6, 1.0, M(0x4a4038), 1); rock(g, 0.3, 0.6, -1.9, 1.1, M(0x3a322c), 2);
-      const hs = owHouse({ w: 1.7, d: 1.4, h1: 1.1, h2: 0.9, beam: OW.brown, plaster: M(0x8a7a6a), style: 'giebel', frontWin: [1], chimney: true, roof: OW.slate }); hs.position.set(-1.1, 0, -0.3); g.add(hs); fx.smokeAt = new V3(-1.1 + 0.4, (hs.userData.top || 2.6) + 0.6, -0.5);
+      const hs = owHouse({ w: 1.7, d: 1.4, h1: 1.1, h2: 0.9, beam: OW.brown, plaster: M(0x8a7a6a), style: 'giebel', frontWin: [1], chimney: true, roof: OW.slate }); hs.position.set(-1.1, 0, -0.45); hs.scale.setScalar(1.2); g.add(hs); fx.smokeAt = new V3(-1.1 + 0.5, (hs.userData.top || 2.6) * 1.2 + 0.6, -0.65);
       const bk = new THREE.Group(); bk.position.set(1.3, 0, 0.3); g.add(bk); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(bk, 0.12, 1.3, 0.12, OW.brown, sx * 0.5, 0.65, sz * 0.45); B(bk, 1.2, 0.8, 1.1, OW.wood, 0, 1.6, 0); for (let k = 0; k < 5; k++) B(bk, 1.22, 0.03, 0.03, OW.brown, 0, 1.25 + k * 0.17, 0.56); B(bk, 1.3, 0.08, 1.2, OW.slate, 0, 2.05, 0, 0.15, 0, 0);
       const cv = new THREE.Group(); cv.position.set(-0.2, 0, -0.2); g.add(cv); const belt = B(cv, 0.4, 0.08, 2.2, M(0x2a2420), 0.6, 1.25, 0.25, 0, 0, 0); belt.rotation.set(0, Math.PI / 2, 0.55); for (let k = 0; k < 4; k++) B(cv, 0.08, 0.4 + k * 0.3, 0.08, OW.brown, -0.2 + k * 0.42, (0.4 + k * 0.3) / 2 + 0.6, 0.25);
       for (let k = 0; k < 6; k++) cv.add(mesh(new THREE.DodecahedronGeometry(0.08, 0), om, -0.2 + k * 0.3, 0.9 + k * 0.2, 0.25));
