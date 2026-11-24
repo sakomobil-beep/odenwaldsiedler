@@ -84,6 +84,7 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 .blabel:after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-5px;border:5px solid transparent;border-top-color:rgba(224,172,72,.8);border-bottom:0}
 .blabel .bi{font-size:16px}.blabel .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:2px}
 .dot.work{background:#6fd04a;box-shadow:0 0 6px #6fd04a}.dot.idle{background:#c8c0a8}.dot.wait{background:#f0a030}.dot.pause{background:#e05030}.dot.bau{background:#5aa0e0}
+.lagercols{display:flex;gap:14px;margin-top:6px}.lagercols>div{flex:1;line-height:1.5}#info{max-width:420px!important}
 </style></head><body>
 <div id="top" class="panel"><div id="res"></div><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
@@ -5787,7 +5788,12 @@ function finishBuilding(b) {
   b.needsWorker = true; b.status = 'Wartet auf Werkzeug 🔨';
   toast(`${TYPES[b.type].name} ist fertig!`);
 }
+// ---------- Wartende Siedler im Lager (je Beruf 1 zum Start) ----------
+const POOL = {};
+for (const k of Object.keys(TYPES)) if (!['lager', 'bruecke', 'strasse', 'wachturm'].includes(k)) POOL[k] = 1;
+POOL.waechter = 1;
 function trySpawnGuard(b) {
+  if (POOL.waechter > 0) { POOL.waechter--; stock.kampfstock++; }
   if (stock.kampfstock < 1) { b.status = 'Kein Kampfstock im Lager – Waffenschnitzer bauen!'; return; }
   stock.kampfstock--; refreshPiles(); b.needsGuard = false;
   const w = makeWorker('waechter'); w.g.position.copy(lagerDoor(b.x, b.z)); w.home = null; workers.push(w);
@@ -5797,6 +5803,7 @@ function trySpawnGuard(b) {
   w.queue.push({ fn: () => { setCarry(w, null); w.g.visible = false; b.guard = w; b.status = 'Besetzt – Gebiet erweitert'; addTerritory(b.x, b.z, 22); toast('Ein Wächter hat den Wachturm bezogen – dein Gebiet wächst!'); } });
 }
 function trySpawnWorker(b) {
+  if (POOL[b.type] > 0) { POOL[b.type]--; stock.werkzeug++; }
   if (stock.werkzeug < 1) { b.status = (b.type === 'schmied' || b.type === 'schmelze') ? 'Kein Werkzeug mehr im Lager – hier kann niemand anfangen!' : 'Kein Werkzeug im Lager – Werkzeugschmied liefert nach'; return; }
   stock.werkzeug--; refreshPiles(); b.needsWorker = false;
   const w = makeWorker(b.type); w.g.position.copy(lagerDoor(b.x, b.z)); b.worker = w; w.home = b; workers.push(w);
@@ -6261,7 +6268,7 @@ function updateLabels() {
 function renderInfo() {
   const b = selected; if (!b) return; const T = TYPES[b.type];
   let extra = '';
-  if (b.type === 'lager') extra = Object.entries(ITEMS).map(([k, it]) => `${it.icon} ${it.name}: <b>${stock[k]}</b>`).join('<br>');
+  if (b.type === 'lager') { const wait = Object.entries(POOL).filter(([, n]) => n > 0); extra = `<div class="lagercols"><div><b>📦 Waren</b><br>${Object.entries(ITEMS).map(([k, it]) => `${it.icon} ${it.name}: <b>${stock[k]}</b>`).join('<br>')}</div><div><b>🧑‍🌾 Wartende Siedler</b><br>${wait.length ? wait.map(([k, n]) => `${k === 'waechter' ? '🛡️ Wächter' : TYPES[k].icon + ' ' + (JOB[k] || TYPES[k].name)}: <b>${n}</b>`).join('<br>') : '<i>keine – neue Arbeiter brauchen ein Werkzeug</i>'}<br><small>Bauarbeiter: unbegrenzt<br>Träger: ${carriers.length}</small></div></div>`; }
   if (b.type === 'bauernhof') extra = `Felder: ${b.plots.length} · reif: ${b.plots.filter(p => p.state === 'reif').length} · wachsend: ${b.plots.filter(p => p.state === 'wächst').length}`;
   if (b.type === 'wagner') { const busy = b.working && b.worker && b.worker.queue[0] && b.worker.queue[0].wait; const pr = busy ? Math.min(1, (b.worker.queue[0].el || 0) / b.worker.queue[0].wait) : 0; extra = `Offene Aufträge: <b>${b.orders || 0}</b> · Karren im Lager: ${stock.karren} · Karren unterwegs: ${carriers.filter(c => c.cart).length}<div style="height:8px;background:#0005;border-radius:4px;margin-top:4px"><div style="height:8px;width:${pr * 100}%;background:#e0ac48;border-radius:4px"></div></div>`; }
   if (b.type === 'schweinezucht') extra = 'Schweine: ' + b.fx.pigs.map(p => Math.round(p.growth * 100) + ' %').join(' · ');
@@ -6546,7 +6553,7 @@ function serialize() {
   const alive = new Set(trees.filter(t => t.orig !== undefined && t.alive && !t.falling).map(t => t.orig)), removed = [];
   for (let i = 0; i < origN; i++) if (!alive.has(i)) removed.push(i);
   return {
-    v: 2, bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
+    v: 2, pool: { ...POOL }, bonus1: true, t: Date.now(), simT, stock: { ...stock, karren: stock.karren + carriers.filter(c => c.cart && !c.removed).length }, explored: Array.from(explored).join(''), territories: territories.map(t => ({ ...t })),
     treeRemoved: removed, treeAdded: trees.filter(t => t.orig === undefined && t.alive && !t.falling).map(t => [r1(t.x), r1(t.z), Math.round(t.growth * 100) / 100]),
     rocks: rocks.map(r => r.amount), fish: fishSpots.map(f => f.amount),
     cam: [target.x, target.z, yaw, pitch, dist],
@@ -6569,6 +6576,7 @@ function saveGame(name, auto) {
   } catch (err) { toast('Speichern fehlgeschlagen – der Speicher ist voll. Bitte alte Spielstände löschen.'); }
 }
 function applySave(d) {
+  for (const k of Object.keys(POOL)) POOL[k] = d.pool ? (d.pool[k] || 0) : 0;
   Object.assign(stock, d.stock);
   for (let i = 0; i < explored.length; i++) explored[i] = d.explored.charCodeAt(i) === 49 ? 1 : 0;
   if (d.trees) { for (const t of [...trees]) removeTree(t); for (const [x, z, g] of d.trees) addTree(x, z, g); }
