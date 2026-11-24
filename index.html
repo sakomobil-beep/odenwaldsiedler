@@ -86,6 +86,8 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 .dot.work{background:#6fd04a;box-shadow:0 0 6px #6fd04a}.dot.idle{background:#c8c0a8}.dot.wait{background:#f0a030}.dot.pause{background:#e05030}.dot.bau{background:#5aa0e0}
 .lagercols{display:flex;gap:14px;margin-top:6px}.lagercols>div{flex:1;line-height:1.5}#info{max-width:420px!important}
 #top .tb.on{background:#d9a23a;color:#2b1e13}
+.picon{position:fixed;left:0;top:0;z-index:2;pointer-events:none;background:rgba(36,24,14,.85);border:2px solid #e05030;border-radius:50%;padding:4px;box-shadow:0 3px 8px rgba(0,0,0,.45);transform-origin:50% 100%;line-height:0}
+.picon .hand{transform-origin:12px 13.5px;animation:pclk 2s steps(8) infinite}@keyframes pclk{to{transform:rotate(360deg)}}
 </style></head><body>
 <div id="top" class="panel"><div id="res"></div><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
@@ -6275,7 +6277,19 @@ function selectB(b) {
 const labelBox = document.createElement('div'); labelBox.id = 'labels'; document.body.appendChild(labelBox);
 const JOB = { wagner: 'Wagner', lager: 'Lager', holzfaeller: 'Holzfäller', saegewerk: 'Säger', steinmetz: 'Steinmetz', bauernhof: 'Bauer', muehle: 'Müller', brunnen: 'Brunnen', baeckerei: 'Bäcker', steinmine: 'Bergmann (Stein)', eisenmine: 'Bergmann (Eisen)', kohlemine: 'Köhler-Bergmann', goldmine: 'Goldgräber', schweinezucht: 'Schweinehirt', metzger: 'Metzger', fischer: 'Fischer', bruecke: 'Brücke', schmelze: 'Schmelzer', waffenschnitzer: 'Waffenschnitzer', wachturm: 'Wachturm', schmied: 'Schmied', muenzpraege: 'Münzpräger' };
 const _lv = new V3();
+function updatePauseIcons() {
+  for (const b of buildings) {
+    const show = b.paused && !b.removed && !INMENU;
+    if (!show) { if (b.pIcon) b.pIcon.style.display = 'none'; continue; }
+    if (!b.pIcon) { b.pIcon = document.createElement('div'); b.pIcon.className = 'picon'; b.pIcon.innerHTML = '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="13.5" r="8.5" fill="#fff4dc" stroke="#2b1e13" stroke-width="2"/><rect x="10" y="1.5" width="4" height="3" rx="1" fill="#2b1e13"/><line x1="12" y1="13.5" x2="12" y2="8" stroke="#c0392b" stroke-width="2.2" stroke-linecap="round" class="hand"/><circle cx="12" cy="13.5" r="1.4" fill="#2b1e13"/></svg>'; document.body.appendChild(b.pIcon); }
+    if (b.pIcon.parentNode !== document.body) document.body.appendChild(b.pIcon);
+    _lv.set(b.x, (b.g.userData.top || 3) * 0.75 + b.g.position.y + (SET.labels && dist < 75 ? 1.6 : 0), b.z).project(camera);
+    if (_lv.z > 1 || Math.abs(_lv.x) > 1.1 || Math.abs(_lv.y) > 1.1) { b.pIcon.style.display = 'none'; continue; }
+    b.pIcon.style.display = 'block'; b.pIcon.style.transform = `translate(${(_lv.x + 1) / 2 * innerWidth}px,${(1 - _lv.y) / 2 * innerHeight}px) translate(-50%,-100%) scale(${THREE.MathUtils.clamp(45 / dist, 0.6, 1.3)})`;
+  }
+}
 function updateLabels() {
+  updatePauseIcons();
   if (INMENU || SET.labels === false || dist > 75) { labelBox.style.display = 'none'; return; }
   labelBox.style.display = 'block';
   const op = THREE.MathUtils.clamp((75 - dist) / 20, 0, 1);
@@ -6516,6 +6530,7 @@ function demolish(b, fullRefund) {
   if (b === buildings[0]) { toast('Das Hauptlager kann nicht abgerissen werden'); return false; }
   b.removed = true;
   for (const o of [b.g, b.scaffold, b.outPile, b.site]) if (o) scene.remove(o);
+  if (b.pIcon) b.pIcon.remove(); if (b.label) b.label.remove();
   if (b.builder) { b.builder.removed = true; scene.remove(b.builder.g); }
   for (const p of b.plots) scene.remove(p.g);
   const f = fullRefund ? 1 : 0.5;
