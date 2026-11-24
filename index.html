@@ -6225,7 +6225,7 @@ function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
   if (b.type === 'wohnhaus') return houseWants(b);
   if (!isActive(b)) return [];
   const res = [];
-  if (TYPES[b.type].mine) { const have = FOODS.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*food', 2 - have]); return res; }
+  if (TYPES[b.type].mine) { const have = MINEFOOD.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*mfood', 2 - have]); return res; }
   if (b.type === 'waffenschmied') { const need = {}; for (const [p, n] of Object.entries(b.wo || {})) if (n > 0 && WS_REC[p]) for (const [k, v] of Object.entries(WS_REC[p][0])) need[k] = Math.max(need[k] || 0, v * 2); for (const [k, v] of Object.entries(need)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v) res.push([k, v - have]); } return res; }
   if (b.type === 'kaserne') { const need = {}; if (b.trS > 0) { need.schwert = 1; need.schild = 1; } if (b.trB > 0) { need.bogen = 1; need.pfeile = 5; } if (b.promo > 0) need.muenzen = 1; for (const [k, v] of Object.entries(need)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v) res.push([k, v - have]); } return res; }
   if (b.type === 'brauerei') { const h = (b.in.honig || 0) + (b.inc.honig || 0); if (h < 2) res.push(['honig', 2 - h]); }
@@ -6234,7 +6234,7 @@ function wantsOf(b) { // was braucht das Gebäude noch? [item, anzahl]
   for (const [k, v] of Object.entries(r)) { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < v * 2) res.push([k, v * 2 - have]); }
   return res;
 }
-const matchesWant = (want, item) => want === item || (want === '*food' && FOODS.includes(item)) || (want === '*fine' && FINE.includes(item));
+const matchesWant = (want, item) => want === item || (want === '*mfood' && MINEFOOD.includes(item)) || (want === '*food' && FOODS.includes(item)) || (want === '*fine' && FINE.includes(item));
 function bestConsumer(item, x, z, except) {
   let best = null, bk = 1e9;
   for (const b of buildings) { if (b === except) continue; for (const [wi] of wantsOf(b)) if (matchesWant(wi, item)) { const k = b.prio * 400 + Math.hypot(b.x - x, b.z - z); if (k < bk) { bk = k; best = b; } } }
@@ -6567,7 +6567,7 @@ function houseWants(b) {
   const res = [], L = HOUSE_LV[b.lvl || 0];
   for (const k of L.needs) { if (k === 'bier') continue; if (k === '*fine') { const have = FINE.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*fine', 2 - have]); continue; } if (k === '*food') { const have = FOODS.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 2) res.push(['*food', 2 - have]); continue; } const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < 2) res.push([k, 2 - have]); }
   if ((b.lvl || 0) === 1 && (b.sat || 0) >= 1) { const z = (b.in.ziegel || 0) + (b.inc.ziegel || 0); if (z < 2) res.push(['ziegel', 2 - z]); }
-  if ((b.lvl || 0) < 2) { const nx = HOUSE_LV[(b.lvl || 0) + 1]; for (const k of nx.needs) if (!L.needs.includes(k) && k !== 'bier' && k[0] !== '*') { const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < 1) res.push([k, 1 - have]); } }
+  if ((b.lvl || 0) < 2) { const nx = HOUSE_LV[(b.lvl || 0) + 1]; for (const k of nx.needs) if (!L.needs.includes(k) && k !== 'bier' && k !== '*food') { if (k === '*fine') { const have = FINE.reduce((a, f) => a + (b.in[f] || 0) + (b.inc[f] || 0), 0); if (have < 1) res.push(['*fine', 1 - have]); continue; } const have = (b.in[k] || 0) + (b.inc[k] || 0); if (have < 1) res.push([k, 1 - have]); } }
   return res;
 }
 function setHouseLevel(b, lv) {
@@ -6584,9 +6584,9 @@ function houseStep(b, dt) {
   if (!miss.length) {
     b.sat = Math.min(3, (b.sat || 0) + 1); b.bad = 0;
     if (L.tax) { stock.muenzen += L.tax; stat('prod', 'muenzen', L.tax); refreshPiles(); }
-    if ((b.lvl || 0) === 0 && b.sat >= 2) { setHouseLevel(b, 1); b.sat = 0; toast('🏠 Eine Hütte ist zum Fachwerkhaus aufgestiegen!', b); }
+    if ((b.lvl || 0) === 0 && b.sat >= 2 && HOUSE_LV[1].needs.every(k => needOk(b, k))) { setHouseLevel(b, 1); b.sat = 0; toast('🏠 Eine Hütte ist zum Fachwerkhaus aufgestiegen!', b); }
     else if (b.lvl === 1 && b.sat >= 2 && (b.in.ziegel || 0) >= 2 && ['met', 'kruege', 'kerzen', 'kuchen'].every(k => (b.in[k] || 0) > 0)) { b.in.ziegel -= 2; setHouseLevel(b, 2); b.sat = 0; toast('🏛️ Ein Fachwerkhaus ist zum Bürgerhaus aufgestiegen!', b); }
-    b.status = `${HOUSE_LV[b.lvl].name} – zufrieden 😊`;
+    { const nx = HOUSE_LV[(b.lvl || 0) + 1], miss2 = nx ? nx.needs.filter(k => !needOk(b, k)).concat(b.lvl === 1 && (b.in.ziegel || 0) < 2 ? ['ziegel'] : []) : []; b.status = `${HOUSE_LV[b.lvl].name} – zufrieden 😊` + (nx && b.sat >= 2 && miss2.length ? ` · für den Aufstieg fehlt: ${miss2.map(needName).join(', ')}` : ''); }
   } else {
     b.sat = 0; b.bad = (b.bad || 0) + 1;
     b.status = `${L.name} – es fehlt: ${miss.map(needName).join(', ')}`;
@@ -6605,7 +6605,9 @@ function marketStep(dt) {
   else if (TRADER.here && TRADER.t > 120 * TF) { TRADER.here = false; TRADER.t = 0; toast('Der Händler ist weitergezogen.'); }
   for (const b of mk) { if (b.fx.trader) b.fx.trader.visible = TRADER.here; b.status = TRADER.here ? `Händler da – noch ${Math.ceil((120 * TF - TRADER.t) / 60)} Min.` : `Händler kommt in ca. ${Math.max(1, Math.ceil((240 * TF - TRADER.t) / 60))} Min.`; }
 }
-function economyStep(dt) { for (const b of buildings) if (b.type === 'wohnhaus' && b.progress >= 1 && !b.removed) houseStep(b, dt); marketStep(dt); }
+let garT = 0;
+function autoGarrison(dt) { garT += dt; if (garT < 20) return; garT = 0; const free = kasernen().flatMap(k => k.garrison || []).filter(s => !s.marching).sort((a, c) => c.rank - a.rank); if (!free.length) return; const post = buildings.filter(t => (t.type === 'wachturm' || t.type === 'burg') && t.progress >= 1 && !t.removed && !t.needsGuard && !(t.garrison || []).length)[0]; if (post) sendToPost(free[0], post); }
+function economyStep(dt) { autoGarrison(dt); for (const b of buildings) if (b.type === 'wohnhaus' && b.progress >= 1 && !b.removed) houseStep(b, dt); marketStep(dt); }
 // ---------- Arbeits-Abläufe ----------
 function moveTo(w, p) { w.queue.push({ to: new V3(p.x, 0, p.z) }); }
 function work(w, t, anim, onDone) { w.queue.push({ wait: t * WORKF * (w.home && w.home.up ? 0.8 : 1), anim, fn: onDone }); }
@@ -6623,7 +6625,7 @@ function refreshOut(b) {
 }
 const hasIn = (b, inp) => Object.entries(inp).every(([k, v]) => (b.in[k] || 0) >= v);
 function takeIn(b, inp) { for (const [k, v] of Object.entries(inp)) { b.in[k] -= v; stat('use', k, v); } }
-const FOODS = ['brot', 'fisch', 'schinken'];
+const FOODS = ['brot', 'fisch', 'schinken'], MINEFOOD = ['raeucherfisch', 'wurst', 'brot', 'fisch', 'schinken'];
 function planNext(b) {
   const w = b.worker, T = b.type;
   const idle = (msg, t = 2) => { b.status = msg; b.working = false; work(w, t, null); };
@@ -6754,7 +6756,7 @@ function planNext(b) {
       flachsbauer: [{}, 'flachs', 1, 6, 'Erntet Flachs'], seilerei: [{ flachs: 1 }, 'sehne', 1, 5, 'Dreht Sehnen'],
       schmied: [{ eisenbarren: 1 }, 'werkzeug', 1, 6, 'Schmiedet Werkzeug'] }[T];
     let [inp, out, n, t, verb] = rec;
-    if (TYPES[T].mine) { const food = FOODS.filter(f => b.in[f] > 0).sort((a, c) => b.in[c] - b.in[a])[0]; if (!food) return idle('Wartet auf Essen (Brot, Fisch oder Schinken)', 2); inp = { [food]: 1 }; }
+    if (TYPES[T].mine) { const food = MINEFOOD.filter(f => b.in[f] > 0)[0]; if (!food) return idle('Wartet auf Essen (Brot, Fisch, Schinken, Wurst oder Räucherfisch)', 2); inp = { [food]: 1 }; if (food === 'wurst' || food === 'raeucherfisch') n = 2; }
     if (T === 'wagner' && !(b.orders > 0)) return idle('Wartet auf Auftrag – Gebäude antippen', 2);
     if (b.paused) return idle('Angehalten', 2);
     if ((b.out[out] || 0) >= 8) return idle('Ausgang voll – Träger holen ab', 2);
@@ -6854,10 +6856,10 @@ const UNLOCK = {
   imker: 2, konditorei: 2, flachsbauer: 2, seilerei: 2, bogenbauer: 2, waffenschmied: 2, kaserne: 2,
   burg: 3,
 };
-const TIER_TXT = ['', 'dem ersten Fachwerkhaus 🏠', '4 Fachwerkhäusern 🏠🏠🏠🏠', 'dem ersten Bürgerhaus 🏛️'];
+const TIER_TXT = ['', 'der ersten zufriedenen Hütte 🛖', '4 Fachwerkhäusern 🏠🏠🏠🏠', 'dem ersten Bürgerhaus 🏛️'];
 let UNL = CFG && CFG.unlock === 'alle' ? 3 : 0;
 const isUnlocked = t => (UNLOCK[t] || 0) <= UNL;
-function tierNow() { const H = buildings.filter(b => b.type === 'wohnhaus' && b.progress >= 1 && !b.removed); const f = H.filter(b => (b.lvl || 0) >= 1).length, bu = H.filter(b => (b.lvl || 0) >= 2).length; let t = 0; if (f >= 1) t = 1; if (f >= 4) t = 2; if (bu >= 1) t = 3; for (const b of buildings) if (!b.removed && UNLOCK[b.type]) t = Math.max(t, UNLOCK[b.type]); return t; }
+function tierNow() { const H = buildings.filter(b => b.type === 'wohnhaus' && b.progress >= 1 && !b.removed); const f = H.filter(b => (b.lvl || 0) >= 1).length, bu = H.filter(b => (b.lvl || 0) >= 2).length; let t = 0; if (f >= 1 || H.some(b => (b.lvl || 0) === 0 && (b.sat || 0) >= 2)) t = 1; if (f >= 4) t = 2; if (bu >= 1) t = 3; for (const b of buildings) if (!b.removed && UNLOCK[b.type]) t = Math.max(t, UNLOCK[b.type]); return t; }
 function checkUnlock(silent) { const t = tierNow(); if (t <= UNL) return; const old = UNL; UNL = t; const neu = Object.keys(UNLOCK).filter(k => UNLOCK[k] > old && UNLOCK[k] <= t); if (!silent && neu.length) { toast(`🔓 Neue Gebäude freigeschaltet: ${neu.map(k => TYPES[k].icon + ' ' + TYPES[k].name).join(', ')}`); try { sfx && sfx('done'); } catch (e) { } } renderSub(); renderCats(); }
 function renderCats() { $('menu').innerHTML = CATS.map((c, i) => { const n = c.types.filter(isUnlocked).length; return `<button class="cat${openCat === i ? ' on' : ''}" data-c="${i}"><i>${c.icon}</i>${c.name}<small>▲ ${n}${n < c.types.length ? ' von ' + c.types.length : ''} Gebäude</small></button>`; }).join(''); if (typeof bindCats === 'function') bindCats(); }
 renderCats();
@@ -6962,7 +6964,7 @@ function renderInfo() {
   if (b.type === 'wagner') { const busy = b.working && b.worker && b.worker.queue[0] && b.worker.queue[0].wait; const pr = busy ? Math.min(1, (b.worker.queue[0].el || 0) / b.worker.queue[0].wait) : 0; extra = `Offene Aufträge: <b>${b.orders || 0}</b> · Karren im Lager: ${stock.karren} · Karren unterwegs: ${carriers.filter(c => c.cart).length}<div style="height:8px;background:#0005;border-radius:4px;margin-top:4px"><div style="height:8px;width:${pr * 100}%;background:#e0ac48;border-radius:4px"></div></div>`; }
   if (b.type === 'schweinezucht') extra = 'Schweine: ' + b.fx.pigs.map(p => Math.round(p.growth * 100) + ' %').join(' · ');
   if (b.type === 'wachturm' || b.type === 'burg') extra = `Besatzung ${(b.garrison || []).length}/${capOf(b)} · Gebiet: Radius ${b.type === 'burg' ? 40 : 22}<br>` + (b.garrison || []).map(soldierHTML).join('<br>');
-  if (b.type === 'wohnhaus' && b.progress >= 1) { const L = HOUSE_LV[b.lvl || 0], nx = HOUSE_LV[(b.lvl || 0) + 1]; extra = `<b>${['🛖', '🏠', '🏛️'][b.lvl || 0]} ${L.name}</b> · ${L.people} Träger · Steuern: ${L.tax} 🪙 je Runde<br>Bedarf: ${L.needs.map(k => `${needOk(b, k) ? '✅' : '❌'} ${needIcon(k)} ${needName(k)}`).join('<br>')}<br>Zufriedenheit: ${'⭐'.repeat(b.sat || 0) || '–'}` + (nx ? `<br><small>Aufstieg zum ${nx.name}: 2 Runden voll versorgt${b.lvl === 1 ? ', dazu 2 Dachziegel + Met, Krüge, Kerzen, Kuchen' : b.lvl === 0 ? ' (danach braucht es Räucherfisch oder Wurst, Käse, Bier, Kleidung)' : ''}</small>` : ''); }
+  if (b.type === 'wohnhaus' && b.progress >= 1) { const L = HOUSE_LV[b.lvl || 0], nx = HOUSE_LV[(b.lvl || 0) + 1]; extra = `<b>${['🛖', '🏠', '🏛️'][b.lvl || 0]} ${L.name}</b> · ${L.people} Träger · Steuern: ${L.tax} 🪙 je Runde<br>Bedarf: ${L.needs.map(k => `${needOk(b, k) ? '✅' : '❌'} ${needIcon(k)} ${needName(k)}`).join('<br>')}<br>Zufriedenheit: ${'⭐'.repeat(b.sat || 0) || '–'}` + (nx ? `<br><small>Aufstieg zum ${nx.name}: 2 Runden voll versorgt${b.lvl === 1 ? ', dazu 2 Dachziegel + Met, Krüge, Kerzen, Kuchen' : b.lvl === 0 ? ' (dafür müssen Räucherfisch oder Wurst, Käse und Kleidung im Haus sein und ein Wirtshaus in der Nähe Bier haben)' : ''}</small>` : ''); }
   if (b.type === 'markt') { extra = TRADER.here ? '🧑‍💼 <b>Der Händler ist da!</b> Wähle unten, was du tauschen willst.' : '⏳ Der Händler ist unterwegs. Sobald er da ist, kannst du hier tauschen.'; }
   if (b.type === 'wirtshaus') extra = `Bier im Fass: ${b.in.bier || 0} · versorgt ${buildings.filter(h => h.type === 'wohnhaus' && h.progress >= 1 && !h.removed && Math.hypot(h.x - b.x, h.z - b.z) < 25).length} Wohnhäuser im Umkreis`;
   if (b.type === 'kaserne') extra = `Kämpfer hier: ${(b.garrison || []).length}<br>` + (b.garrison || []).map(soldierHTML).join('<br>');
