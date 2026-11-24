@@ -7697,7 +7697,7 @@ function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('main
 function showMain() {
   const last = [...IDX].sort((a, b) => b.t - a.t)[0];
   $('mainbtns').innerHTML = (last ? `<button data-m="cont">▶ Weiterspielen<small>${last.name} · ${fmtDate(last.t)}</small></button>` : '') +
-    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="mis">🗺️ Missionen<small>Szenarien mit festen Zielen</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
+    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="mis">📜 Kampagne<small>Das Erbe des Tals</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
   $('mainbtns').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const m = b.dataset.m; if (m !== 'cont') $('mainmenu').style.display = 'none';
     if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'mis') showMissions(); if (m === 'tut') bootTo({ mode: 'new', cfg: { classic: true, tutorial: true, unlock: 'normal', tempo: 'normal' } }); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); });
   $('mainmenu').style.display = 'flex';
@@ -8079,6 +8079,7 @@ function aiDefeat(a) {
   if (!AIS.length) gameOver(true);
 }
 function gameOver(win, a) {
+  if (win && typeof MIS !== 'undefined' && MIS) { toast('🏆 Der Gegner ist besiegt!'); renderMission(); return; }
   const d = document.createElement('div'); d.id = 'gameover'; d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:60;font-family:inherit';
   d.innerHTML = `<div style="background:#2a1d12;border:2px solid #c9a24a;border-radius:14px;padding:26px 34px;color:#f4e6c8;text-align:center;max-width:420px"><div style="font-size:46px">${win ? '🏆' : '🔥'}</div><h2 style="margin:8px 0">${win ? 'Sieg!' : 'Niederlage'}</h2><p>${win ? 'Alle Gegner sind besiegt – der Odenwald gehört dir!' : `${a.name} hat dein Haupthaus erobert.`}</p><button id="goon" style="margin:6px;padding:8px 16px">${win ? 'Weiter siedeln' : 'Zuschauen'}</button><button id="gomenu" style="margin:6px;padding:8px 16px">Hauptmenü</button></div>`;
   document.body.appendChild(d); $('goon').onclick = () => d.remove(); $('gomenu').onclick = () => { location.href = location.pathname; };
@@ -8141,11 +8142,22 @@ const MISSIONS = [
       { icon: '👥', t: '30 Siedler im Dorf', v: () => workers.filter(w => !w.removed && !w.ai).length + carriers.length, n: 30 },
     ],
     win: 'Der Graf ist beeindruckt! Aus ein paar Zelten ist ein lebendiges Fachwerkdorf geworden – Valewright hat seine ersten Baumeister.' },
+  { id: 2, name: 'Der Streit um das Tal', icon: '⚔️',
+    story: 'Deine Siedlung wächst – das bleibt nicht unbemerkt. Der Graf von Erbach erhebt Anspruch auf das Tal und hat im Osten sein eigenes Lager errichtet.<br><br>Baue eine Waffenproduktion auf, bilde Soldaten aus und sichere deine Grenzen mit Wachtürmen. Wenn du bereit bist, erobere sein Haupthaus.',
+    cfg: { modus: 'kampf', ki: '1', kistufe: 'leicht', unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 8150 },
+    goals: [
+      { icon: '🗼', t: '3 Wachtürme fertig gebaut', v: () => buildings.filter(b => !b.removed && b.type === 'wachturm' && b.progress >= 1).length, n: 3 },
+      { icon: '⚔️', t: '10 Soldaten ausgebildet', v: () => SOLD.length, n: 10 },
+      { icon: '🏰', t: 'Haupthaus des Grafen erobert', v: () => (simT > 30 && !AIS.length) ? 1 : 0, n: 1 },
+    ],
+    win: 'Das Banner des Grafen ist gefallen! Das Tal gehört nun ganz dir – und dein Name wird in den Dörfern des Odenwalds mit Respekt genannt.' },
 ];
 const MIS_DONE = (() => { try { return JSON.parse(localStorage.getItem('odws_mis') || '{}'); } catch (e) { return {}; } })();
 function showMissions() {
-  let h = '<h2>🗺️ Missionen</h2><p style="opacity:.85">Spielbare Szenarien mit festen Zielen.</p>';
-  for (const m of MISSIONS) h += `<div style="background:rgba(0,0,0,.25);border:1px solid #c9a24a;border-radius:12px;padding:14px 16px;margin:12px 0"><div style="font-size:20px"><b>${m.icon} Mission ${m.id}: ${m.name}</b> ${MIS_DONE[m.id] ? '<span style="color:#9fd08a">✔ geschafft</span>' : ''}</div><p>${m.story}</p><div style="margin:6px 0 10px"><b>Ziele:</b><br>${m.goals.map(g => g.icon + ' ' + g.t).join('<br>')}</div><button data-mis="${m.id}" style="padding:8px 18px">▶ Mission starten</button></div>`;
+  let h = '<h2>📜 Kampagne: Das Erbe des Tals</h2><p style="opacity:.85">Erlebe den Aufstieg deiner Siedlung – Kapitel für Kapitel.</p>';
+  for (const m of MISSIONS) { const locked = m.id > 1 && !MIS_DONE[m.id - 1];
+    h += `<div style="background:rgba(0,0,0,.25);border:1px solid #c9a24a;border-radius:12px;padding:14px 16px;margin:12px 0;${locked ? 'opacity:.55' : ''}"><div style="font-size:20px"><b>${m.icon} Kapitel ${m.id}: ${m.name}</b> ${MIS_DONE[m.id] ? '<span style="color:#9fd08a">✔ geschafft</span>' : ''}</div>` +
+      (locked ? `<p>🔒 Schließe zuerst Kapitel ${m.id - 1} ab.</p></div>` : `<p>${m.story}</p><div style="margin:6px 0 10px"><b>Ziele:</b><br>${m.goals.map(g => g.icon + ' ' + g.t).join('<br>')}</div><button data-mis="${m.id}" style="padding:8px 18px">▶ Kapitel starten</button></div>`); }
   const s = openScreen(h);
   s.querySelectorAll('[data-mis]').forEach(b => b.onclick = () => { const m = MISSIONS.find(x => x.id === +b.dataset.mis); bootTo({ mode: 'new', cfg: { ...m.cfg, mission: m.id } }); });
 }
@@ -8157,17 +8169,17 @@ let misMin = false; misPanel.onclick = () => { misMin = !misMin; renderMission()
 function renderMission() {
   if (!MIS || INMENU) return; misPanel.style.display = 'block';
   const st = MIS.goals.map(g => ({ g, v: Math.min(g.n, Math.floor(g.v())) })), ok = st.filter(x => x.v >= x.g.n).length;
-  if (misMin) { misPanel.innerHTML = `<b>${MIS.icon} Mission ${MIS.id}</b> · ${ok}/${st.length} Ziele ▾`; }
+  if (misMin) { misPanel.innerHTML = `<b>${MIS.icon} Kapitel ${MIS.id}</b> · ${ok}/${st.length} Ziele ▾`; }
   else misPanel.innerHTML = `<div style="display:flex;justify-content:space-between"><b>${MIS.icon} ${MIS.name}</b><span>▴</span></div><div style="margin-top:6px">` + st.map(x => { const d = x.v >= x.g.n; return `<div style="margin:5px 0;${d ? 'color:#9fd08a' : ''}">${d ? '✅' : x.g.icon} ${x.g.t}<div style="height:5px;background:rgba(255,255,255,.15);border-radius:3px;margin-top:2px"><div style="height:5px;width:${x.v / x.g.n * 100}%;background:${d ? '#9fd08a' : '#e9c46a'};border-radius:3px"></div></div><small style="opacity:.75">${x.v} / ${x.g.n}</small></div>`; }).join('') + '</div>';
   if (ok === st.length && !CFG.misDone) { CFG.misDone = true; MIS_DONE[MIS.id] = 1; localStorage.setItem('odws_mis', JSON.stringify(MIS_DONE)); missionWon(); }
 }
 function missionWon() {
   try { play('fanfare', target.x, target.z); } catch (e) {}
   const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:60';
-  d.innerHTML = `<div style="background:#2a1d12;border:2px solid #c9a24a;border-radius:14px;padding:26px 34px;color:#f4e6c8;text-align:center;max-width:440px"><div style="font-size:46px">🏆</div><h2 style="margin:8px 0">Mission geschafft!</h2><p>${MIS.win}</p><p style="opacity:.8">Spielzeit: ${fmtTime(simT)}</p><button id="misgo" style="margin:6px;padding:8px 16px">Weiter siedeln</button><button id="mismenu" style="margin:6px;padding:8px 16px">Hauptmenü</button></div>`;
-  document.body.appendChild(d); $('misgo').onclick = () => d.remove(); $('mismenu').onclick = () => { saveGame(null, true); location.href = location.pathname; };
+  d.innerHTML = `<div style="background:#2a1d12;border:2px solid #c9a24a;border-radius:14px;padding:26px 34px;color:#f4e6c8;text-align:center;max-width:440px"><div style="font-size:46px">🏆</div><h2 style="margin:8px 0">Kapitel ${MIS.id} geschafft!</h2><p>${MIS.win}</p><p style="opacity:.8">Spielzeit: ${fmtTime(simT)}</p>${MISSIONS.find(x => x.id === MIS.id + 1) ? '<button id="misnext" style="margin:6px;padding:8px 16px">▶ Nächstes Kapitel</button>' : ''}<button id="misgo" style="margin:6px;padding:8px 16px">Weiter siedeln</button><button id="mismenu" style="margin:6px;padding:8px 16px">Hauptmenü</button></div>`;
+  document.body.appendChild(d); $('misgo').onclick = () => d.remove(); if ($('misnext')) $('misnext').onclick = () => { const n = MISSIONS.find(x => x.id === MIS.id + 1); bootTo({ mode: 'new', cfg: { ...n.cfg, mission: n.id } }); }; $('mismenu').onclick = () => { saveGame(null, true); location.href = location.pathname; };
 }
-if (MIS && !INMENU) setTimeout(() => { if (simT < 5) toast(`${MIS.icon} Mission ${MIS.id}: ${MIS.name} – Ziele siehst du rechts oben.`); }, 1500);
+if (MIS && !INMENU) setTimeout(() => { if (simT < 5) toast(`${MIS.icon} Kapitel ${MIS.id}: ${MIS.name} – Ziele siehst du rechts oben.`); }, 1500);
 // ---------- Start / Laden ----------
 {
   let ok = false;
