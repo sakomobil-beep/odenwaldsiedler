@@ -108,9 +108,11 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 #notewin{max-height:70vh;overflow:auto;width:min(460px,94vw)}#notewin .note{padding:5px 7px;margin:3px 0;border-radius:6px;background:rgba(255,255,255,.06);font-size:13px}#notewin .note.go{cursor:pointer}#notewin .note.go:hover{background:rgba(217,162,58,.35)}
 @media (max-width:1600px){#res .gh small,#clock small,.hbox small{display:none}}@media (max-width:1250px){#res .pins .rs:nth-child(n+3){display:none}}
 #sub .card.locked{opacity:.5;filter:grayscale(.85);position:relative}#sub .card.locked:hover{transform:none}#sub .card .lock{position:absolute;top:6px;left:6px;right:6px;z-index:2;background:rgba(30,20,12,.82);border-radius:8px;padding:3px 5px;font-size:15px;line-height:1.1;text-align:center}#sub .card .lock small{display:block;font-size:10px;opacity:.9}
+#balwin{max-height:78vh;overflow:auto;width:min(640px,94vw)}#balwin table.bal{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}#balwin th{text-align:left;font-size:11px;opacity:.75;padding:3px}#balwin td{padding:3px;border-top:1px solid rgba(255,255,255,.08)}#balwin tr.neg td{color:#ff9a8a}#balwin tr.neg{background:rgba(192,57,43,.15)}#balwin tr.pos td b{color:#9f9}.warnc{color:#ffb080}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><div id="popinfo" class="hbox"></div><div id="clock" class="hbox"></div><div id="spd" class="hbox"><button data-sp="0" title="Pause (Leertaste)">⏸</button><button data-sp="1" class="on" title="Normal (1)">▶</button><button data-sp="2" title="Schnell (2)">⏩</button><button data-sp="4" title="Sehr schnell (3)">⏭</button></div><div class="tbg"><button id="statbtn" class="tb" title="Statistik (T)">📊</button><button id="chainbtn" class="tb" title="Produktionsketten (K)">🔗</button><button id="milbtn" class="tb" title="Militär (M)">⚔️</button></div><div class="tbg"><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus (L)">🏷️</button><button id="sndbtn" class="tb" title="Ton an/aus (V)">🔊</button></div><button id="bellbtn" class="tb" title="Meldungen (N)">🔔<span id="bellcnt"></span></button><button id="menubtn" class="tb" title="Menü (Esc)">☰</button><button id="speed" style="display:none">1×</button></div>
+<div id="top" class="panel"><div id="res"></div><div id="popinfo" class="hbox"></div><div id="clock" class="hbox"></div><div id="spd" class="hbox"><button data-sp="0" title="Pause (Leertaste)">⏸</button><button data-sp="1" class="on" title="Normal (1)">▶</button><button data-sp="2" title="Schnell (2)">⏩</button><button data-sp="4" title="Sehr schnell (3)">⏭</button></div><div class="tbg"><button id="statbtn" class="tb" title="Statistik (T)">📊</button><button id="balbtn" class="tb" title="Wirtschaftsbilanz (B)">📈</button><button id="chainbtn" class="tb" title="Produktionsketten (K)">🔗</button><button id="milbtn" class="tb" title="Militär (M)">⚔️</button></div><div class="tbg"><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus (L)">🏷️</button><button id="sndbtn" class="tb" title="Ton an/aus (V)">🔊</button></div><button id="bellbtn" class="tb" title="Meldungen (N)">🔔<span id="bellcnt"></span></button><button id="menubtn" class="tb" title="Menü (Esc)">☰</button><button id="speed" style="display:none">1×</button></div>
 <div id="notewin" class="panel pop"><button id="closenote" class="x">✕</button><div id="notebody"></div></div><button id="chainbtn" class="tb" title="Produktionsketten">🔗</button><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
+<div id="balwin" class="panel pop"><button id="closebal" class="x">✕</button><div id="balbody"></div></div>
 <div id="chainwin" class="panel pop"><button id="closechain" class="x">✕</button><div id="chainbody"></div></div>
 <div id="milwin" class="panel pop"><button id="closemil" class="x">✕</button><div id="milbody"></div></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
@@ -6217,7 +6219,7 @@ function bestConsumer(item, x, z, except) {
   for (const b of buildings) { if (b === except) continue; for (const [wi] of wantsOf(b)) if (matchesWant(wi, item)) { const k = b.prio * 400 + Math.hypot(b.x - x, b.z - z); if (k < bk) { bk = k; best = b; } } }
   return best;
 }
-function carrierTarget() { return 3 + Math.floor(buildings.filter(b => b.worker).length / 2) + buildings.filter(b => b.type === 'wohnhaus' && b.progress >= 1 && !b.removed).reduce((a, b) => a + (b.lvl || 0) + 1, 0); }
+function carrierTarget() { return 3 + Math.floor(buildings.filter(b => b.worker).length / 2) + 2 * Math.max(0, buildings.filter(b => b.type === 'lager' && b.progress >= 1 && !b.removed).length - 1) + buildings.filter(b => b.type === 'wohnhaus' && b.progress >= 1 && !b.removed).reduce((a, b) => a + (b.lvl || 0) + 1, 0); }
 function spawnCarrier() {
   const l = buildings[0]; const w = makeWorker('traeger'); w.g.position.copy(l.door); w.home = null; w.isCarrier = true; workers.push(w); carriers.push(w);
 }
@@ -6696,8 +6698,8 @@ function planNext(b) {
     deliver(w, 'fisch', 1); moveTo(w, b.door);
   } else if (T === 'brunnen') {
     b.working = true; b.status = 'Schöpft Wasser'; doFn(w, () => faceTo(w, b));
-    work(w, 3, 'pull', () => { setCarry(w, 'wasser'); b.status = 'Bringt Wasser nach Hause'; });
-    deliver(w, 'wasser', 1); moveTo(w, b.door);
+    work(w, 2.4, 'pull', () => { setCarry(w, 'wasser'); b.status = 'Bringt Wasser nach Hause'; });
+    deliver(w, 'wasser', 2); moveTo(w, b.door);
   } else {
     if (T === 'metzger') b.alt = (stock.wurst || 0) < (stock.schinken || 0) ? 'wurst' : 'schinken';
     if (T === 'toepfer') b.alt = (stock.ziegel || 0) < (stock.kruege || 0) ? 'ziegel' : 'kruege';
@@ -6778,7 +6780,8 @@ function updateHUD() {
   h += HUD_GROUPS.map(([ic, name, ks], i) => { const sum = ks.reduce((a, k) => a + (stock[k] || 0), 0), low = (i === 1 && hudLowFood); return `<div class="grp${hudOpen === i ? ' open' : ''}${low ? ' low' : ''}" data-g="${i}" title="${name}${low ? ' – kein Brot, Fisch oder Schinken! Baue eine Bäckerei, einen Fischer oder einen Metzger.' : ''}"><span class="gh">${ic}<b>${sum}</b><small>${name}</small></span><div class="gdrop"><div class="gt">${ic} ${name}</div>${ks.map(hudChip).join('')}</div></div>`; }).join('');
   if (h !== updateHUD.last) { updateHUD.last = h; $('res').innerHTML = h; $('res').querySelectorAll('.grp').forEach(x => { x.onclick = e => { e.stopPropagation(); hudOpen = hudOpen === +x.dataset.g ? null : +x.dataset.g; updateHUD(); }; }); }
   const pop = workers.filter(w => !w.removed).length, car = carriers.filter(c => !c.removed).length, free = Object.values(POOL).reduce((a, n) => a + n, 0);
-  $('popinfo').innerHTML = `<span title="Arbeiter / Träger / wartend im Lager">👥 <b>${pop}</b><small>/${car}/${free}</small></span><span title="Kämpfer">⚔️ <b>${typeof SOLD !== 'undefined' ? SOLD.length : 0}</b></span>`;
+  const waiting = buildings.reduce((a, x) => a + Object.entries(x.out).reduce((q, [k, v]) => q + Math.max(0, v - (x.outRes[k] || 0)), 0), 0), busy = carriers.filter(c => !c.removed && c.queue.length).length, short = waiting > 12 && busy >= car;
+  $('popinfo').innerHTML = `<span class="${short ? 'warnc' : ''}" title="Arbeiter / Träger / wartend im Lager${short ? ' – ⚠️ Träger kommen nicht hinterher (' + waiting + ' Waren warten). Baue Wohnhäuser oder ein Lagerhaus für mehr Träger.' : ''}">👥 <b>${pop}</b><small>/${car}/${free}</small>${short ? ' ⚠️' : ''}</span><span title="Kämpfer">⚔️ <b>${typeof SOLD !== 'undefined' ? SOLD.length : 0}</b></span>`;
   const day = 1 + Math.floor((simT + 200) / 600), m = ((simT + 200) % 600) / 600 * 1440, hh = Math.floor(m / 60);
   $('clock').innerHTML = `${hh >= 6 && hh < 20 ? '☀️' : '🌙'} <b>${String(hh).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}</b><small>Tag ${day}</small>`;
   document.querySelectorAll('#sub button[data-t]').forEach(btn => btn.classList.toggle('no', !canAfford(costOf(btn.dataset.t))));
@@ -6946,7 +6949,7 @@ let speedBefore = 1;
 addEventListener('keydown', e => { if (INMENU || paused || e.target.tagName === 'INPUT' || e.ctrlKey || e.altKey) return; const k = e.key.toLowerCase();
   if (k === ' ') { e.preventDefault(); if (speed) { speedBefore = speed; setSpeed(0); } else setSpeed(speedBefore || 1); }
   else if (k === '1') setSpeed(1); else if (k === '2') setSpeed(2); else if (k === '3') setSpeed(4);
-  else if (k === 'k') $('chainbtn').click(); else if (k === 'm') $('milbtn').click(); else if (k === 't') $('statbtn').click(); else if (k === 'l') $('lblbtn').click(); else if (k === 'n') $('bellbtn').click(); else if (k === 'v') $('sndbtn').click(); });
+  else if (k === 'k') $('chainbtn').click(); else if (k === 'b') $('balbtn').click(); else if (k === 'm') $('milbtn').click(); else if (k === 't') $('statbtn').click(); else if (k === 'l') $('lblbtn').click(); else if (k === 'n') $('bellbtn').click(); else if (k === 'v') $('sndbtn').click(); });
 let toastT = 0; function toast(m, at, noLog) { const t = $('toast'); t.innerHTML = m; t.style.opacity = 1; toastT = 2.5; if (!noLog) addNote(m, at); }
 const NOTES = []; let notesUnread = 0;
 function addNote(m, at) { if (/^Ton |Schilder|gespeichert/i.test(m)) return; NOTES.unshift({ m, at: at || null, t: simT }); if (NOTES.length > 40) NOTES.pop(); notesUnread++; renderNotes(); }
@@ -6955,7 +6958,8 @@ function renderNotes() { const c = $('bellcnt'); if (!c) return; c.textContent =
   box.querySelectorAll('.note.go').forEach(x => x.onclick = () => { const n = NOTES[+x.dataset.n]; target.set(n.at.x, target.y, n.at.z); });
   const cl = $('noteclr'); if (cl) cl.onclick = () => { NOTES.length = 0; renderNotes(); }; }
 const noteSeen = new Map();
-function checkProblems() { for (const b of buildings) { if (b.removed || b.progress < 1 || b.paused || !b.status) continue; const bad = /^Wartet auf (?!Auftrag)|Ausgang voll/.test(b.status); if (!bad) { b.probT = 0; continue; } b.probT = (b.probT || 0) + 1; if (b.probT === 30 && noteSeen.get(b) !== b.status) { noteSeen.set(b, b.status); addNote(`${TYPES[b.type].icon} ${TYPES[b.type].name}: ${b.status}`, b); } }
+function checkProblems() {
+  { const car = carriers.filter(c => !c.removed).length, waiting = buildings.reduce((a, x) => a + Object.entries(x.out).reduce((q, [k, v]) => q + Math.max(0, v - (x.outRes[k] || 0)), 0), 0); checkProblems.cw = waiting > 12 && carriers.filter(c => !c.removed && c.queue.length).length >= car ? (checkProblems.cw || 0) + 1 : 0; if (checkProblems.cw === 30) addNote(`🚶 Die Träger kommen nicht hinterher – ${waiting} Waren warten auf Abholung. Wohnhäuser oder ein Lagerhaus bringen mehr Träger.`); } for (const b of buildings) { if (b.removed || b.progress < 1 || b.paused || !b.status) continue; const bad = /^Wartet auf (?!Auftrag)|Ausgang voll/.test(b.status); if (!bad) { b.probT = 0; continue; } b.probT = (b.probT || 0) + 1; if (b.probT === 30 && noteSeen.get(b) !== b.status) { noteSeen.set(b, b.status); addNote(`${TYPES[b.type].icon} ${TYPES[b.type].name}: ${b.status}`, b); } }
   if (hudLowFood && !checkProblems.food) { checkProblems.food = true; addNote('🍞 Kein Brot, Fisch oder Schinken – die Minen stehen still! Baue eine Bäckerei, einen Fischer oder einen Metzger.'); } if (!hudLowFood) checkProblems.food = false; }
 
 // ---------- Kamera & Eingabe ----------
@@ -7223,6 +7227,18 @@ function renderInfoBtns() {
 }
 
 // ---------- Statistik-Fenster ----------
+function renderBal() {
+  const box = $('balbody'); if (!box || $('balwin').style.display !== 'block') return;
+  const win = Math.min(300, Math.max(30, simT)), from = simT - win, prod = {}, use = {};
+  for (const [t, k, it, n] of statLog) if (t >= from) (k === 'prod' ? prod : use)[it] = ((k === 'prod' ? prod : use)[it] || 0) + n;
+  const want = {}; for (const b of buildings) for (const [k, n] of wantsOf(b)) { const kk = k === '*food' ? 'brot' : k === '*fine' ? 'wurst' : k; want[kk] = (want[kk] || 0) + n; }
+  const per = v => (v || 0) * 60 / win, f = v => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10).toString().replace('.', ',');
+  const rows = Object.keys(ITEMS).map(k => ({ k, p: per(prod[k]), u: per(use[k]), w: want[k] || 0 })).filter(r => r.p || r.u || r.w);
+  rows.forEach(r => r.n = r.p - r.u); rows.sort((a, c) => (a.n - c.n) || (c.w - a.w));
+  const makers = k => Object.keys(CHAIN_IO).filter(t => CHAIN_IO[t][1].includes(k));
+  box.innerHTML = `<h3>📈 Wirtschaftsbilanz</h3><small>Pro Minute, gemessen über die letzten ${Math.round(win / 60 * 10) / 10} Spielminuten. Rot = es wird mehr verbraucht als hergestellt.</small><table class="bal"><tr><th>Ware</th><th>Herstellung</th><th>Verbrauch</th><th>Bilanz</th><th>Lager</th><th>Bedarf offen</th></tr>` +
+    rows.map(r => { const bad = r.n < -0.05 || (r.w > 0 && stock[r.k] === 0); const tip = bad ? `Mehr bauen: ${makers(r.k).map(t => TYPES[t].icon + ' ' + TYPES[t].name).join(', ') || '–'}` : ''; return `<tr class="${bad ? 'neg' : r.n > 0.05 ? 'pos' : ''}" title="${tip}"><td>${ITEMS[r.k].icon} ${ITEMS[r.k].name}</td><td>${f(r.p)}</td><td>${f(r.u)}</td><td><b>${r.n > 0 ? '+' : ''}${f(r.n)}</b></td><td>${stock[r.k]}</td><td>${r.w || ''}${bad ? `<small> → ${makers(r.k).map(t => TYPES[t].icon).join('') || ''}</small>` : ''}</td></tr>`; }).join('') + '</table>' + (rows.length ? '' : '<i>Noch keine Daten – lass das Spiel ein wenig laufen.</i>');
+}
 function renderStats() {
   if ($('stats').style.display !== 'block') return;
   const win = Math.min(180, Math.max(10, simT)), from = simT - win, prod = {}, use = {};
@@ -7238,6 +7254,7 @@ function renderStats() {
   $('statsbody').innerHTML = h;
 }
 $('sndbtn').textContent = soundOn ? '🔊' : '🔇'; $('sndbtn').onclick = () => { audioInit(); sndSetOn(!soundOn); toast(soundOn ? 'Ton an' : 'Ton aus'); };
+$('balbtn').onclick = () => { const m = $('balwin'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; renderBal(); }; $('closebal').onclick = () => $('balwin').style.display = 'none';
 $('chainbtn').onclick = () => { const m = $('chainwin'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; renderChains(); }; $('closechain').onclick = () => $('chainwin').style.display = 'none';
 $('milbtn').onclick = () => { const m = $('milwin'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; renderMil(); }; $('closemil').onclick = () => $('milwin').style.display = 'none';
 $('lblbtn').classList.toggle('on', !!SET.labels); $('lblbtn').onclick = () => { SET.labels = !SET.labels; saveSet(); $('lblbtn').classList.toggle('on', SET.labels); toast(SET.labels ? 'Gebäude-Schilder an' : 'Gebäude-Schilder aus'); };
@@ -7561,7 +7578,7 @@ function animate() {
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
-  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); checkProblems(); checkUnlock(); }
+  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); renderBal(); checkProblems(); checkUnlock(); }
   autoT += real; if (SET.autosave && autoT > SET.autosave && !INMENU) { autoT = 0; saveGame(null, true); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
