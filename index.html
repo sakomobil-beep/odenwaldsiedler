@@ -7812,7 +7812,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && !placing && !INMENU
 
 const clock = new THREE.Clock(); let infoT = 0, simT = 0, carT = 0;
 // ---------- KI-Gegner (Teil 1: Siedlungen, Wirtschaft, Gebiete) ----------
-const AI_NAMES = ['Graf von Erbach', 'Fürst von Breuberg', 'Abt von Amorbach'], AI_COLS = [0xb02a2a, 0xd8a020, 0x7a3aa0];
+const AI_NAMES = ['Graf von Rabeneck', 'Fürst von Hohenstein-Mümling', 'Abt von Kloster Waldbrunn'], AI_COLS = [0xb02a2a, 0xd8a020, 0x7a3aa0];
 AI_COLS.forEach((c, i) => { LOOK['ki' + i] = { c, hat: 'cap', hc: 0x3a2a1a }; LOOK['kis' + i] = { c, hat: 'helmet' }; });
 const AIS = [];
 const AI_DIFF = { leicht: { iv: 60, posts: 0.6 }, mittel: { iv: 38, posts: 1 }, schwer: { iv: 24, posts: 1.5 } };
@@ -8143,7 +8143,7 @@ const MISSIONS = [
     ],
     win: 'Der Graf ist beeindruckt! Aus ein paar Zelten ist ein lebendiges Fachwerkdorf geworden – Valewright hat seine ersten Baumeister.' },
   { id: 2, name: 'Der Streit um das Tal', icon: '⚔️',
-    story: 'Deine Siedlung wächst – das bleibt nicht unbemerkt. Der Graf von Erbach erhebt Anspruch auf das Tal und hat ganz in der Nähe sein eigenes Lager errichtet.<br><br>Baue eine Waffenproduktion auf, bilde Soldaten aus und sichere deine Grenzen mit Wachtürmen. Wenn du bereit bist, erobere sein Haupthaus.',
+    story: 'Deine Siedlung wächst – das bleibt nicht unbemerkt. Der Graf von Rabeneck erhebt Anspruch auf das Tal und hat ganz in der Nähe sein eigenes Lager errichtet.<br><br>Baue eine Waffenproduktion auf, bilde Soldaten aus und sichere deine Grenzen mit Wachtürmen. Wenn du bereit bist, erobere sein Haupthaus.',
     cfg: { modus: 'kampf', ki: '1', kistufe: 'leicht', unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 8150 },
     goals: [
       { icon: '🗼', t: '3 Wachtürme fertig gebaut', v: () => buildings.filter(b => !b.removed && b.type === 'wachturm' && b.progress >= 1).length, n: 3 },
