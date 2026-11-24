@@ -7697,9 +7697,9 @@ function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('main
 function showMain() {
   const last = [...IDX].sort((a, b) => b.t - a.t)[0];
   $('mainbtns').innerHTML = (last ? `<button data-m="cont">▶ Weiterspielen<small>${last.name} · ${fmtDate(last.t)}</small></button>` : '') +
-    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
+    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="mis">🗺️ Missionen<small>Szenarien mit festen Zielen</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
   $('mainbtns').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const m = b.dataset.m; if (m !== 'cont') $('mainmenu').style.display = 'none';
-    if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'tut') bootTo({ mode: 'new', cfg: { classic: true, tutorial: true, unlock: 'normal', tempo: 'normal' } }); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); });
+    if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'mis') showMissions(); if (m === 'tut') bootTo({ mode: 'new', cfg: { classic: true, tutorial: true, unlock: 'normal', tempo: 'normal' } }); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); });
   $('mainmenu').style.display = 'flex';
 }
 // Kartengenerator
@@ -8127,6 +8127,47 @@ function showAiInfo(b) {
 }
 function pickAi(p) { let best = null, bd = 99; for (const a of AIS) for (const b of a.blds) { const d = Math.hypot(b.x - p.x, b.z - p.z); if (b.g.visible && d < TYPES[b.type].r + 1 && d < bd) { bd = d; best = b; } } return best; }
 
+
+// ---------- Missionen ----------
+const MISSIONS = [
+  { id: 1, name: 'Die erste Siedlung', icon: '🏡',
+    story: 'Ein junger Siedlertrupp erreicht ein stilles Tal im Odenwald. Der Graf hat dir das Land anvertraut – zeig ihm, dass hier eine blühende Siedlung entstehen kann.<br><br>Keine Gegner, kein Zeitdruck. Lerne die Warenketten kennen und bau dein Dorf in Ruhe auf.',
+    cfg: { modus: 'frieden', ki: '0', kistufe: 'leicht', unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 4711 },
+    goals: [
+      { icon: '🟫', t: '30 Bretter auf Lager', v: () => stock.bretter || 0, n: 30 },
+      { icon: '🍞', t: '20 Brot auf Lager', v: () => stock.brot || 0, n: 20 },
+      { icon: '🔨', t: '10 Werkzeuge auf Lager', v: () => stock.werkzeug || 0, n: 10 },
+      { icon: '🗼', t: '2 Wachtürme fertig gebaut', v: () => buildings.filter(b => !b.removed && b.type === 'wachturm' && b.progress >= 1).length, n: 2 },
+      { icon: '👥', t: '25 Siedler im Dorf', v: () => workers.filter(w => !w.removed && !w.ai).length + carriers.length, n: 25 },
+    ],
+    win: 'Der Graf ist beeindruckt! Aus ein paar Zelten ist ein lebendiges Fachwerkdorf geworden – Valewright hat seine ersten Baumeister.' },
+];
+const MIS_DONE = (() => { try { return JSON.parse(localStorage.getItem('odws_mis') || '{}'); } catch (e) { return {}; } })();
+function showMissions() {
+  let h = '<h2>🗺️ Missionen</h2><p style="opacity:.85">Spielbare Szenarien mit festen Zielen.</p>';
+  for (const m of MISSIONS) h += `<div style="background:rgba(0,0,0,.25);border:1px solid #c9a24a;border-radius:12px;padding:14px 16px;margin:12px 0"><div style="font-size:20px"><b>${m.icon} Mission ${m.id}: ${m.name}</b> ${MIS_DONE[m.id] ? '<span style="color:#9fd08a">✔ geschafft</span>' : ''}</div><p>${m.story}</p><div style="margin:6px 0 10px"><b>Ziele:</b><br>${m.goals.map(g => g.icon + ' ' + g.t).join('<br>')}</div><button data-mis="${m.id}" style="padding:8px 18px">▶ Mission starten</button></div>`;
+  const s = openScreen(h);
+  s.querySelectorAll('[data-mis]').forEach(b => b.onclick = () => { const m = MISSIONS.find(x => x.id === +b.dataset.mis); bootTo({ mode: 'new', cfg: { ...m.cfg, mission: m.id } }); });
+}
+const MIS = CFG.mission ? MISSIONS.find(m => m.id === CFG.mission) : null;
+const misPanel = document.createElement('div'); misPanel.id = 'mispanel';
+misPanel.style.cssText = 'position:fixed;right:14px;top:120px;width:250px;background:rgba(42,29,18,.92);border:2px solid #c9a24a;border-radius:12px;padding:10px 12px;color:#f4e6c8;z-index:25;font-size:13px;display:none;cursor:pointer';
+document.body.appendChild(misPanel);
+let misMin = false; misPanel.onclick = () => { misMin = !misMin; renderMission(); };
+function renderMission() {
+  if (!MIS || INMENU) return; misPanel.style.display = 'block';
+  const st = MIS.goals.map(g => ({ g, v: Math.min(g.n, Math.floor(g.v())) })), ok = st.filter(x => x.v >= x.g.n).length;
+  if (misMin) { misPanel.innerHTML = `<b>${MIS.icon} Mission ${MIS.id}</b> · ${ok}/${st.length} Ziele ▾`; }
+  else misPanel.innerHTML = `<div style="display:flex;justify-content:space-between"><b>${MIS.icon} ${MIS.name}</b><span>▴</span></div><div style="margin-top:6px">` + st.map(x => { const d = x.v >= x.g.n; return `<div style="margin:5px 0;${d ? 'color:#9fd08a' : ''}">${d ? '✅' : x.g.icon} ${x.g.t}<div style="height:5px;background:rgba(255,255,255,.15);border-radius:3px;margin-top:2px"><div style="height:5px;width:${x.v / x.g.n * 100}%;background:${d ? '#9fd08a' : '#e9c46a'};border-radius:3px"></div></div><small style="opacity:.75">${x.v} / ${x.g.n}</small></div>`; }).join('') + '</div>';
+  if (ok === st.length && !CFG.misDone) { CFG.misDone = true; MIS_DONE[MIS.id] = 1; localStorage.setItem('odws_mis', JSON.stringify(MIS_DONE)); missionWon(); }
+}
+function missionWon() {
+  try { play('fanfare', target.x, target.z); } catch (e) {}
+  const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:60';
+  d.innerHTML = `<div style="background:#2a1d12;border:2px solid #c9a24a;border-radius:14px;padding:26px 34px;color:#f4e6c8;text-align:center;max-width:440px"><div style="font-size:46px">🏆</div><h2 style="margin:8px 0">Mission geschafft!</h2><p>${MIS.win}</p><p style="opacity:.8">Spielzeit: ${fmtTime(simT)}</p><button id="misgo" style="margin:6px;padding:8px 16px">Weiter siedeln</button><button id="mismenu" style="margin:6px;padding:8px 16px">Hauptmenü</button></div>`;
+  document.body.appendChild(d); $('misgo').onclick = () => d.remove(); $('mismenu').onclick = () => { saveGame(null, true); location.href = location.pathname; };
+}
+if (MIS && !INMENU) setTimeout(() => { if (simT < 5) toast(`${MIS.icon} Mission ${MIS.id}: ${MIS.name} – Ziele siehst du rechts oben.`); }, 1500);
 // ---------- Start / Laden ----------
 {
   let ok = false;
@@ -8259,7 +8300,7 @@ function animate() {
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
-  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); renderBal(); checkProblems(); checkUnlock(); }
+  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); renderBal(); checkProblems(); checkUnlock(); renderMission(); }
   autoT += real; if (SET.autosave && autoT > SET.autosave && !INMENU) { autoT = 0; saveGame(null, true); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
