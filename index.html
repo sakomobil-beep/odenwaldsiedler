@@ -88,8 +88,10 @@ input[type=range]{width:160px;accent-color:#d9a23a}
 #top .tb.on{background:#d9a23a;color:#2b1e13}
 .picon{position:fixed;left:0;top:0;z-index:2;pointer-events:none;background:rgba(36,24,14,.85);border:2px solid #e05030;border-radius:50%;padding:4px;box-shadow:0 3px 8px rgba(0,0,0,.45);transform-origin:50% 100%;line-height:0}
 .picon .hand{transform-origin:12px 13.5px;animation:pclk 2s steps(8) infinite}@keyframes pclk{to{transform:rotate(360deg)}}
+#chainwin{max-height:78vh;overflow:auto;width:min(620px,94vw)}#chainwin .chg{margin:8px 0}#chainwin .chr{display:flex;align-items:center;gap:6px;padding:4px 6px;margin:3px 0;border-radius:6px;background:rgba(255,255,255,.06);cursor:pointer;font-size:13px}#chainwin .chr.ok{border-left:4px solid #5c5}#chainwin .chr.warn{border-left:4px solid #eb4}#chainwin .chr.none{border-left:4px solid #d44;opacity:.75}#chainwin .cin{min-width:110px;display:flex;flex-wrap:wrap;gap:2px}#chainwin .cb{flex:1}#chainwin .cb small{display:block;opacity:.75}#chainwin .ci{display:inline-flex;flex-direction:column;align-items:center;line-height:1}#chainwin .ci small{font-size:10px;opacity:.8}#chainwin .car{opacity:.6}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
+<div id="top" class="panel"><div id="res"></div><button id="chainbtn" class="tb" title="Produktionsketten">🔗</button><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
+<div id="chainwin" class="panel pop"><button id="closechain" class="x">✕</button><div id="chainbody"></div></div>
 <div id="milwin" class="panel pop"><button id="closemil" class="x">✕</button><div id="milbody"></div></div>
 <div id="stats" class="panel pop"><button id="closestats" class="x">✕</button><div id="statsbody"></div></div>
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div><div id="infobtns"></div></div>
@@ -6169,6 +6171,46 @@ function renderMil() {
     `<h4>Ränge</h4><small>⚔️ ${RANKS.schwert.join(' → ')}<br>🏹 ${RANKS.bogen.join(' → ')}<br>Bis Rang 3 durch Übung in der Kaserne, darüber nur mit 🪙 Münzen. Jeder Kämpfer isst etwa alle 2 Minuten.</small>`;
 }
 
+
+// ---------- Produktionsketten ----------
+const CHAIN_IO = {
+  holzfaeller: [[], ['stamm']], saegewerk: [['stamm'], ['bretter']], steinmetz: [[], ['stein']],
+  bauernhof: [[], ['getreide']], muehle: [['getreide'], ['mehl']], brunnen: [[], ['wasser']], baeckerei: [['mehl', 'wasser'], ['brot']],
+  fischer: [[], ['fisch']], schweinezucht: [['getreide', 'wasser'], ['schwein']], metzger: [['schwein'], ['schinken']],
+  steinmine: [['brot|fisch|schinken'], ['stein']], kohlemine: [['brot|fisch|schinken'], ['kohle']], eisenmine: [['brot|fisch|schinken'], ['eisenerz']], goldmine: [['brot|fisch|schinken'], ['golderz']],
+  schmelze: [['eisenerz', 'kohle'], ['eisenbarren']], schmied: [['eisenbarren'], ['werkzeug']], muenzpraege: [['golderz', 'kohle'], ['muenzen']],
+  wagner: [['bretter', 'eisenbarren'], ['karren']], waffenschnitzer: [['bretter'], ['kampfstock']],
+  flachsbauer: [[], ['flachs']], seilerei: [['flachs'], ['sehne']],
+  waffenschmied: [['eisenbarren', 'kohle', 'bretter', 'sehne'], ['schwert', 'schild', 'bogen', 'pfeile']],
+  kaserne: [['schwert', 'schild', 'bogen', 'pfeile', 'muenzen'], ['⚔️ Kämpfer']],
+};
+const CHAINS = [
+  ['🪵 Baustoffe', ['holzfaeller', 'saegewerk', 'steinmetz', 'steinmine']],
+  ['🍞 Nahrung', ['bauernhof', 'brunnen', 'muehle', 'baeckerei', 'fischer', 'schweinezucht', 'metzger']],
+  ['⛏️ Bergbau & Metall', ['kohlemine', 'eisenmine', 'schmelze', 'schmied', 'wagner']],
+  ['🪙 Gold', ['goldmine', 'muenzpraege']],
+  ['⚔️ Militär', ['flachsbauer', 'seilerei', 'waffenschnitzer', 'waffenschmied', 'kaserne']],
+];
+let chainSel = null;
+function chainItem(k) { if (!ITEMS[k.split('|')[0]]) return `<span class="ci">${k}</span>`; return k.split('|').map(x => `<span class="ci" title="${ITEMS[x].name}">${ITEMS[x].icon}<small>${stock[x] ?? 0}</small></span>`).join('<i>/</i>'); }
+function renderChains() {
+  const box = $('chainbody'); if (!box || $('chainwin').style.display !== 'block') return;
+  const live = t => buildings.filter(b => b.type === t && !b.removed);
+  const prodOf = k => Object.keys(CHAIN_IO).filter(t => CHAIN_IO[t][1].includes(k));
+  let h = `<h3>🔗 Produktionsketten</h3><small>Zahl unter der Ware = Bestand im Lager. Rot = Gebäude fehlt. Antippen springt zum Gebäude.</small>`;
+  for (const [title, list] of CHAINS) {
+    h += `<div class="chg"><b>${title}</b>`;
+    for (const t of list) {
+      const [i, o] = CHAIN_IO[t], L = live(t), work = L.filter(b => b.working).length, paused = L.filter(b => b.paused).length;
+      const miss = i.flatMap(k => k.split('|').every(x => !prodOf(x).some(p => live(p).length)) ? [k] : []);
+      const st = !L.length ? 'none' : miss.length ? 'warn' : 'ok';
+      h += `<div class="chr ${st}" data-ct="${t}"><span class="cin">${i.length ? i.map(chainItem).join(' ') : '<small>Natur</small>'}</span><span class="car">➜</span><span class="cb">${TYPES[t].icon} ${TYPES[t].name}<small>${L.length ? `${L.length}× · ${work} arbeitet${paused ? ` · ${paused} ⏸` : ''}` : 'nicht gebaut'}${miss.length && L.length ? ` · fehlt: ${miss.map(k => ITEMS[k.split('|')[0]] ? ITEMS[k.split('|')[0]].name : k).join(', ')}` : ''}</small></span><span class="car">➜</span><span class="cin">${o.map(chainItem).join(' ')}</span></div>`;
+    }
+    h += `</div>`;
+  }
+  box.innerHTML = h;
+  box.querySelectorAll('[data-ct]').forEach(x => x.onclick = () => { const L = live(x.dataset.ct); if (!L.length) return toast(TYPES[x.dataset.ct].name + ' ist noch nicht gebaut'); chainSel = L[(L.indexOf(chainSel) + 1) % L.length]; target.set(chainSel.x, target.y, chainSel.z); });
+}
 // ---------- Arbeits-Abläufe ----------
 function moveTo(w, p) { w.queue.push({ to: new V3(p.x, 0, p.z) }); }
 function work(w, t, anim, onDone) { w.queue.push({ wait: t * WORKF, anim, fn: onDone }); }
@@ -6731,6 +6773,7 @@ function renderStats() {
   $('statsbody').innerHTML = h;
 }
 $('sndbtn').textContent = soundOn ? '🔊' : '🔇'; $('sndbtn').onclick = () => { audioInit(); sndSetOn(!soundOn); toast(soundOn ? 'Ton an' : 'Ton aus'); };
+$('chainbtn').onclick = () => { const m = $('chainwin'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; renderChains(); }; $('closechain').onclick = () => $('chainwin').style.display = 'none';
 $('milbtn').onclick = () => { const m = $('milwin'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; renderMil(); }; $('closemil').onclick = () => $('milwin').style.display = 'none';
 $('lblbtn').classList.toggle('on', !!SET.labels); $('lblbtn').onclick = () => { SET.labels = !SET.labels; saveSet(); $('lblbtn').classList.toggle('on', SET.labels); toast(SET.labels ? 'Gebäude-Schilder an' : 'Gebäude-Schilder aus'); };
 $('statbtn').onclick = () => { const s = $('stats'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; renderStats(); };
@@ -7040,7 +7083,7 @@ function animate() {
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
-  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); }
+  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); }
   autoT += real; if (SET.autosave && autoT > SET.autosave && !INMENU) { autoT = 0; saveGame(null, true); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
