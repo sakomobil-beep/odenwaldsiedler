@@ -5291,7 +5291,7 @@ for (const k of Object.keys(ITEMS)) if (stock[k] == null) stock[k] = 0;
 
 // ---------- Gebäudetypen ----------
 const TYPES = {
-  lager: { name: 'Lager', icon: '🏠', cost: { bretter: 6, stein: 4 }, r: 3.2, desc: 'Hier landen alle Waren. Ein zweites Lager verkürzt die Wege der Träger in fernen Gebieten.' },
+  lager: { name: 'Lagerhaus', icon: '🏠', cost: { bretter: 6, stein: 4 }, r: 3.2, desc: 'Zusätzliches Lager: Träger bringen Waren zum nächsten Lager – verkürzt die Wege in fernen Gebieten und bringt 2 Träger mehr.' },
   strasse: { name: 'Straße', icon: '🛤️', cost: {}, r: 0.5, desc: 'Startpunkt und Endpunkt anklicken. Auf Straßen laufen Siedler fast doppelt so schnell. 1 Stein je 10 m.' },
   holzfaeller: { name: 'Holzfäller', icon: '🪓', cost: { bretter: 3 }, r: 2, desc: 'Fällt Bäume → Baumstämme. Pflanzt nur ab und zu nach (etwa 1 von 3).' },
   foerster: { name: 'Förster', icon: '🌲', cost: { bretter: 2 }, r: 2, plantR: 9, desc: 'Pflanzt im grünen Umkreis neue Bäume – damit dem Holzfäller das Holz nicht ausgeht.' },
@@ -6840,14 +6840,14 @@ function genBuildIcons() {
 }
 genBuildIcons();
 const CATS = [
-  { name: 'Holz & Stein', icon: '🪵', types: ['holzfaeller', 'foerster', 'saegewerk', 'steinmetz'] },
-  { name: 'Nahrung', icon: '🍞', types: ['bauernhof', 'muehle', 'brunnen', 'baeckerei', 'fischer', 'schweinezucht', 'metzger', 'raeucherei', 'kuhstall', 'kaeserei', 'konditorei'] },
-  { name: 'Bergbau', icon: '⛏️', types: ['rutengaenger', 'steinmine', 'eisenmine', 'kohlemine', 'goldmine'] },
-  { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege'] },
-  { name: 'Wehr', icon: '⚔️', types: ['waffenschnitzer', 'flachsbauer', 'seilerei', 'bogenbauer', 'waffenschmied', 'kaserne', 'wachturm', 'burg'] },
-  { name: 'Handwerk', icon: '🧺', types: ['hopfenbauer', 'brauerei', 'schaefer', 'weberei', 'schneider', 'imker', 'lehmgrube', 'toepfer', 'koehler'] },
-  { name: 'Wohnen & Handel', icon: '🏡', types: ['wohnhaus', 'wirtshaus', 'markt'] },
-  { name: 'Wege & Lager', icon: '🛤️', types: ['bruecke', 'lager', 'wagner'] },
+  { name: 'Siedlung', icon: '🏡', types: ['wohnhaus', 'wirtshaus', 'markt', 'lager', 'bruecke'] },
+  { name: 'Baustoffe', icon: '🪵', types: ['holzfaeller', 'foerster', 'saegewerk', 'steinmetz'] },
+  { name: 'Landwirtschaft', icon: '🌾', types: ['bauernhof', 'brunnen', 'fischer', 'schweinezucht', 'kuhstall', 'schaefer', 'hopfenbauer', 'imker', 'flachsbauer'] },
+  { name: 'Lebensmittel', icon: '🍞', types: ['muehle', 'baeckerei', 'metzger', 'raeucherei', 'kaeserei', 'brauerei', 'konditorei'] },
+  { name: 'Bergbau', icon: '⛏️', types: ['rutengaenger', 'steinmine', 'kohlemine', 'eisenmine', 'goldmine', 'koehler'] },
+  { name: 'Metall', icon: '🔨', types: ['schmelze', 'schmied', 'muenzpraege', 'wagner'] },
+  { name: 'Handwerk', icon: '🧵', types: ['weberei', 'schneider', 'seilerei', 'lehmgrube', 'toepfer'] },
+  { name: 'Militär', icon: '⚔️', types: ['waffenschnitzer', 'bogenbauer', 'waffenschmied', 'kaserne', 'wachturm', 'burg'] },
 ];
 let openCat = -1;
 // ---------- Freischalten über Wohnhäuser ----------
