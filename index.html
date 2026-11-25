@@ -6703,14 +6703,18 @@ function wildInit() {
     return { g, neck, legs, home: { x, z }, tx: x, tz: z, state: 'graze', t: 1 + R() * 4, ph: R() * 5 }; };
   let groups = 0; for (let i = 0; i < 300 && groups < Math.round(5 * sc); i++) { const t = trees[Math.floor(R() * trees.length)]; if (!t || Math.hypot(t.x, t.z) < 60) continue; groups++;
     const n = 2 + Math.floor(R() * 2); for (let k = 0; k < n; k++) { const x = t.x + (R() - 0.5) * 12, z = t.z + (R() - 0.5) * 12; if (height(x, z) < 0.1) continue; WILD.deer.push(deer(x, z, k === 0)); } }
-  const boat = d => { const g = new THREE.Group(), wd = M(0x80573a); g.add(mesh(box(0.9, 0.3, 2.4), wd, 0, 0.15, 0)); g.add(mesh(box(0.7, 0.08, 2.2), M(0x5a3d28), 0, 0.31, 0)); const bow = mesh(box(0.5, 0.32, 0.5), wd, 0, 0.3, 1.25); bow.rotation.x = 0.5; g.add(bow);
-    g.add(mesh(box(0.36, 0.5, 0.28), M(0x2f8a8a), 0, 0.65, -0.2)); g.add(mesh(box(0.24, 0.24, 0.24), M(pick0(SKIN)), 0, 1.03, -0.2)); g.add(mesh(box(0.3, 0.08, 0.3), M(0x5a3e1f), 0, 1.17, -0.2));
-    const oars = []; for (const s of [-1, 1]) { const o = new THREE.Group(); o.position.set(0.45 * s, 0.45, -0.1); g.add(o); const b = mesh(box(1.3, 0.05, 0.07), M(0x9a7248), 0.6 * s, -0.1, 0); b.rotation.z = -0.25 * s; o.add(b); oars.push(o); }
-    g.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(g); return Object.assign(d, { g, oars }); };
-  for (let k = 0; k < 2; k++) WILD.boats.push(boat({ kind: 'river', s: (R() - 0.5) * 0.7 * SIZE, dir: k ? -1 : 1 }));
-  for (const l of LAKES) if (l.R > 11) WILD.boats.push(boat({ kind: 'lake', l, a: R() * 6.28 }));
 }
 const pick0 = a => a[Math.floor(Math.random() * a.length)];
+// Boot einer Fischerhütte: liegt am Ufer, der Fischer rudert damit hinaus und angelt
+function fisherBoat(x, z, yaw) {
+  const g = new THREE.Group(), wd = M(0x80573a); g.add(mesh(box(0.9, 0.3, 2.4), wd, 0, 0.15, 0)); g.add(mesh(box(0.7, 0.08, 2.2), M(0x5a3d28), 0, 0.31, 0)); const bow = mesh(box(0.5, 0.32, 0.5), wd, 0, 0.3, 1.25); bow.rotation.x = 0.5; g.add(bow);
+  const man = new THREE.Group(); man.position.set(0, 0.35, -0.2); g.add(man); man.add(mesh(box(0.36, 0.5, 0.28), M(0x2f8a8a), 0, 0.3, 0)); man.add(mesh(box(0.24, 0.24, 0.24), M(pick0(SKIN)), 0, 0.68, 0)); man.add(mesh(box(0.3, 0.08, 0.3), M(0x5a3e1f), 0, 0.82, 0)); man.visible = false;
+  const rod = new THREE.Group(); rod.position.set(0.15, 0.95, 0); rod.rotation.x = -0.6; man.add(rod); rod.add(mesh(box(0.03, 0.03, 1.8), M(0x73523a), 0, 0, 0.9)); const line = mesh(box(0.01, 1.1, 0.01), M(0xeeeeee), 0, -0.55, 1.8); line.rotation.x = 0.6; rod.add(line); rod.visible = false;
+  const catchM = makeItem('fisch'); catchM.position.set(0, 0.45, 0.7); catchM.visible = false; g.add(catchM);
+  const oars = []; for (const s of [-1, 1]) { const o = new THREE.Group(); o.position.set(0.45 * s, 0.45, -0.1); g.add(o); const b = mesh(box(1.3, 0.05, 0.07), M(0x9a7248), 0.6 * s, -0.1, 0); b.rotation.z = -0.25 * s; o.add(b); oars.push(o); }
+  g.position.set(x, -0.43, z); g.rotation.y = yaw; g.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(g);
+  const bt = { g, man, rod, catchM, oars, goto: null, fishing: false }; WILD.boats.push(bt); return bt;
+}
 function wildStep(dt) {
   if (!WILD.init) { if (!trees.length) return; wildInit(); }
   const t = simT;
@@ -6727,11 +6731,11 @@ function wildStep(dt) {
     if (d.state === 'graze') d.legs.forEach(l => l.rotation.x *= 0.9);
     p.y = height(p.x, p.z); d.g.visible = isExplored(p.x, p.z);
   }
-  for (const b of WILD.boats) { let x, z, ax, az;
-    if (b.kind === 'river') { b.s += b.dir * 1.4 * dt; const lim = SIZE * 0.45; if (Math.abs(b.s) > lim) { b.dir = -b.dir; b.s = Math.max(-lim, Math.min(lim, b.s)); } x = riverX(b.s) + 2 * b.dir; z = b.s; ax = riverX(b.s + b.dir) - riverX(b.s); az = b.dir; }
-    else { b.a += dt * 0.12; x = b.l.x + Math.cos(b.a) * b.l.R * 0.55; z = b.l.z + Math.sin(b.a) * b.l.R * 0.55; ax = -Math.sin(b.a); az = Math.cos(b.a); }
-    b.g.position.set(x, -0.43 + Math.sin(t * 1.8 + x) * 0.04, z); b.g.rotation.set(0, Math.atan2(ax, az), Math.sin(t * 1.3) * 0.04); b.g.visible = isExplored(x, z);
-    const r = Math.sin(t * 3); b.oars.forEach((o, i) => { o.rotation.y = r * 0.5 * (i ? -1 : 1); o.rotation.x = Math.cos(t * 3) * 0.15; }); }
+  for (const b of WILD.boats) { const p = b.g.position; let moving = false;
+    if (b.goto) { const dx = b.goto.x - p.x, dz = b.goto.z - p.z, L = Math.hypot(dx, dz); if (L < 0.3) b.goto = null; else { const m = Math.min(L, 1.6 * dt); p.x += dx / L * m; p.z += dz / L * m; const ya = Math.atan2(dx, dz); let d = ya - b.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); b.g.rotation.y += d * Math.min(1, dt * 3); moving = true; } }
+    p.y = -0.43 + Math.sin(t * 1.8 + p.x) * 0.04; b.g.rotation.z = Math.sin(t * 1.3) * 0.04; b.g.visible = isExplored(p.x, p.z);
+    b.rod.visible = b.fishing; if (b.fishing) b.rod.rotation.x = -0.6 + Math.sin(t * 1.1) * 0.06;
+    const r = moving ? Math.sin(t * 3) : 0; b.oars.forEach((o, i) => { o.rotation.y = r * 0.5 * (i ? -1 : 1); o.rotation.x = moving ? Math.cos(t * 3) * 0.15 : 0; }); }
 }
 // ---------- Dorfleben: spielende Kinder und plaudernde Nachbarn (wie in der Godot-Version) ----------
 const VILLAGE = { t: 0, talks: 0 }, TALKERS = ['traeger', 'baeckerei', 'schneider', 'weberei', 'metzger', 'brauerei', 'kaeserei'];
@@ -6940,11 +6944,20 @@ function planNext(b) {
     let best = null, bd = 26;
     for (const f of fishSpots) { if (f.amount <= 0 || f.reserved || riverSide(f.x, f.z) !== riverSide(b.x, b.z) && Math.abs(f.x - riverX(f.z)) > 1 && !bridgesDone().length) continue; const d = Math.hypot(f.x - b.x, f.z - b.z); if (d < bd) { bd = d; best = f; } }
     if (!best) return idle('Keine Fische in der Nähe – warten, bis sie nachwachsen', 3);
-    best.reserved = true; b.working = true; b.status = 'Geht ans Ufer';
-    const dir = new V3(b.x - best.x, 0, b.z - best.z).normalize(); const shore = new V3(best.x, 0, best.z);
-    for (let k = 0; k < 40 && height(shore.x, shore.z) < 0.1; k++) shore.addScaledVector(dir, 0.5);
-    moveTo(w, shore); doFn(w, () => { b.status = 'Angelt'; faceTo(w, best); });
-    work(w, 5, 'fish', () => { best.amount--; best.reserved = false; setCarry(w, 'fisch'); b.status = 'Bringt Fisch nach Hause'; });
+    best.reserved = true; b.working = true; b.status = 'Geht zum Boot';
+    if (!b.boat) { // eigenes Boot am Ufer anlegen
+      const dir = new V3(b.x - best.x, 0, b.z - best.z).normalize(), m = new V3(best.x, 0, best.z);
+      for (let k = 0; k < 80 && height(m.x + dir.x * 0.5, m.z + dir.z * 0.5) < -0.2; k++) m.addScaledVector(dir, 0.5);
+      b.boatMoor = m.clone(); b.boatShore = m.clone().addScaledVector(dir, 1.6); b.boat = fisherBoat(m.x, m.z, Math.atan2(-dir.x, -dir.z));
+    }
+    const bt = b.boat, spot = { x: best.x + (Math.random() - 0.5) * 2, z: best.z + (Math.random() - 0.5) * 2 }, travel = Math.hypot(spot.x - b.boatMoor.x, spot.z - b.boatMoor.z) / 1.6 + 0.6;
+    moveTo(w, b.boatShore);
+    doFn(w, () => { w.g.visible = false; bt.man.visible = true; bt.goto = spot; b.status = 'Rudert hinaus'; });
+    w.queue.push({ wait: travel });
+    doFn(w, () => { bt.fishing = true; b.status = 'Angelt'; });
+    work(w, 5, null, () => { best.amount--; best.reserved = false; bt.fishing = false; bt.catchM.visible = true; bt.goto = { x: b.boatMoor.x, z: b.boatMoor.z }; b.status = 'Rudert mit dem Fang zurück'; });
+    w.queue.push({ wait: travel });
+    doFn(w, () => { bt.man.visible = false; bt.catchM.visible = false; w.g.position.set(b.boatShore.x, height(b.boatShore.x, b.boatShore.z), b.boatShore.z); w.g.visible = true; setCarry(w, 'fisch'); b.status = 'Bringt Fisch nach Hause'; });
     deliver(w, 'fisch', 1); moveTo(w, b.door);
   } else if (T === 'rutengaenger') {
     b.searched = b.searched || []; let best = null, bd = 1e9;
@@ -7638,6 +7651,7 @@ function demolish(b, fullRefund) {
   const f = fullRefund ? 1 : 0.5;
   if (b.progress < 1 && b.siteNeed) { for (const k of Object.keys(b.siteNeed)) stock[k] += b.in[k] || 0; } else for (const [k, v] of Object.entries(TYPES[b.type].cost)) stock[k] += Math.floor(v * f);
   for (const box of [b.in, b.out]) for (const [k, v] of Object.entries(box)) if (v > 0) stock[k] += v;
+  if (b.boat) { scene.remove(b.boat.g); WILD.boats.splice(WILD.boats.indexOf(b.boat), 1); b.boat = null; }
   if (b.worker) { const w = b.worker; w.home = null; w.queue.length = 0; w.g.visible = true; holdFront(w, null); setCarry(w, null); moveTo(w, lagerDoor(b.x, b.z)); w.queue.push({ fn: () => { w.removed = true; scene.remove(w.g); POOL[b.type] = (POOL[b.type] || 0) + 1; refreshPiles(); } }); b.worker = null; }
   if (b.guard) { const gw = b.guard; gw.home = null; gw.queue.length = 0; gw.g.visible = true; gw.g.position.copy(b.door); moveTo(gw, lagerDoor(b.x, b.z)); gw.queue.push({ fn: () => { gw.removed = true; scene.remove(gw.g); POOL.waechter = (POOL.waechter || 0) + 1; } }); const i = territories.findIndex(t => Math.abs(t.x - b.x) < 0.01 && Math.abs(t.z - b.z) < 0.01); if (i >= 0) territories.splice(i, 1); rebuildFlags(); }
   for (const t of trees) if (t.reserved && Math.hypot(t.x - b.x, t.z - b.z) < 40) t.reserved = false;
