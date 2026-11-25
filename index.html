@@ -7996,7 +7996,7 @@ function aiInit() {
   const dirs = ['Osten', 'Südosten', 'Süden', 'Südwesten', 'Westen', 'Nordwesten', 'Norden', 'Nordosten'];
   for (let i = 0; i < n; i++) {
     let spot = null;
-    for (let k = 0; k < 400 && !spot; k++) { const an = a0 + i * Math.PI * 2 / n + (Math.random() - 0.5) * 1.2, d = MAP * (0.55 + Math.random() * 0.25), x = Math.cos(an) * d, z = Math.sin(an) * d; if (Math.abs(x) > MAP - 40 || Math.abs(z) > MAP - 40) continue; if (AIS.some(o => Math.hypot(o.x - x, o.z - z) < 90)) continue; const tmp = { terr: [] }; if (aiSpotOK(tmp, 'lager', x, z, true) && (k > 250 || Math.abs(x - riverX(z)) > 20)) spot = [x, z, an]; }
+    for (let k = 0; k < 400 && !spot; k++) { const an = a0 + i * Math.PI * 2 / n + (Math.random() - 0.5) * 1.2, d = MAP * (k < 300 ? 0.74 + Math.random() * 0.14 : 0.55 + Math.random() * 0.25), x = Math.cos(an) * d, z = Math.sin(an) * d; if (Math.abs(x) > MAP - (k < 300 ? 22 : 40) || Math.abs(z) > MAP - (k < 300 ? 22 : 40)) continue; if (AIS.some(o => Math.hypot(o.x - x, o.z - z) < 90)) continue; const tmp = { terr: [] }; if (aiSpotOK(tmp, 'lager', x, z, true) && (k > 200 || Math.abs(x - riverX(z)) > 20)) spot = [x, z, an]; }
     if (!spot) continue;
     const a = aiNew(i, spot[0], spot[1], CFG['ai' + (i + 1) + 'd'] || diff, peace || CFG['ai' + (i + 1) + 'p'] === '1'); aiPlace(a, 'lager', a.x, a.z, Math.atan2(-a.x, -a.z), 1); aiFlags(a);
     const dir = dirs[Math.round(((Math.atan2(-a.z, a.x) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8];
