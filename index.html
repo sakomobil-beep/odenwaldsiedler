@@ -6944,7 +6944,16 @@ function planNext(b) {
     let best = null, bd = 26;
     for (const f of fishSpots) { if (f.amount <= 0 || f.reserved || riverSide(f.x, f.z) !== riverSide(b.x, b.z) && Math.abs(f.x - riverX(f.z)) > 1 && !bridgesDone().length) continue; const d = Math.hypot(f.x - b.x, f.z - b.z); if (d < bd) { bd = d; best = f; } }
     if (!best) return idle('Keine Fische in der Nähe – warten, bis sie nachwachsen', 3);
-    best.reserved = true; b.working = true; b.status = 'Geht zum Boot';
+    best.reserved = true; b.working = true;
+    if (Math.abs(best.x - riverX(best.z)) > 6) { // kleiner See: kein Boot, er angelt vom Ufer aus
+      b.status = 'Geht ans Ufer';
+      const dir = new V3(b.x - best.x, 0, b.z - best.z).normalize(), shore = new V3(best.x, 0, best.z);
+      for (let k = 0; k < 40 && height(shore.x, shore.z) < 0.1; k++) shore.addScaledVector(dir, 0.5);
+      moveTo(w, shore); doFn(w, () => { b.status = 'Angelt am Ufer'; faceTo(w, best); });
+      work(w, 5, 'fish', () => { best.amount--; best.reserved = false; setCarry(w, 'fisch'); b.status = 'Bringt Fisch nach Hause'; });
+      deliver(w, 'fisch', 1); moveTo(w, b.door); return;
+    }
+    b.status = 'Geht zum Boot';
     if (!b.boat) { // eigenes Boot am Ufer anlegen
       const dir = new V3(b.x - best.x, 0, b.z - best.z).normalize(), m = new V3(best.x, 0, best.z);
       for (let k = 0; k < 80 && height(m.x + dir.x * 0.5, m.z + dir.z * 0.5) < -0.2; k++) m.addScaledVector(dir, 0.5);
