@@ -4644,7 +4644,8 @@ function mountain(x, z) {
   let h = 0;
   for (const m of MOUNTAINS) { const RR = m.R * 1.6, d = Math.hypot(x - m.x, z - m.z); if (d > RR) continue; const k = 1 - d / RR;
     const r1 = 1 - Math.abs(noise(x * 0.09 + m.x, z * 0.09) * 2 - 1), r2 = 1 - Math.abs(noise(x * 0.23 + 5, z * 0.23 - m.z) * 2 - 1);
-    h += m.H * 0.65 * Math.pow(k, 1.15) * (0.5 + 0.4 * r1 + 0.18 * r2) + (noise(x * 0.7, z * 0.7) - 0.5) * 0.9 * k; }
+    const sh = k * k * (3 - 2 * k);
+    h += m.H * 0.65 * sh * (0.55 + 0.35 * r1 + 0.12 * r2) + r2 * r2 * r2 * 2.2 * sh; }
   return h;
 }
 const MC = MOUNTAINS[0], MR = MOUNTAINS[0].R;
@@ -4688,8 +4689,17 @@ const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG).rotateX(-Math.PI / 2).
 const baseCols = [];
 {
   const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) pos.setY(i, height(pos.getX(i), pos.getZ(i)));
-  geo.computeVertexNormals();
+  const GW = SEG + 1, STEP = SIZE / SEG, HG = new Float32Array(GW * GW);
+  for (let j = 0; j < GW; j++) for (let i = 0; i < GW; i++) HG[j * GW + i] = height(-MAP + i * STEP, -MAP + j * STEP);
+  const hg = (i, j) => HG[Math.min(SEG, Math.max(0, j)) * GW + Math.min(SEG, Math.max(0, i))];
+  const nArr = new Float32Array(pos.count * 3), vN = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    const gi = Math.round((pos.getX(i) + MAP) / STEP), gj = Math.round((pos.getZ(i) + MAP) / STEP);
+    pos.setY(i, hg(gi, gj));
+    vN.set(hg(gi - 1, gj) - hg(gi + 1, gj), 2 * STEP, hg(gi, gj - 1) - hg(gi, gj + 1)).normalize();
+    nArr[i * 3] = vN.x; nArr[i * 3 + 1] = vN.y; nArr[i * 3 + 2] = vN.z;
+  }
+  geo.setAttribute('normal', new THREE.BufferAttribute(nArr, 3));
   const nrm = geo.attributes.normal, C = c => new THREE.Color(c);
   const g1 = C(0x8fae4e), g2 = C(0xb3b552), sand = C(0xc9b48a), pebble = C(0xa89a80), mud = C(0x6e5e46), rockA = C(0x8f918a), rockB = C(0x74766f), rockC = C(0xaaa6a0), moss = C(0x7d8a5a), scree = C(0x9a9184), snow = C(0xf4f6fa), alp = C(0x86a04a);
   const c = new THREE.Color(), t = new THREE.Color();
@@ -4708,13 +4718,14 @@ const baseCols = [];
       const rockAmt = Math.max(sstep(0.22, 0.5, steep) * THREE.MathUtils.clamp((mh - 1) / 3, 0, 1), sstep(4.5, 8, mh) * 0.9);
       c.lerp(alp, THREE.MathUtils.clamp((mh - 1) / 4, 0, 0.5));
       c.lerp(t, rockAmt);
-      if (mh > 8) c.lerp(snow, THREE.MathUtils.clamp((mh - 8) / 2.5, 0, 1) * THREE.MathUtils.clamp((ny - 0.45) * 3, 0, 1));
+      const snowL = 12.5 + (noise(x * 0.12, z * 0.12) - 0.5) * 4;
+      if (mh > snowL) c.lerp(snow, THREE.MathUtils.clamp((mh - snowL) / 3, 0, 0.9) * THREE.MathUtils.clamp((ny - 0.5) * 3, 0, 1));
     }
     c.offsetHSL(0, 0, (hash(x, z) - 0.5) * 0.05); for (let k = 0; k < 3; k++) baseCols.push(c.r, c.g, c.b);
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(baseCols.slice(), 3));
 }
-const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
+const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
 ground.receiveShadow = true; scene.add(ground);
 const WSEG = SIZE / 2;
 const wgeo = new THREE.PlaneGeometry(SIZE, SIZE, WSEG, WSEG).rotateX(-Math.PI / 2);
