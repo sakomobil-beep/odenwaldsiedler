@@ -134,7 +134,7 @@ body.inmenu #tut{display:none!important}
 
 .woods{border:10px solid transparent!important;border-image:repeating-linear-gradient(90deg,#5e3a1c 0 3px,#7a4f2a 3px 7px,#6a4322 7px 11px,#85582f 11px 14px) 10!important;box-shadow:inset 0 0 0 1px rgba(255,220,160,.18),0 6px 22px rgba(0,0,0,.5),0 0 0 1px #2a1a0c!important;background:rgba(33,23,14,.95)!important;border-radius:0!important}
 </style></head><body>
-<div id="top" class="panel"><div id="res"></div><div id="popinfo" class="hbox"></div><div id="clock" class="hbox"></div><div id="spd" class="hbox"><button data-sp="0" title="Pause (Leertaste)">⏸</button><button data-sp="1" class="on" title="Normal (1)">▶</button><button data-sp="2" title="Schnell (2)">⏩</button><button data-sp="4" title="Sehr schnell (3)">⏭</button></div><div class="tbg"><button id="statbtn" class="tb" title="Statistik (T)">📊</button><button id="balbtn" class="tb" title="Wirtschaftsbilanz (B)">📈</button><button id="chainbtn" class="tb" title="Produktionsketten (K)">🔗</button><button id="milbtn" class="tb" title="Militär (M)">⚔️</button></div><div class="tbg"><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus (L)">🏷️</button><button id="sndbtn" class="tb" title="Ton an/aus (V)">🔊</button></div><button id="bellbtn" class="tb" title="Meldungen (N)">🔔<span id="bellcnt"></span></button><button id="menubtn" class="tb" title="Menü (Esc)">☰</button><button id="speed" style="display:none">1×</button></div>
+<div id="top" class="panel"><div id="res"></div><div id="popinfo" class="hbox"></div><div id="spd" class="hbox"><button data-sp="0" title="Pause (Leertaste)">⏸</button><button data-sp="1" class="on" title="Normal (1)">▶</button><button data-sp="2" title="Schnell (2)">⏩</button><button data-sp="4" title="Sehr schnell (3)">⏭</button></div><div class="tbg"><button id="statbtn" class="tb" title="Statistik (T)">📊</button><button id="balbtn" class="tb" title="Wirtschaftsbilanz (B)">📈</button><button id="chainbtn" class="tb" title="Produktionsketten (K)">🔗</button><button id="milbtn" class="tb" title="Militär (M)">⚔️</button></div><div class="tbg"><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus (L)">🏷️</button><button id="sndbtn" class="tb" title="Ton an/aus (V)">🔊</button></div><button id="bellbtn" class="tb" title="Meldungen (N)">🔔<span id="bellcnt"></span></button><button id="menubtn" class="tb" title="Menü (Esc)">☰</button><button id="speed" style="display:none">1×</button></div>
 <div id="notewin" class="panel pop"><button id="closenote" class="x">✕</button><div id="notebody"></div></div><button id="chainbtn" class="tb" title="Produktionsketten">🔗</button><button id="milbtn" class="tb" title="Militär">⚔️</button><button id="lblbtn" class="tb" title="Gebäude-Schilder ein/aus">🏷️</button><button id="sndbtn" class="tb">🔊</button><button id="statbtn" class="tb">📊</button><button id="menubtn" class="tb">☰</button><button id="speed">1×</button></div>
 <div id="tut" class="panel"></div>
 <div id="balwin" class="panel pop"><button id="closebal" class="x">✕</button><div id="balbody"></div></div>
@@ -6761,7 +6761,7 @@ const VILLAGE = { t: 0, talks: 0 }, TALKERS = ['traeger', 'baeckerei', 'schneide
 const KID_COLS = [0xe08c73, 0x7fb3f0, 0xf2d866, 0x99d980];
 function villageStep(dt) {
   VILLAGE.t -= dt; if (VILLAGE.t > 0) return; VILLAGE.t = 1;
-  const hh = ((simT + 200) % 600) / 600 * 24, day = hh >= 7 && hh < 19.5;
+  const day = true; // immer Tag
   const H = buildings.filter(b => b.type === 'wohnhaus' && b.progress >= 1 && !b.removed && b.door);
   for (const b of H) {
     b.kids = (b.kids || []).filter(k => !k.removed);
@@ -7239,8 +7239,7 @@ function updateHUD() {
   const pop = workers.filter(w => !w.removed && !w.ai && !w.village).length, car = carriers.filter(c => !c.removed).length, free = Object.values(POOL).reduce((a, n) => a + n, 0);
   const waiting = buildings.reduce((a, x) => a + Object.entries(x.out).reduce((q, [k, v]) => q + Math.max(0, v - (x.outRes[k] || 0)), 0), 0), busy = carriers.filter(c => !c.removed && c.queue.length).length, short = waiting > 12 && busy >= car;
   $('popinfo').innerHTML = `<span class="${short ? 'warnc' : ''}" title="Arbeiter / Träger / wartend im Lager${short ? ' – ⚠️ Träger kommen nicht hinterher (' + waiting + ' Waren warten). Baue Wohnhäuser oder ein Lagerhaus für mehr Träger.' : ''}">👥 <b>${pop}</b><small>/${car}/${free}</small>${short ? ' ⚠️' : ''}</span><span title="Kämpfer">⚔️ <b>${typeof SOLD !== 'undefined' ? SOLD.length : 0}</b></span>`;
-  const day = 1 + Math.floor((simT + 200) / 600), m = ((simT + 200) % 600) / 600 * 1440, hh = Math.floor(m / 60);
-  $('clock').innerHTML = `${hh >= 6 && hh < 20 ? '☀️' : '🌙'} <b>${String(hh).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}</b><small>Tag ${day}</small>`;
+  // keine Uhrzeit – im Spiel ist immer Tag
   document.querySelectorAll('#sub button[data-t]').forEach(btn => btn.classList.toggle('no', !canAfford(costOf(btn.dataset.t))));
 }
 const costStr = c => Object.entries(c).map(([k, v]) => `${v}${ITEMS[k].icon}`).join(' ');
