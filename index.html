@@ -7689,17 +7689,17 @@ let autoT = 0;
 // ---------- Menüs ----------
 const fmtDate = t => new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
 const fmtTime = s => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return h ? `${h} Std. ${m} Min.` : `${m} Min.`; };
-const LBL = { modus: { frieden: '🕊️ Friedlich siedeln', kampf: '⚔️ Mit Kämpfen' }, ki: { '0': 'Keine', '1': '1', '2': '2', '3': '3' }, kistufe: { leicht: 'Leicht', mittel: 'Mittel', schwer: 'Schwer' }, unlock: { normal: 'Nach und nach freischalten', alle: 'Alles von Anfang an' }, size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, tempo: { gemuetlich: 'Gemütlich', normal: 'Normal', schnell: 'Schnell' } };
-const LBLN = { modus: '🎮 Spielart', ki: '🤖 KI-Gegner', kistufe: '💪 KI-Stärke', unlock: '🔓 Gebäude', size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial', tempo: '⏳ Spieltempo' };
-let NEWCFG = Object.assign({ modus: 'kampf', ki: '1', kistufe: 'mittel', unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
+const LBL = { ziel: { conquest: '⚔️ Eroberung', economy: '🪙 Wirtschaftssieg', territory: '🚩 Gebietssieg', endless: '♾️ Endlosspiel' }, modus: { frieden: '🕊️ Friedlich siedeln', kampf: '⚔️ Mit Kämpfen' }, ki: { '0': 'Keine', '1': '1', '2': '2', '3': '3' }, kistufe: { leicht: 'Leicht', mittel: 'Mittel', schwer: 'Schwer' }, unlock: { normal: 'Nach und nach freischalten', alle: 'Alles von Anfang an' }, size: { klein: 'Klein', mittel: 'Mittel', gross: 'Groß' }, terrain: { flach: 'Flachland', huegel: 'Hügelland', gebirge: 'Gebirge', gemischt: 'Gemischt' }, water: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, forest: { licht: 'Licht', normal: 'Normal', dicht: 'Dicht' }, res: { knapp: 'Knapp', normal: 'Normal', reich: 'Reich' }, start: { wenig: 'Wenig', normal: 'Normal', viel: 'Viel' }, tempo: { gemuetlich: 'Gemütlich', normal: 'Normal', schnell: 'Schnell' } };
+const LBLN = { ziel: '🎯 Spielziel', modus: '🎮 Spielart', ki: '🤖 KI-Gegner', kistufe: '💪 KI-Stärke', unlock: '🔓 Gebäude', size: '🗺️ Kartengröße', terrain: '⛰️ Landschaft', water: '🌊 Wasser', forest: '🌲 Wald', res: '⛏️ Rohstoffe', start: '📦 Startmaterial', tempo: '⏳ Spieltempo' };
+let NEWCFG = Object.assign({ ziel: 'conquest', ai1d: 'mittel', ai2d: 'mittel', ai3d: 'mittel', ai1p: '0', ai2p: '0', ai3p: '0', modus: 'kampf', ki: '1', kistufe: 'mittel', unlock: 'normal', size: 'mittel', terrain: 'gemischt', water: 'normal', forest: 'normal', res: 'normal', start: 'normal', tempo: 'normal', seed: 1 + Math.floor(Math.random() * 99999) }, (() => { try { return JSON.parse(localStorage.getItem('odws_lastcfg') || '{}'); } catch (e) { return {}; } })());
 function openScreen(html, back) { const s = $('screen'); s.innerHTML = `<button class="x" id="scrback">✕</button>` + html; s.style.display = 'block'; $('scrback').onclick = back || closeScreen; return s; }
 function closeScreen() { $('screen').style.display = 'none'; if (INMENU) $('mainmenu').style.display = 'flex'; else if (paused) showPause(); }
 function showMain() {
   const last = [...IDX].sort((a, b) => b.t - a.t)[0];
   $('mainbtns').innerHTML = (last ? `<button data-m="cont">▶ Weiterspielen<small>${last.name} · ${fmtDate(last.t)}</small></button>` : '') +
-    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="mis">📜 Kampagne<small>Die Chronik von Valewright</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="about">ℹ️ Über das Spiel</button>`;
+    `<button data-m="tut">🎓 Tutorial<small>Lerne die ersten Schritte</small></button><button data-m="mis">📜 Kampagne<small>Die Chronik von Valewright</small></button><button data-m="new">🆕 Neues Spiel</button><button data-m="load">📂 Laden</button><button data-m="set">⚙️ Einstellungen</button><button data-m="help">❓ Hilfe</button><button data-m="about">ℹ️ Über das Spiel</button>`;
   $('mainbtns').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const m = b.dataset.m; if (m !== 'cont') $('mainmenu').style.display = 'none';
-    if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'mis') showMissions(); if (m === 'tut') bootTo({ mode: 'new', cfg: { classic: true, tutorial: true, unlock: 'normal', tempo: 'normal' } }); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); });
+    if (m === 'cont') bootTo({ mode: 'load', id: last.id }); if (m === 'new') showNew(); if (m === 'mis') showMissions(); if (m === 'tut') bootTo({ mode: 'new', cfg: { classic: true, tutorial: true, unlock: 'normal', tempo: 'normal' } }); if (m === 'load') showLoad(); if (m === 'set') showSettings(); if (m === 'about') showAbout(); if (m === 'help') showHelp(); });
   $('mainmenu').style.display = 'flex';
 }
 // Kartengenerator
@@ -7721,10 +7721,13 @@ function drawPreview(cfg, cv) {
 function showNew() {
   const opt = k => `<div class="opt"><span>${LBLN[k]}</span><div class="seg">${Object.entries(LBL[k]).map(([v, n]) => `<button data-k="${k}" data-v="${v}" class="${NEWCFG[k] === v ? 'on' : ''}">${n}</button>`).join('')}</div></div>`;
   const s = openScreen(`<div class="subhead">🗺️ Neues Spiel – Kartengenerator</div><div class="newwrap"><div class="opts">${Object.keys(LBL).map(opt).join('')}
-    <div class="opt"><span>🔢 Kartennummer</span><div class="seg"><input id="seedin" type="number" value="${NEWCFG.seed}"><button id="dice">🎲</button></div></div></div>
+    <div class="opt"><span>🔢 Kartennummer</span><div class="seg"><input id="seedin" type="number" value="${NEWCFG.seed}"><button id="dice">🎲</button></div></div>
+    <div id="aiopts">${[0, 1, 2].map(i => `<div class="opt" data-airow="${i}"><span style="color:${['#ff7a6a', '#ffd24a', '#c890ff'][i]}">🤖 ${AI_NAMES[i]}</span><div class="seg">${['leicht', 'mittel', 'schwer'].map(v => `<button data-k="ai${i + 1}d" data-v="${v}" class="${NEWCFG['ai' + (i + 1) + 'd'] === v ? 'on' : ''}">${LBL.kistufe[v]}</button>`).join('')}<button data-k="ai${i + 1}p" data-v="0" class="${NEWCFG['ai' + (i + 1) + 'p'] !== '1' ? 'on' : ''}">⚔️ greift an</button><button data-k="ai${i + 1}p" data-v="1" class="${NEWCFG['ai' + (i + 1) + 'p'] === '1' ? 'on' : ''}">🕊️ friedlich</button></div></div>`).join('')}<small id="zielinfo" style="display:block;opacity:.8;margin:6px 0"></small></div></div>
     <div class="prev"><canvas id="prevcv" width="120" height="120"></canvas><small>Vorschau · 🟡 Gold · ● Startpunkt</small></div></div>
     <div class="row"><button class="big" id="startnew">▶ Spiel starten</button></div>`, () => { closeScreen(); showMain(); });
-  const upd = () => drawPreview(NEWCFG, $('prevcv'));
+  const ZINFO = { conquest: 'Besiege alle Gegner, indem du ihre Haupthäuser eroberst.', economy: 'Bringe ein Wohnhaus zum zufriedenen Herrenhaus und sammle 300 Münzen.', territory: 'Beherrsche 60 % des bebaubaren Landes.', endless: 'Kein Spielende – baue in Ruhe, so lange du willst. Gegner können trotzdem besiegt werden.' };
+  const aiRows = () => { s.querySelectorAll('[data-airow]').forEach(r => r.style.display = +r.dataset.airow < +NEWCFG.ki ? '' : 'none'); const kz = s.querySelector('[data-k="kistufe"]'); if (kz) kz.closest('.opt').style.display = 'none'; $('zielinfo').textContent = '🎯 ' + ZINFO[NEWCFG.ziel] + (+NEWCFG.ki ? ' · Friedliche Gegner wachsen, greifen aber nie an.' : ''); };
+  const upd = () => { drawPreview(NEWCFG, $('prevcv')); aiRows(); };
   s.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { NEWCFG[b.dataset.k] = b.dataset.v; s.querySelectorAll(`[data-k="${b.dataset.k}"]`).forEach(x => x.classList.toggle('on', x === b)); upd(); });
   $('seedin').onchange = () => { NEWCFG.seed = Math.max(1, parseInt($('seedin').value) || 1); upd(); };
   $('dice').onclick = () => { NEWCFG.seed = 1 + Math.floor(Math.random() * 99999); $('seedin').value = NEWCFG.seed; upd(); };
@@ -7788,21 +7791,36 @@ function applyLiveSettings() {
 }
 function showAbout() {
   openScreen(`<div class="subhead">ℹ️ Über das Spiel</div>
-    <p><b>Valewright</b> – Baue. Wirtschafte. Herrsche. Ein Aufbauspiel im Odenwald. Baue Warenketten auf, versorge deine Bergwerke, erweitere dein Gebiet mit Wachtürmen.</p><p style="text-align:center"><img src="odenforge-logo.svg" alt="Odenforge" style="width:110px"><br>Entwickelt von <b>Odenforge</b></p>
-    <h4>Steuerung am PC</h4><p>Linke Maustaste ziehen: Karte verschieben · Rechte Maustaste ziehen: drehen · Mausrad: zoomen<br>Gebäude: Kategorie wählen → Gebäude → Platz anklicken → ✔ Bauen (Enter)<br>R: Gebäude drehen · Esc: abbrechen bzw. Pausenmenü</p>
-    <h4>Steuerung am Handy</h4><p>Ein Finger: verschieben · Zwei Finger: zoomen und drehen · Antippen: Gebäude auswählen</p>
-    <h4>Tipps</h4><p>Zuerst Holzfäller, Sägewerk und Steinmetz bauen. Jeder Arbeiter braucht ein Werkzeug, Wächter einen Kampfstock. Bergwerke brauchen Brot, Fisch oder Schinken.</p>`, () => { closeScreen(); if (INMENU) showMain(); });
+    <p style="text-align:center"><img src="odenforge-logo.svg" alt="Odenforge" style="width:120px"></p>
+    <h2 style="text-align:center;margin:4px 0;color:#e9c46a">Valewright</h2><p style="text-align:center;margin:0">Baue. Wirtschafte. Herrsche.<br><small>Version 0.6 – Browser-Ausgabe</small></p><hr>
+    <p>Valewright ist ein Aufbau- und Strategiespiel im Odenwälder Fachwerkstil. Gründe eine Siedlung in einem stillen Tal, baue Warenketten von der Holzfällerhütte bis zur Goldschmiede auf, lass deine Wohnhäuser von der Hütte zum Herrenhaus wachsen und verteidige dein Gebiet gegen rivalisierende Herren. Die Gebäude sind von echten Fachwerkhäusern aus Michelstadt und dem Odenwald inspiriert.</p><hr>
+    <h4 style="text-align:center">Mitwirkende</h4><p style="text-align:center">Idee, Spieldesign & Gestaltung: Kingman · Odenforge<br>Programmierung: mit Unterstützung von Claude (Anthropic)<br>3D-Darstellung: three.js (MIT-Lizenz)<br><br>© 2026 Odenforge – Games aus dem Odenwald</p>`, () => { closeScreen(); if (INMENU) showMain(); else showPause(); });
+}
+function showHelp() {
+  const T = [
+    ['🎮 Steuerung', 'Linke Maustaste ziehen: Karte verschieben · Rechte Maustaste ziehen: drehen · Mausrad: zoomen · Klick auf ein Gebäude: Info-Fenster · R: Gebäude beim Bauen drehen · Esc: Bauen abbrechen bzw. Pausenmenü. Am Handy: ein Finger verschieben, zwei Finger zoomen und drehen, antippen zum Auswählen.'],
+    ['🔨 Bauen', 'Wähle unten eine Kategorie und dann ein Gebäude. Grün heißt: hier darf gebaut werden, rot: nicht möglich (Wasser, Hang, zu nah an anderen Gebäuden oder außerhalb deines Gebiets). Erst Platz anklicken, dann „✔ Bauen“ bestätigen. Bauarbeiter und Träger bringen das Material. Jeder neue Arbeiter braucht 1 Werkzeug.'],
+    ['🔗 Warenketten', 'Holzfäller → Stämme → Sägewerk → Bretter · Steinmetz → Stein · Förster pflanzt Bäume nach · Bauernhof → Getreide → Mühle → Mehl, mit Wasser vom Brunnen → Bäckerei → Brot · Fischer → Fisch · Schweinezucht → Metzger → Schinken & Wurst · Bergwerke → Kohle & Eisenerz → Eisenschmelze → Eisenbarren → Werkzeugschmied → Werkzeug · Waffenschnitzer → Kampfstöcke für Wächter. Die Übersicht „🔗 Produktionsketten“ zeigt, was fehlt.'],
+    ['🏠 Wohnhäuser & Freischalten', 'Wohnhäuser haben 5 Stufen: Hütte, Bauernhaus, Fachwerkhaus, Bürgerhaus, Herrenhaus. Jede Stufe braucht bestimmte Waren. Sind alle da, wird das Haus zufrieden 😊 und steigt auf. Höhere Stufen zahlen Steuern in Münzen. Zufriedene Häuser schalten neue Gebäude frei.'],
+    ['⛏️ Bergbau & Rutengänger', 'Bodenschätze liegen in den Bergen. Der Rutengänger sucht sie und markiert sie mit Fähnchen. Bergwerke brauchen ein gefundenes Vorkommen und Essen (Brot, Fisch oder Schinken).'],
+    ['🌉 Brücken', 'Siedler können nicht schwimmen. Mit einer Brücke über den Fluss erreichen sie das andere Ufer.'],
+    ['🚩 Gebiet & Militär', 'Gebaut werden darf nur im eigenen Gebiet. Wachstube, Wachturm, Wehrturm und Burg erweitern es, sobald ein Wächter einzieht – jeder Wächter braucht einen Kampfstock. Die Kaserne bildet Schwertkämpfer und Bogenschützen aus. Zum Angreifen ein gegnerisches Gebäude anklicken. Fällt das gegnerische Haupthaus, ist der Gegner besiegt.'],
+    ['🎯 Spielziele', 'Eroberung: alle Gegner besiegen · Wirtschaftssieg: ein zufriedenes Herrenhaus und 300 Münzen · Gebietssieg: 60 % des bebaubaren Landes · Endlosspiel: kein Ende. Nach einem Sieg kannst du immer weiterspielen. Für jeden Gegner lassen sich Stärke und Verhalten (greift an / friedlich) einstellen.'],
+    ['💾 Speichern', 'Im Pausenmenü (Esc) kannst du speichern und laden. Das Spiel speichert zusätzlich regelmäßig automatisch.'],
+  ];
+  openScreen(`<div class="subhead">❓ Hilfe</div>` + T.map(([t, x]) => `<h4 style="color:#e9c46a;margin:12px 0 4px">${t}</h4><p style="margin:0">${x}</p>`).join('<hr>'), () => { closeScreen(); if (INMENU) showMain(); else showPause(); });
 }
 // Pausenmenü
 function showPause() {
   paused = true; $('pausemenu').style.display = 'flex';
-  $('pausebtns').innerHTML = `<button data-p="go">▶ Weiterspielen</button><button data-p="save">💾 Speichern unter …</button><button data-p="load">📂 Laden</button><button data-p="set">⚙️ Einstellungen</button><button data-p="main">🏠 Hauptmenü</button>`;
+  $('pausebtns').innerHTML = `<button data-p="go">▶ Weiterspielen</button><button data-p="save">💾 Speichern unter …</button><button data-p="load">📂 Laden</button><button data-p="set">⚙️ Einstellungen</button><button data-p="help">❓ Hilfe</button><button data-p="main">🏠 Hauptmenü</button>`;
   $('pausebtns').querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
     const p = b.dataset.p;
     if (p === 'go') hidePause();
     if (p === 'save') { const n = prompt('Name für den Spielstand:', 'Spielstand ' + new Date().toLocaleDateString('de-DE')); if (n) saveGame(n); }
     if (p === 'load') { $('pausemenu').style.display = 'none'; showLoad(); }
     if (p === 'set') { $('pausemenu').style.display = 'none'; showSettings(); }
+    if (p === 'help') { $('pausemenu').style.display = 'none'; showHelp(); }
     if (p === 'main') bootTo(null);
   });
 }
@@ -7875,9 +7893,9 @@ function aiInit() {
     let spot = null;
     for (let k = 0; k < 400 && !spot; k++) { const an = a0 + i * Math.PI * 2 / n + (Math.random() - 0.5) * 1.2, d = MAP * (0.55 + Math.random() * 0.25), x = Math.cos(an) * d, z = Math.sin(an) * d; if (Math.abs(x) > MAP - 40 || Math.abs(z) > MAP - 40) continue; if (AIS.some(o => Math.hypot(o.x - x, o.z - z) < 90)) continue; const tmp = { terr: [] }; if (aiSpotOK(tmp, 'lager', x, z, true) && (k > 250 || Math.abs(x - riverX(z)) > 20)) spot = [x, z, an]; }
     if (!spot) continue;
-    const a = aiNew(i, spot[0], spot[1], diff, peace); aiPlace(a, 'lager', a.x, a.z, Math.atan2(-a.x, -a.z), 1); aiFlags(a);
+    const a = aiNew(i, spot[0], spot[1], CFG['ai' + (i + 1) + 'd'] || diff, peace || CFG['ai' + (i + 1) + 'p'] === '1'); aiPlace(a, 'lager', a.x, a.z, Math.atan2(-a.x, -a.z), 1); aiFlags(a);
     const dir = dirs[Math.round(((Math.atan2(-a.z, a.x) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8];
-    setTimeout(() => toast(`🤖 ${a.name} siedelt irgendwo im ${dir}${peace ? ' – friedlich' : ''}. Erkunde das Land, um ihn zu finden!`), 1500 + i * 2500);
+    setTimeout(() => toast(`🤖 ${a.name} siedelt irgendwo im ${dir}${a.peace ? ' – friedlich' : ''}. Erkunde das Land, um ihn zu finden!`), 1500 + i * 2500);
   }
 }
 function aiPickSpot(a, type) {
@@ -8080,8 +8098,10 @@ function aiDefeat(a) {
 }
 function gameOver(win, a) {
   if (win && typeof MIS !== 'undefined' && MIS) { toast('🏆 Der Gegner ist besiegt!'); renderMission(); return; }
+  if (win && (CFG.ziel || 'conquest') !== 'conquest') { toast('🏆 Alle Gegner sind besiegt!'); return; }
+  if (win && !(a && a.msg)) { if (CFG.goalWon) return; CFG.goalWon = true; }
   const d = document.createElement('div'); d.id = 'gameover'; d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:60;font-family:inherit';
-  d.innerHTML = `<div style="background:#2a1d12;border:2px solid #c9a24a;border-radius:14px;padding:26px 34px;color:#f4e6c8;text-align:center;max-width:420px"><div style="font-size:46px">${win ? '🏆' : '🔥'}</div><h2 style="margin:8px 0">${win ? 'Sieg!' : 'Niederlage'}</h2><p>${win ? 'Alle Gegner sind besiegt – der Odenwald gehört dir!' : `${a.name} hat dein Haupthaus erobert.`}</p><button id="goon" style="margin:6px;padding:8px 16px">${win ? 'Weiter siedeln' : 'Zuschauen'}</button><button id="gomenu" style="margin:6px;padding:8px 16px">Hauptmenü</button></div>`;
+  d.innerHTML = `<div style="background:#2a1d12;border:2px solid #c9a24a;border-radius:14px;padding:26px 34px;color:#f4e6c8;text-align:center;max-width:420px"><div style="font-size:46px">${win ? '🏆' : '🔥'}</div><h2 style="margin:8px 0">${win ? 'Sieg!' : 'Niederlage'}</h2><p>${win ? (a && a.msg ? a.msg : 'Alle Gegner sind besiegt – der Odenwald gehört dir!') + '<br><small>Du kannst einfach weiterspielen und deine Siedlung weiter ausbauen.</small>' : `${a.name} hat dein Haupthaus erobert.`}</p><button id="goon" style="margin:6px;padding:8px 16px">${win ? 'Weiter siedeln' : 'Zuschauen'}</button><button id="gomenu" style="margin:6px;padding:8px 16px">Hauptmenü</button></div>`;
   document.body.appendChild(d); $('goon').onclick = () => d.remove(); $('gomenu').onclick = () => { location.href = location.pathname; };
   if (!win) { for (const a2 of AIS) a2.won = true; }
 }
@@ -8093,7 +8113,7 @@ function aiTargets(a) {
   return list.map(b => { const d = defsOf(b); return { b, near: near(b), def: d.reduce((s, x) => s + strength(x), 0), arch: d.some(x => x.kind === 'bogen'), n: d.length }; }).filter(t => t.near < 70);
 }
 function aiWar(a, dt) {
-  if (PEACE() || a.dead || a.won) return;
+  if (PEACE() || a.peace || a.dead || a.won) return;
   a.wt = (a.wt ?? 120) - dt; if (a.wt > 0) return;
   const D = { leicht: { start: 3600, iv: 600 }, mittel: { start: 2700, iv: 420 }, schwer: { start: 1500, iv: 240 } }[a.diff] || { start: 2700, iv: 420 };
   a.wt = D.iv * (0.8 + Math.random() * 0.4);
@@ -8185,6 +8205,24 @@ const MIS = CFG.mission ? MISSIONS.find(m => m.id === CFG.mission) : null;
 const misPanel = document.createElement('div'); misPanel.id = 'mispanel';
 misPanel.style.cssText = 'position:fixed;right:14px;top:172px;width:250px;background:rgba(42,29,18,.92);border:2px solid #c9a24a;border-radius:12px;padding:10px 12px;color:#f4e6c8;z-index:25;font-size:13px;display:none;cursor:pointer';
 document.body.appendChild(misPanel);
+// ---------- Spielziel (freies Spiel) ----------
+const goalPanel = document.createElement('div');
+goalPanel.style.cssText = 'position:fixed;right:14px;top:172px;width:250px;background:rgba(42,29,18,.92);border:2px solid #c9a24a;border-radius:12px;padding:10px 12px;color:#f4e6c8;z-index:25;font-size:13px;display:none';
+document.body.appendChild(goalPanel);
+let goalT = 99, landShare = 0;
+function calcLand() { let land = 0, mine = 0; for (let x = -MAPV + 3; x < MAPV; x += 6) for (let z = -MAPV + 3; z < MAPV; z += 6) { if (height(x, z) < -0.35 || mountain(x, z) > 8) continue; land++; if (inTerritory(x, z)) mine++; } return land ? mine / land : 0; }
+function renderGoal() {
+  const z = CFG.ziel || 'conquest';
+  if (INMENU || CFG.mission || CFG.tutorial || z === 'endless') { goalPanel.style.display = 'none'; return; }
+  goalPanel.style.display = 'block';
+  let h = `<b>🎯 ${LBL.ziel[z]}</b><br>`, ok = false;
+  if (z === 'conquest') h += `<br>Verbleibende Gegner: ${AIS.filter(a => !a.dead).length}`;
+  if (z === 'economy') { const manor = buildings.some(b => b.type === 'wohnhaus' && !b.removed && (b.lvl || 0) >= 4 && (b.sat || 0) >= 1), c = Math.min(300, stock.muenzen || 0); h += `<br>${manor ? '✅' : '🌳'} Zufriedenes Herrenhaus ${manor ? 1 : 0} / 1<br>🪙 300 Münzen auf Lager ${c} / 300`; ok = manor && c >= 300; }
+  if (z === 'territory') { if (++goalT > 5) { goalT = 0; landShare = calcLand(); } h += `<br>🚩 Dein Land ${Math.round(landShare * 100)} % / 60 %`; ok = landShare >= 0.6; }
+  if (CFG.goalWon) h += '<br><br>👑 Sieg!';
+  goalPanel.innerHTML = h;
+  if (ok && !CFG.goalWon) { CFG.goalWon = true; gameOver(true, { msg: z === 'economy' ? 'Wirtschaftssieg! Deine Stadt ist die reichste im Odenwald.' : 'Gebietssieg! Das Land des Odenwalds gehört dir.' }); }
+}
 let misMin = false; misPanel.onclick = () => { misMin = !misMin; renderMission(); };
 function renderMission() {
   if (!MIS || INMENU) return; misPanel.style.display = 'block';
@@ -8332,7 +8370,7 @@ function animate() {
   if (toastT > 0) { toastT -= real; if (toastT <= 0) $('toast').style.opacity = 0; }
   miniT += real; if (miniT > 0.4) { miniT = 0; drawMini(); }
   infoT += real; if (infoT > 0.25) { infoT = 0; renderInfo(); updateHUD(); }
-  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); renderBal(); checkProblems(); checkUnlock(); renderMission(); }
+  statT += real; if (statT > 1) { statT = 0; renderStats(); renderMil(); renderChains(); renderBal(); checkProblems(); checkUnlock(); renderMission(); renderGoal(); }
   autoT += real; if (SET.autosave && autoT > SET.autosave && !INMENU) { autoT = 0; saveGame(null, true); }
   if (selected && !placing) { ring.visible = true; ringMat.color.set(0xffd24a); ring.scale.setScalar(TYPES[selected.type].r + 0.6); ring.position.set(selected.x, height(selected.x, selected.z) + 0.15, selected.z); }
   else if (!placing) ring.visible = false;
