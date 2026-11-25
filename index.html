@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Valewright – Baue. Wirtschafte. Herrsche.</title>
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Valewright (Alpha) – Baue. Wirtschafte. Herrsche.</title>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:Georgia,serif;-webkit-user-select:none;user-select:none}
 canvas{display:block;touch-action:none}
@@ -144,7 +144,7 @@ body.inmenu #tut{display:none!important}
 <div id="info" class="panel"><button id="closeinfo">✕</button><div id="infotext"></div><div id="infobtns"></div></div>
 <div id="toast"></div>
 <div id="loading"><div><div class="spin"></div>Welt wird erzeugt …</div></div>
-<div id="mainmenu"><div class="mmbox wood" style="position:relative"><div class="title">Valewright<small>Baue. Wirtschafte. Herrsche.</small></div><div id="mainbtns"></div><div class="devby"><img src="odenforge-logo.svg" alt="Odenforge"><span>ein Spiel von<b>Odenforge</b></span></div></div></div>
+<div id="mainmenu"><div class="mmbox wood" style="position:relative"><div class="title">Valewright<small>Baue. Wirtschafte. Herrsche.</small></div><div style="text-align:center;margin:-4px 0 10px"><span style="display:inline-block;background:#b5452a;color:#fff;font-weight:700;letter-spacing:1px;padding:3px 12px;border-radius:12px;font-size:13px">ALPHA-VERSION</span><div style="font-size:12px;opacity:.8;margin-top:4px">Frühe Testversion – Fehler und Änderungen sind möglich.</div></div><div id="mainbtns"></div><div class="devby"><img src="odenforge-logo.svg" alt="Odenforge"><span>ein Spiel von<b>Odenforge</b></span></div></div></div>
 <div id="pausemenu"><div class="pmbox panel wood"><div class="subhead">⏸ Pause</div><div id="pausebtns"></div></div></div>
 <div id="screen" class="panel wood"></div>
 <canvas id="mini" width="200" height="200"></canvas>
@@ -7940,7 +7940,7 @@ function applyLiveSettings() {
 function showAbout() {
   openScreen(`<div class="subhead">ℹ️ Über das Spiel</div>
     <p style="text-align:center"><img src="odenforge-logo.svg" alt="Odenforge" style="width:120px"></p>
-    <h2 style="text-align:center;margin:4px 0;color:#e9c46a">Valewright</h2><p style="text-align:center;margin:0">Baue. Wirtschafte. Herrsche.<br><small>Version 0.6 – Browser-Ausgabe</small></p><hr>
+    <h2 style="text-align:center;margin:4px 0;color:#e9c46a">Valewright</h2><p style="text-align:center;margin:0">Baue. Wirtschafte. Herrsche.<br><small>Version 0.6 Alpha – Browser-Ausgabe</small></p><hr>
     <p>Valewright ist ein Aufbau- und Strategiespiel im Odenwälder Fachwerkstil. Gründe eine Siedlung in einem stillen Tal, baue Warenketten von der Holzfällerhütte bis zur Goldschmiede auf, lass deine Wohnhäuser von der Hütte zum Herrenhaus wachsen und verteidige dein Gebiet gegen rivalisierende Herren. Die Gebäude sind von echten Fachwerkhäusern aus dem Odenwald inspiriert.</p><hr>
     <h4 style="text-align:center">Mitwirkende</h4><p style="text-align:center">Ein Spiel von Odenforge 2026<br>Programmierung: mit Unterstützung von Claude (Anthropic)<br>3D-Darstellung: three.js (MIT-Lizenz)<br><br>© 2026 Odenforge – Games aus dem Odenwald</p>`, () => { closeScreen(); if (INMENU) showMain(); else showPause(); });
 }
@@ -8540,4 +8540,4 @@ addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; cam
 updateHUD(); animate();
 if (TUT_ON) tutRender(); else toast('Willkommen! Wähle unten eine Kategorie und dann ein Gebäude.');
 window.__dbg = { AIS, aiInit,  stock, buildings, workers, placeBuilding, canPlace, placeReason, trees, deposits, target, finishBuilding, territories, fishSpots, riverX, findPath, walk, carriers, demolish, saveGame, rev: reveal, buildModel, mk: makeWorker, setCarry, refreshPiles, h: height, serialize, road, rebuildRoads, roadCellsBetween };
-</script></body></html>
+</script><div style="position:fixed;right:8px;bottom:6px;z-index:5;font:600 11px sans-serif;color:#fff;background:rgba(181,69,42,.75);padding:2px 8px;border-radius:8px;pointer-events:none">Alpha-Version</div></body></html>
