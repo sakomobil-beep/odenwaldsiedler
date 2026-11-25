@@ -6371,6 +6371,7 @@ function cartModel() {
 function giveCart(w) {
   w.cart = cartModel(); w.cart.rotation.y = -Math.PI / 2; w.cart.position.set(0, 0, 1.0); w.g.add(w.cart); w.cap = 4;
   w.cartLoad = new THREE.Group(); w.cartLoad.position.set(0, 0.5, 0); w.cart.add(w.cartLoad);
+  w.donkey = donkeyModel(); w.donkey.position.set(0, 0, 2.05); w.g.add(w.donkey);
 }
 function setCartLoad(w, item, n) {
   if (!w.cartLoad) return; while (w.cartLoad.children.length) w.cartLoad.remove(w.cartLoad.children[0]);
@@ -6676,6 +6677,61 @@ function mineModel(outer, type, fx) {
 
   g0.add(A(type, fx));
   if (fx.smokeAt) fx.smokeAt.multiplyScalar(0.95);
+}
+// ---------- Esel (zieht den Karren) ----------
+function donkeyModel() {
+  const g = new THREE.Group(), fur = M(0x7a736b), dark = M(0x4a443e), legs = [];
+  g.add(mesh(box(0.36, 0.36, 0.8), fur, 0, 0.62, 0)); g.add(mesh(box(0.16, 0.36, 0.16), fur, 0, 0.88, 0.42)); g.add(mesh(box(0.18, 0.18, 0.36), fur, 0, 1.02, 0.6));
+  for (const s of [-1, 1]) g.add(mesh(box(0.05, 0.24, 0.05), dark, s * 0.06, 1.2, 0.52));
+  g.add(mesh(box(0.04, 0.3, 0.04), dark, 0, 0.6, -0.42));
+  for (const [x, z] of [[0.12, 0.3], [-0.12, 0.3], [0.12, -0.3], [-0.12, -0.3]]) { const l = new THREE.Group(); l.position.set(x, 0.46, z); g.add(l); l.add(mesh(box(0.07, 0.45, 0.07), fur, 0, -0.23, 0)); legs.push(l); }
+  g.add(mesh(box(0.06, 0.06, 1.1), M(0x6a4a2a), 0, 0.5, -0.6));
+  g.userData.legs = legs; g.traverse(o => { if (o.isMesh) o.castShadow = true; }); return g;
+}
+// ---------- Tiere & Boote: Vogelschwärme, Rehe, Ruderboote (wie in der Godot-Version) ----------
+const WILD = { init: false, birds: [], deer: [], boats: [] };
+function wildInit() {
+  WILD.init = true; const R = () => Math.random(), sc = MAP / 180;
+  const bird = (c, col) => { const g = new THREE.Group(), m = M(col); g.add(mesh(box(0.12, 0.1, 0.4), m)); const wl = new THREE.Group(), wr = new THREE.Group(); g.add(wl, wr); wl.add(mesh(box(0.45, 0.03, 0.18), m, 0.24, 0, 0)); wr.add(mesh(box(0.45, 0.03, 0.18), m, -0.24, 0, 0)); scene.add(g);
+    return { g, wl, wr, c, r: 6 + R() * 8, h: 14 + R() * 8, a: R() * 6.28, sp: (0.35 + R() * 0.25) * (R() < 0.5 ? 1 : -1), ph: R() * 10 }; };
+  for (let f = 0; f < Math.round(4 * sc); f++) { const t = trees[Math.floor(R() * trees.length)]; if (!t) break; const n = 4 + Math.floor(R() * 4); for (let k = 0; k < n; k++) WILD.birds.push(bird({ x: t.x, z: t.z }, R() < 0.7 ? 0x2e2926 : 0x8c6b4c)); }
+  const deer = (x, z, buck) => { const g = new THREE.Group(), fur = M(0x9e6b3d), legs = []; g.add(mesh(box(0.38, 0.38, 0.95), fur, 0, 0.78, 0)); g.add(mesh(box(0.3, 0.2, 0.2), M(0xebe0cc), 0, 0.84, -0.5));
+    const neck = new THREE.Group(); neck.position.set(0, 0.92, 0.42); g.add(neck); const nk = mesh(box(0.16, 0.45, 0.16), fur, 0, 0.2, 0.05); nk.rotation.x = -0.35; neck.add(nk); neck.add(mesh(box(0.17, 0.17, 0.32), fur, 0, 0.42, 0.18));
+    for (const s of [-1, 1]) { neck.add(mesh(box(0.06, 0.16, 0.04), fur, s * 0.09, 0.56, 0.08)); if (buck) { const a = mesh(box(0.03, 0.3, 0.03), M(0xd9c79e), s * 0.07, 0.68, 0.12); a.rotation.z = -0.3 * s; neck.add(a); } }
+    for (const [lx, lz] of [[0.12, 0.35], [-0.12, 0.35], [0.12, -0.35], [-0.12, -0.35]]) { const l = new THREE.Group(); l.position.set(lx, 0.62, lz); g.add(l); l.add(mesh(box(0.07, 0.62, 0.07), M(0x7a5330), 0, -0.31, 0)); legs.push(l); }
+    g.scale.setScalar(buck ? 1.25 : 1.1); g.position.set(x, height(x, z), z); g.rotation.y = R() * 6.28; g.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(g);
+    return { g, neck, legs, home: { x, z }, tx: x, tz: z, state: 'graze', t: 1 + R() * 4, ph: R() * 5 }; };
+  let groups = 0; for (let i = 0; i < 300 && groups < Math.round(5 * sc); i++) { const t = trees[Math.floor(R() * trees.length)]; if (!t || Math.hypot(t.x, t.z) < 60) continue; groups++;
+    const n = 2 + Math.floor(R() * 2); for (let k = 0; k < n; k++) { const x = t.x + (R() - 0.5) * 12, z = t.z + (R() - 0.5) * 12; if (height(x, z) < 0.1) continue; WILD.deer.push(deer(x, z, k === 0)); } }
+  const boat = d => { const g = new THREE.Group(), wd = M(0x80573a); g.add(mesh(box(0.9, 0.3, 2.4), wd, 0, 0.15, 0)); g.add(mesh(box(0.7, 0.08, 2.2), M(0x5a3d28), 0, 0.31, 0)); const bow = mesh(box(0.5, 0.32, 0.5), wd, 0, 0.3, 1.25); bow.rotation.x = 0.5; g.add(bow);
+    g.add(mesh(box(0.36, 0.5, 0.28), M(0x2f8a8a), 0, 0.65, -0.2)); g.add(mesh(box(0.24, 0.24, 0.24), M(pick0(SKIN)), 0, 1.03, -0.2)); g.add(mesh(box(0.3, 0.08, 0.3), M(0x5a3e1f), 0, 1.17, -0.2));
+    const oars = []; for (const s of [-1, 1]) { const o = new THREE.Group(); o.position.set(0.45 * s, 0.45, -0.1); g.add(o); const b = mesh(box(1.3, 0.05, 0.07), M(0x9a7248), 0.6 * s, -0.1, 0); b.rotation.z = -0.25 * s; o.add(b); oars.push(o); }
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(g); return Object.assign(d, { g, oars }); };
+  for (let k = 0; k < 2; k++) WILD.boats.push(boat({ kind: 'river', s: (R() - 0.5) * 0.7 * SIZE, dir: k ? -1 : 1 }));
+  for (const l of LAKES) if (l.R > 11) WILD.boats.push(boat({ kind: 'lake', l, a: R() * 6.28 }));
+}
+const pick0 = a => a[Math.floor(Math.random() * a.length)];
+function wildStep(dt) {
+  if (!WILD.init) { if (!trees.length) return; wildInit(); }
+  const t = simT;
+  for (const b of WILD.birds) { b.a += b.sp * dt; const x = b.c.x + Math.cos(b.a) * b.r, z = b.c.z + Math.sin(b.a) * b.r; b.g.position.set(x, Math.max(0, height(x, z)) * 0.3 + b.h + Math.sin(t * 0.7 + b.ph) * 1.2, z);
+    b.g.rotation.y = -b.a + (b.sp > 0 ? Math.PI : 0); const f = Math.sin(t * 11 + b.ph) * 0.7; b.wl.rotation.z = f; b.wr.rotation.z = -f; b.g.visible = isExplored(x, z); }
+  for (const d of WILD.deer) {
+    const p = d.g.position;
+    if (Math.random() < dt * 3) for (const w of workers) { if (w.removed || !w.g.visible) continue; const q = w.g.position, L = Math.hypot(q.x - p.x, q.z - p.z); if (L < 12) { d.tx = p.x + (p.x - q.x) / L * 20; d.tz = p.z + (p.z - q.z) / L * 20; d.state = 'flee'; break; } }
+    d.t -= dt; if (d.state === 'graze' && d.t <= 0) { d.state = 'walk'; const a = Math.random() * 6.28, r = 3 + Math.random() * 7; d.tx = d.home.x + Math.cos(a) * r; d.tz = d.home.z + Math.sin(a) * r; }
+    if (d.state !== 'graze') { const dx = d.tx - p.x, dz = d.tz - p.z, L = Math.hypot(dx, dz), sp = d.state === 'flee' ? 4.5 : 0.8;
+      if (L < 0.3 || height(p.x + dx / L, p.z + dz / L) < 0.1) { if (d.state === 'flee') d.home = { x: p.x, z: p.z }; d.state = 'graze'; d.t = 4 + Math.random() * 5; }
+      else { const m = Math.min(L, sp * dt); p.x += dx / L * m; p.z += dz / L * m; d.g.rotation.y = Math.atan2(dx, dz); const k = Math.sin(t * (sp > 2 ? 14 : 6) + d.ph) * (sp > 2 ? 0.6 : 0.35); d.legs.forEach((l, i) => l.rotation.x = i % 3 === 0 ? k : -k); } }
+    d.neck.rotation.x += ((d.state === 'graze' ? 1.1 + Math.sin(t * 1.5 + d.ph) * 0.08 : 0) - d.neck.rotation.x) * Math.min(1, dt * 3);
+    if (d.state === 'graze') d.legs.forEach(l => l.rotation.x *= 0.9);
+    p.y = height(p.x, p.z); d.g.visible = isExplored(p.x, p.z);
+  }
+  for (const b of WILD.boats) { let x, z, ax, az;
+    if (b.kind === 'river') { b.s += b.dir * 1.4 * dt; const lim = SIZE * 0.45; if (Math.abs(b.s) > lim) { b.dir = -b.dir; b.s = Math.max(-lim, Math.min(lim, b.s)); } x = riverX(b.s) + 2 * b.dir; z = b.s; ax = riverX(b.s + b.dir) - riverX(b.s); az = b.dir; }
+    else { b.a += dt * 0.12; x = b.l.x + Math.cos(b.a) * b.l.R * 0.55; z = b.l.z + Math.sin(b.a) * b.l.R * 0.55; ax = -Math.sin(b.a); az = Math.cos(b.a); }
+    b.g.position.set(x, -0.43 + Math.sin(t * 1.8 + x) * 0.04, z); b.g.rotation.set(0, Math.atan2(ax, az), Math.sin(t * 1.3) * 0.04); b.g.visible = isExplored(x, z);
+    const r = Math.sin(t * 3); b.oars.forEach((o, i) => { o.rotation.y = r * 0.5 * (i ? -1 : 1); o.rotation.x = Math.cos(t * 3) * 0.15; }); }
 }
 // ---------- Dorfleben: spielende Kinder und plaudernde Nachbarn (wie in der Godot-Version) ----------
 const VILLAGE = { t: 0, talks: 0 }, TALKERS = ['traeger', 'baeckerei', 'schneider', 'weberei', 'metzger', 'brauerei', 'kaeserei'];
@@ -8304,7 +8360,7 @@ function step(dt) {
   for (const b of buildings) if (b.needsGuard) trySpawnGuard(b);
   for (const b of [...buildings].sort((a, c) => (['schmied', 'schmelze'].indexOf(c.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(c.type)) - (['schmied', 'schmelze'].indexOf(a.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(a.type)))) if (b.needsWorker) trySpawnWorker(b);
   for (const b of [...buildings]) if (b.progress < 1 && !b.removed) { if (b.pendingSite) { b.pendingSite = false; startSite(b); } siteStep(b, dt); }
-  militaryStep(dt); economyStep(dt); aiStep(dt); villageStep(dt);
+  militaryStep(dt); economyStep(dt); aiStep(dt); villageStep(dt); wildStep(dt);
   // Träger
   carT += dt; if (carT > 2 && carriers.length < carrierTarget()) { carT = 0; spawnCarrier(); }
   // Arbeiter
@@ -8353,7 +8409,7 @@ function step(dt) {
       if (q.el >= q.wait) { w.queue.shift(); q.fn && q.fn(); }
     } else if (q.fn) { w.queue.shift(); q.fn(); }
     if (walking) { w.walkPh += dt * 10; const sw = Math.sin(w.walkPh); w.legs[0].rotation.x = sw * 0.65; w.legs[1].rotation.x = -sw * 0.65; w.body.position.y = Math.abs(sw) * 0.04; w.body.rotation.z = sw * 0.04;
-      if (w.cart) { w.arm.rotation.x = w.arm2.rotation.x = -0.9; w.body.rotation.x = 0.15; for (const wh of w.cart.userData.wheels) wh.rotation.z -= dt * 6; }
+      if (w.cart) { w.arm.rotation.x = w.arm2.rotation.x = -0.9; w.body.rotation.x = 0.15; for (const wh of w.cart.userData.wheels) wh.rotation.z -= dt * 6; if (w.donkey) { const k = Math.sin(simT * 9) * 0.45; w.donkey.userData.legs.forEach((l, i) => l.rotation.x = i % 3 === 0 ? k : -k); } }
       const cs = w.carrying && w.carryStyle; if (w.cart) {} else if (cs === 'shoulder') { w.arm.rotation.x = -2.9; w.arm.rotation.z = 0.25; if (w.arm2) w.arm2.rotation.x = sw * 0.45; w.body.rotation.z += 0.05; } else if (cs === 'back') { w.arm.rotation.x = w.arm2.rotation.x = -2.6; w.body.rotation.x = 0.12; } else if (cs === 'front') { w.arm.rotation.x = w.arm2.rotation.x = -1.15; w.body.rotation.x = -0.06; } else if (cs === 'hand') { w.arm.rotation.x = -0.15; if (w.arm2) w.arm2.rotation.x = sw * 0.5; w.body.rotation.z += -0.04; } else { w.arm.rotation.x = -sw * 0.5; if (w.arm2) w.arm2.rotation.x = sw * 0.5; } }
     else { w.legs[0].rotation.x = w.legs[1].rotation.x = 0; w.body.rotation.z = 0; if (w.head) w.head.rotation.y = Math.sin(simT * 0.7 + w.seed) * 0.35; }
     if (!walking && w.carrying && w.arm2 && !(w.queue[0] && w.queue[0].anim)) { const cs = w.carryStyle; if (cs === 'shoulder') { w.arm.rotation.x = -2.9; w.arm.rotation.z = 0.25; } else if (cs === 'back') { w.arm.rotation.x = w.arm2.rotation.x = -2.6; } else if (cs === 'front') { w.arm.rotation.x = w.arm2.rotation.x = -1.15; } else if (cs === 'hand') w.arm.rotation.x = -0.15; }
