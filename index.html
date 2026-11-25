@@ -6753,13 +6753,14 @@ function villageStep(dt) {
   }
   if (day && H.length >= 2 && VILLAGE.talks < 1 + Math.floor(H.length / 4) && Math.random() < 0.12) startTalk(H[Math.floor(Math.random() * H.length)]);
 }
+function clearOfBuildings(x, z, m) { return !buildings.some(o => !o.removed && o.type !== 'bruecke' && Math.hypot(o.x - x, o.z - z) < TYPES[o.type].r + m); }
 function spawnKid(b) {
   const k = makeWorker('traeger'); k.village = true; k.home = null; k.g.scale.multiplyScalar(0.62);
   const shirt = M(KID_COLS[Math.floor(Math.random() * KID_COLS.length)]); k.g.traverse(o => { if (o.isMesh && o.position.y > 0.35 && o.position.y < 0.8 && o.parent === k.body) o.material = shirt; });
   k.g.position.copy(b.door); k.g.position.y = height(b.door.x, b.door.z); if (!k.g.parent) scene.add(k.g); workers.push(k); kidPlay(k, b); return k;
 }
 function kidPlay(k, b) {
-  for (let i = 0; i < 3; i++) { const a = Math.random() * 6.283, r = 4.5 + Math.random() * 3.5; k.queue.push({ to: new V3(b.x + Math.cos(a) * r, 0, b.z + Math.sin(a) * r), routed: true });
+  for (let i = 0; i < 3; i++) { const a = Math.random() * 6.283, r = 3.5 + Math.random() * 3, x = b.x + Math.cos(a) * r, z = b.z + Math.sin(a) * r; if (!clearOfBuildings(x, z, 0.5)) continue; k.queue.push({ to: new V3(x, 0, z) });
     if (Math.random() < 0.5) k.queue.push({ wait: 0.8 + Math.random(), anim: 'hop' }); }
 }
 function bubbleSprite() {
@@ -6769,11 +6770,12 @@ function bubbleSprite() {
 function startTalk(b) {
   const out = new V3(b.door.x - b.x, 0, b.door.z - b.z).normalize(), side = new V3(-out.z, 0, out.x), spot = new V3(b.door.x, 0, b.door.z).addScaledVector(out, 1.5);
   const pa = spot.clone().addScaledVector(side, 0.45), pc = spot.clone().addScaledVector(side, -0.45), dur = 8 + Math.random() * 6;
+  if (!clearOfBuildings(pa.x, pa.z, 0.4) || !clearOfBuildings(pc.x, pc.z, 0.4)) return; // kein Platz vor der Tür
   const mk = () => { const w = makeWorker(TALKERS[Math.floor(Math.random() * TALKERS.length)]); w.village = true; w.home = null; w.g.position.copy(b.door); w.g.position.y = height(b.door.x, b.door.z); if (!w.g.parent) scene.add(w.g); workers.push(w); return w; };
   const a = mk(), c = mk(), bub = bubbleSprite(); bub.position.set(spot.x, height(spot.x, spot.z) + 2.4, spot.z); bub.visible = false; scene.add(bub); VILLAGE.talks++;
   const bye = w => { moveTo(w, b.door); doFn(w, () => { w.removed = true; scene.remove(w.g); }); };
-  a.queue.push({ to: pa, routed: true }); doFn(a, () => { faceTo(a, pc); bub.visible = true; }); a.queue.push({ wait: dur, anim: 'talk' }); doFn(a, () => { scene.remove(bub); VILLAGE.talks--; }); bye(a);
-  c.queue.push({ wait: 0.6 }); c.queue.push({ to: pc, routed: true }); doFn(c, () => faceTo(c, pa)); c.queue.push({ wait: dur - 0.4, anim: 'talk' }); bye(c);
+  a.queue.push({ to: pa }); doFn(a, () => { faceTo(a, pc); bub.visible = true; }); a.queue.push({ wait: dur, anim: 'talk' }); doFn(a, () => { scene.remove(bub); VILLAGE.talks--; }); bye(a);
+  c.queue.push({ wait: 0.6 }); c.queue.push({ to: pc }); doFn(c, () => faceTo(c, pa)); c.queue.push({ wait: dur - 0.4, anim: 'talk' }); bye(c);
 }
 // ---------- Wohnen, Bedürfnisse, Steuern, Markt ----------
 const FINE = ['raeucherfisch', 'wurst'];
@@ -7521,7 +7523,7 @@ function buildWalk() {
 }
 function blockBuilding(b) {
   if (b.removed || b.type === 'bruecke' || b.type === 'strasse') return;
-  const r = TYPES[b.type].r * 0.9;
+  const r = TYPES[b.type].r + 0.15; // ganzer Grundriss – niemand läuft durchs Haus
   for (let x = b.x - r; x <= b.x + r; x += PC * 0.5) for (let z = b.z - r; z <= b.z + r; z += PC * 0.5) { if (Math.hypot(x - b.x, z - b.z) > r) continue; const c = pIdx(x, z); if (c >= 0) walk[c] = 0; }
   const dc = pIdx(b.door.x, b.door.z); if (dc >= 0 && height(b.door.x, b.door.z) > -0.2) walk[dc] = 1;
 }
