@@ -6677,6 +6677,44 @@ function mineModel(outer, type, fx) {
   g0.add(A(type, fx));
   if (fx.smokeAt) fx.smokeAt.multiplyScalar(0.95);
 }
+// ---------- Dorfleben: spielende Kinder und plaudernde Nachbarn (wie in der Godot-Version) ----------
+const VILLAGE = { t: 0, talks: 0 }, TALKERS = ['traeger', 'baeckerei', 'schneider', 'weberei', 'metzger', 'brauerei', 'kaeserei'];
+const KID_COLS = [0xe08c73, 0x7fb3f0, 0xf2d866, 0x99d980];
+function villageStep(dt) {
+  VILLAGE.t -= dt; if (VILLAGE.t > 0) return; VILLAGE.t = 1;
+  const hh = ((simT + 200) % 600) / 600 * 24, day = hh >= 7 && hh < 19.5;
+  const H = buildings.filter(b => b.type === 'wohnhaus' && b.progress >= 1 && !b.removed && b.door);
+  for (const b of H) {
+    b.kids = (b.kids || []).filter(k => !k.removed);
+    const want = day ? 1 + ((b.lvl || 0) >= 1 ? 1 : 0) : 0;
+    while (b.kids.length < want) b.kids.push(spawnKid(b));
+    if (b.kids.length > want) for (const k of b.kids) if (!k.going) { k.going = true; k.queue.length = 0; moveTo(k, b.door); doFn(k, () => { k.removed = true; scene.remove(k.g); }); }
+    for (const k of b.kids) if (!k.going && !k.queue.length) kidPlay(k, b);
+  }
+  if (day && H.length >= 2 && VILLAGE.talks < 1 + Math.floor(H.length / 4) && Math.random() < 0.12) startTalk(H[Math.floor(Math.random() * H.length)]);
+}
+function spawnKid(b) {
+  const k = makeWorker('traeger'); k.village = true; k.home = null; k.g.scale.multiplyScalar(0.62);
+  const shirt = M(KID_COLS[Math.floor(Math.random() * KID_COLS.length)]); k.g.traverse(o => { if (o.isMesh && o.position.y > 0.35 && o.position.y < 0.8 && o.parent === k.body) o.material = shirt; });
+  k.g.position.copy(b.door); k.g.position.y = height(b.door.x, b.door.z); if (!k.g.parent) scene.add(k.g); workers.push(k); kidPlay(k, b); return k;
+}
+function kidPlay(k, b) {
+  for (let i = 0; i < 3; i++) { const a = Math.random() * 6.283, r = 4.5 + Math.random() * 3.5; k.queue.push({ to: new V3(b.x + Math.cos(a) * r, 0, b.z + Math.sin(a) * r), routed: true });
+    if (Math.random() < 0.5) k.queue.push({ wait: 0.8 + Math.random(), anim: 'hop' }); }
+}
+function bubbleSprite() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); c.font = '48px serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('💬', 32, 36);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false })); s.scale.set(0.7, 0.7, 1); return s;
+}
+function startTalk(b) {
+  const out = new V3(b.door.x - b.x, 0, b.door.z - b.z).normalize(), side = new V3(-out.z, 0, out.x), spot = new V3(b.door.x, 0, b.door.z).addScaledVector(out, 1.5);
+  const pa = spot.clone().addScaledVector(side, 0.45), pc = spot.clone().addScaledVector(side, -0.45), dur = 8 + Math.random() * 6;
+  const mk = () => { const w = makeWorker(TALKERS[Math.floor(Math.random() * TALKERS.length)]); w.village = true; w.home = null; w.g.position.copy(b.door); w.g.position.y = height(b.door.x, b.door.z); if (!w.g.parent) scene.add(w.g); workers.push(w); return w; };
+  const a = mk(), c = mk(), bub = bubbleSprite(); bub.position.set(spot.x, height(spot.x, spot.z) + 2.4, spot.z); bub.visible = false; scene.add(bub); VILLAGE.talks++;
+  const bye = w => { moveTo(w, b.door); doFn(w, () => { w.removed = true; scene.remove(w.g); }); };
+  a.queue.push({ to: pa, routed: true }); doFn(a, () => { faceTo(a, pc); bub.visible = true; }); a.queue.push({ wait: dur, anim: 'talk' }); doFn(a, () => { scene.remove(bub); VILLAGE.talks--; }); bye(a);
+  c.queue.push({ wait: 0.6 }); c.queue.push({ to: pc, routed: true }); doFn(c, () => faceTo(c, pa)); c.queue.push({ wait: dur - 0.4, anim: 'talk' }); bye(c);
+}
 // ---------- Wohnen, Bedürfnisse, Steuern, Markt ----------
 const FINE = ['raeucherfisch', 'wurst'];
 const HOUSE_LV = [
@@ -7099,7 +7137,7 @@ function updateHUD() {
   let h = `<div class="coins" title="Goldmünzen: ${stock.muenzen}">${ITEMS.muenzen.icon}<b>${stock.muenzen}</b>${trendOf('muenzen')}</div><div class="pins">${HUD_PIN.filter(k => ITEMS[k]).map(hudChip).join('')}</div>`;
   h += HUD_GROUPS.map(([ic, name, ks], i) => { const sum = ks.reduce((a, k) => a + (stock[k] || 0), 0), low = (i === 1 && hudLowFood); return `<div class="grp${hudOpen === i ? ' open' : ''}${low ? ' low' : ''}" data-g="${i}" title="${name}${low ? ' – kein Brot, Fisch oder Schinken! Baue eine Bäckerei, einen Fischer oder einen Metzger.' : ''}"><span class="gh">${ic}<b>${sum}</b><small>${name}</small></span><div class="gdrop"><div class="gt">${ic} ${name}</div>${ks.map(hudChip).join('')}</div></div>`; }).join('');
   if (h !== updateHUD.last) { updateHUD.last = h; $('res').innerHTML = h; $('res').querySelectorAll('.grp').forEach(x => { x.onclick = e => { e.stopPropagation(); hudOpen = hudOpen === +x.dataset.g ? null : +x.dataset.g; updateHUD(); }; }); }
-  const pop = workers.filter(w => !w.removed && !w.ai).length, car = carriers.filter(c => !c.removed).length, free = Object.values(POOL).reduce((a, n) => a + n, 0);
+  const pop = workers.filter(w => !w.removed && !w.ai && !w.village).length, car = carriers.filter(c => !c.removed).length, free = Object.values(POOL).reduce((a, n) => a + n, 0);
   const waiting = buildings.reduce((a, x) => a + Object.entries(x.out).reduce((q, [k, v]) => q + Math.max(0, v - (x.outRes[k] || 0)), 0), 0), busy = carriers.filter(c => !c.removed && c.queue.length).length, short = waiting > 12 && busy >= car;
   $('popinfo').innerHTML = `<span class="${short ? 'warnc' : ''}" title="Arbeiter / Träger / wartend im Lager${short ? ' – ⚠️ Träger kommen nicht hinterher (' + waiting + ' Waren warten). Baue Wohnhäuser oder ein Lagerhaus für mehr Träger.' : ''}">👥 <b>${pop}</b><small>/${car}/${free}</small>${short ? ' ⚠️' : ''}</span><span title="Kämpfer">⚔️ <b>${typeof SOLD !== 'undefined' ? SOLD.length : 0}</b></span>`;
   const day = 1 + Math.floor((simT + 200) / 600), m = ((simT + 200) % 600) / 600 * 1440, hh = Math.floor(m / 60);
@@ -8266,7 +8304,7 @@ function step(dt) {
   for (const b of buildings) if (b.needsGuard) trySpawnGuard(b);
   for (const b of [...buildings].sort((a, c) => (['schmied', 'schmelze'].indexOf(c.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(c.type)) - (['schmied', 'schmelze'].indexOf(a.type) + 1 && 3 - ['schmied', 'schmelze'].indexOf(a.type)))) if (b.needsWorker) trySpawnWorker(b);
   for (const b of [...buildings]) if (b.progress < 1 && !b.removed) { if (b.pendingSite) { b.pendingSite = false; startSite(b); } siteStep(b, dt); }
-  militaryStep(dt); economyStep(dt); aiStep(dt);
+  militaryStep(dt); economyStep(dt); aiStep(dt); villageStep(dt);
   // Träger
   carT += dt; if (carT > 2 && carriers.length < carrierTarget()) { carT = 0; spawnCarrier(); }
   // Arbeiter
@@ -8290,6 +8328,8 @@ function step(dt) {
       for (const br of bridgesDone()) { const lx = new V3(p.x - br.x, 0, p.z - br.z).applyAxisAngle(new V3(0, 1, 0), -br.rot); if (Math.abs(lx.z) < 1.2 && Math.abs(lx.x) < 7) { const top = Math.abs(lx.x) < 5 ? 1.12 : 1.12 - (Math.abs(lx.x) - 5) * 0.4; p.y = Math.max(p.y, top); } }
     } else if (q.wait !== undefined) {
       q.el = (q.el || 0) + dt; const ph = q.el * 7;
+      if (q.anim === 'hop') { const k = Math.abs(Math.sin(q.el * 7)); w.g.position.y = height(w.g.position.x, w.g.position.z) + k * 0.35; w.arm.rotation.x = -2.6 * k; if (w.arm2) w.arm2.rotation.x = -2.6 * k; }
+      if (q.anim === 'talk') { w.arm.rotation.x = -0.5 + Math.sin(q.el * 3.3) * 0.35; w.body.rotation.x = Math.sin(q.el * 1.7) * 0.05; }
       if (q.anim === 'chop') { w.arm.rotation.x = -1.6 + Math.abs(Math.sin(ph)) * 2.2; w.body.rotation.x = Math.sin(ph) * 0.1; if (w.arm2) w.arm2.rotation.x = w.arm.rotation.x * 0.8; }
       const hitEvery = (period, name, gain) => { q.nh = q.nh ?? period * 0.5; if (q.el >= q.nh) { q.nh += period; play(name, w.g.position.x, w.g.position.z, gain); return true; } return false; };
       if (q.anim === 'chop') hitEvery(Math.PI / 7, w.home && w.home.type === 'holzfaeller' ? 'axe' : 'pick', 1);
