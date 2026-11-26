@@ -6390,7 +6390,6 @@ function cartModel() {
 function giveCart(w) {
   w.cart = cartModel(); w.cart.rotation.y = -Math.PI / 2; w.cart.position.set(0, 0, 1.0); w.g.add(w.cart); w.cap = 4;
   w.cartLoad = new THREE.Group(); w.cartLoad.position.set(0, 0.5, 0); w.cart.add(w.cartLoad);
-  w.donkey = donkeyModel(); w.donkey.position.set(0, 0, 2.05); w.g.add(w.donkey);
 }
 function setCartLoad(w, item, n) {
   if (!w.cartLoad) return; while (w.cartLoad.children.length) w.cartLoad.remove(w.cartLoad.children[0]);
