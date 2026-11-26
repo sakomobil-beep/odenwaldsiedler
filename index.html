@@ -6839,8 +6839,8 @@ function houseStep(b, dt) {
     { const nx = HOUSE_LV[(b.lvl || 0) + 1], miss2 = nx ? nx.needs.filter(k => !needOk(b, k)).concat(Object.entries(UPCOST[(b.lvl || 0) + 1] || {}).filter(([k, v]) => (b.in[k] || 0) < v).map(([k]) => k)) : []; b.status = `${HOUSE_LV[b.lvl].name} – zufrieden 😊` + (nx && b.sat >= 3 && miss2.length ? ` · für den Aufstieg fehlt: ${miss2.map(needName).join(', ')}` : ''); }
   } else {
     b.sat = 0; b.bad = (b.bad || 0) + 1;
-    b.status = `${L.name} – es fehlt: ${miss.map(needName).join(', ')}`;
-    if (b.bad >= 3 && b.lvl > 0) { setHouseLevel(b, b.lvl - 1); b.bad = 0; toast(`😟 Ein Haus ist abgestiegen – es fehlte ${miss.map(needName).join(', ')}`, b); }
+    b.status = `${L.name} – unzufrieden 😟, keine Steuern. Es fehlt: ${miss.map(needName).join(', ')}`;
+    // kein Abstieg mehr: Stufe bleibt, nur keine Steuern
   }
 }
 function upgradeBuilding(b) { if (b.up) return; if ((stock.ziegel || 0) < 2 || (stock.bretter || 0) < 2) return toast('Für den Ausbau brauchst du 2 Dachziegel und 2 Bretter'); stock.ziegel -= 2; stock.bretter -= 2; stat('use', 'ziegel', 2); stat('use', 'bretter', 2); b.up = 1; addUpBadge(b); refreshPiles(); toast(`⬆️ ${TYPES[b.type].name} ausgebaut – arbeitet jetzt 20 % schneller`, b); }
